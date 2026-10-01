@@ -30,7 +30,7 @@ export interface CreatedSession {
   expiresAt: Date;
 }
 
-async function createSession(
+export async function createSessionForUser(
   tx: Tx,
   userId: string,
   activeTenantId: string | null,
@@ -111,7 +111,7 @@ export async function signup(
       payload: { tenantId: tenant.id, ownerUserId: user.id },
       actor,
     });
-    const session = await createSession(tx, user.id, tenant.id, meta);
+    const session = await createSessionForUser(tx, user.id, tenant.id, meta);
     await tx.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
     return { ...session, tenantId: tenant.id, userId: user.id };
   });
@@ -158,7 +158,7 @@ export async function login(
   const session = await withSystem(deps.prisma, async (tx) => {
     const tenantId = await firstActiveTenantId(tx, user.id);
     await tx.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
-    return createSession(tx, user.id, tenantId, meta);
+    return createSessionForUser(tx, user.id, tenantId, meta);
   });
   return { status: 'ok', session };
 }
@@ -213,7 +213,7 @@ export async function verifyMagicLink(
       where: { id: row.userId },
       data: { emailVerifiedAt: new Date(), lastLoginAt: new Date() },
     });
-    return createSession(tx, row.userId, await firstActiveTenantId(tx, row.userId), meta);
+    return createSessionForUser(tx, row.userId, await firstActiveTenantId(tx, row.userId), meta);
   });
 }
 
@@ -255,7 +255,7 @@ export async function resetPassword(
       where: { userId: row.userId, revokedAt: null },
       data: { revokedAt: new Date() },
     });
-    return createSession(tx, row.userId, await firstActiveTenantId(tx, row.userId), meta);
+    return createSessionForUser(tx, row.userId, await firstActiveTenantId(tx, row.userId), meta);
   });
 }
 

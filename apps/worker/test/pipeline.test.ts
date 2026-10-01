@@ -5,7 +5,7 @@
 import { REALTIME_PG_CHANNEL } from '@batimint/contracts';
 import { createPrismaClient, emitEvent, type PrismaClient, withSystem, withTenant } from '@batimint/db';
 import { testDatabaseUrls } from '@batimint/db/testing';
-import { MemoryStorage, MockMailer, MockVatValidator } from '@batimint/integrations';
+import { MemoryStorage, MockMailer, MockPeppolProvider, MockVatValidator } from '@batimint/integrations';
 import pg from 'pg';
 import type { PgBoss } from 'pg-boss';
 import { v7 as uuidv7 } from 'uuid';
@@ -41,7 +41,12 @@ beforeAll(async () => {
   });
   const deps = {
     prisma,
-    integrations: { mailer: new MockMailer(), storage: new MemoryStorage(), vat: new MockVatValidator() },
+    integrations: {
+      mailer: new MockMailer(),
+      storage: new MemoryStorage(),
+      vat: new MockVatValidator(),
+      peppol: new MockPeppolProvider(),
+    },
     appUrl: 'http://localhost:3000',
   };
   listener = new pg.Client({ connectionString: urls.appUrl });
@@ -122,7 +127,12 @@ describe('outbox → worker → temps réel', () => {
     );
     const deps = {
       prisma,
-      integrations: { mailer: new MockMailer(), storage: new MemoryStorage(), vat: new MockVatValidator() },
+      integrations: {
+        mailer: new MockMailer(),
+        storage: new MemoryStorage(),
+        vat: new MockVatValidator(),
+        peppol: new MockPeppolProvider(),
+      },
       appUrl: '',
     };
     expect(await runConsumer(deps, diagnosticNotification, event.id)).toBe('skipped');
@@ -146,7 +156,12 @@ describe('outbox → worker → temps réel', () => {
     );
     const deps = {
       prisma,
-      integrations: { mailer: new MockMailer(), storage: new MemoryStorage(), vat: new MockVatValidator() },
+      integrations: {
+        mailer: new MockMailer(),
+        storage: new MemoryStorage(),
+        vat: new MockVatValidator(),
+        peppol: new MockPeppolProvider(),
+      },
       appUrl: '',
     };
     const failing = {
@@ -161,5 +176,57 @@ describe('outbox → worker → temps réel', () => {
       tx.processedEvent.count({ where: { consumer: 'failing-test', eventId: event.id } }),
     );
     expect(processed).toBe(0);
+  });
+});
+
+describe('invitations', () => {
+  it('user.invited envoie un e-mail avec un jeton dont seule l’empreinte est stockée', async () => {
+    const { createHash } = await import('node:crypto');
+    const { sendInvitation } = await import('../src/consumers/invitations');
+    const mailer = new MockMailer();
+    const deps = {
+      prisma,
+      integrations: {
+        mailer,
+        storage: new MemoryStorage(),
+        vat: new MockVatValidator(),
+        peppol: new MockPeppolProvider(),
+      },
+      appUrl: 'https://app.test',
+    };
+    const inv = await withTenant(prisma, tenantId, userId, (tx) =>
+      tx.invitation.create({
+        data: {
+          tenantId,
+          email: 'sophie@example.test',
+          name: 'Sophie',
+          role: 'office',
+          tokenHash: `placeholder-${uuidv7()}`,
+          invitedBy: userId,
+          expiresAt: new Date(Date.now() + 86_400_000),
+        },
+      }),
+    );
+    const event = await withTenant(prisma, tenantId, userId, (tx) =>
+      emitEvent(tx, {
+        tenantId,
+        type: 'user.invited.v1',
+        aggregateType: 'invitation',
+        aggregateId: inv.id,
+        payload: { invitationId: inv.id, email: inv.email, role: inv.role, invitedBy: userId },
+      }),
+    );
+    expect(await runConsumer(deps, sendInvitation, event.id)).toBe('done');
+    const mail = mailer.lastTo('sophie@example.test')!;
+    expect(mail.subject).toMatch(/vous invite sur Batimint/);
+    expect(mail.text).toMatch(/« Bureau »/);
+    const token = decodeURIComponent(/token=([^\s"]+)/.exec(mail.text)![1]!);
+    const stored = await withTenant(prisma, tenantId, userId, (tx) =>
+      tx.invitation.findUniqueOrThrow({ where: { id: inv.id } }),
+    );
+    expect(stored.tokenHash).toBe(createHash('sha256').update(token).digest('hex'));
+    // Rejeu : aucun second e-mail.
+    expect(await runConsumer(deps, sendInvitation, event.id)).toBe('skipped');
+    expect(mailer.sent).toHaveLength(1);
   });
 });

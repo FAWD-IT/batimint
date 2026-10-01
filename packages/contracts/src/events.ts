@@ -14,6 +14,10 @@ export const EventPayloads = {
     invitedBy: Uuid.nullable(),
   }),
   'tenant.created.v1': z.object({ tenantId: Uuid, ownerUserId: Uuid }),
+  'tenant.updated.v1': z.object({ fields: z.array(z.string()) }),
+  'member.joined.v1': z.object({ userId: Uuid, role: z.string(), invitationId: Uuid.nullable() }),
+  'member.updated.v1': z.object({ membershipId: Uuid, role: z.string(), status: z.string() }),
+  'integration.updated.v1': z.object({ kind: z.string(), status: z.string(), provider: z.string() }),
 } as const;
 
 export type EventType = keyof typeof EventPayloads;

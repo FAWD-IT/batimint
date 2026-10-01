@@ -7,6 +7,8 @@ import type { Mailer } from './mail/types';
 import { MemoryStorage } from './storage/memory';
 import { S3Storage } from './storage/s3';
 import type { ObjectStorage } from './storage/types';
+import { MockPeppolProvider } from './peppol/mock';
+import type { PeppolProvider } from './peppol/types';
 import { MockVatValidator } from './vat/mock';
 import type { VatValidator } from './vat/types';
 import { ViesVatValidator } from './vat/vies';
@@ -17,6 +19,16 @@ export interface Integrations {
   mailer: Mailer;
   storage: ObjectStorage;
   vat: VatValidator;
+  peppol: PeppolProvider;
+}
+
+export function createPeppolProvider(env: Env = process.env): PeppolProvider {
+  const provider = env['PEPPOL_PROVIDER'] ?? 'mock';
+  if (provider !== 'mock') {
+    // L'implémentation getpeppr arrive au jalon M12 ; d'ici là, refus explicite plutôt que silence.
+    throw new Error(`PEPPOL_PROVIDER=${provider} n'est pas encore disponible : utilisez « mock ».`);
+  }
+  return new MockPeppolProvider();
 }
 
 export function createMailer(env: Env = process.env): Mailer {
@@ -52,5 +64,10 @@ export function createVatValidator(env: Env = process.env): VatValidator {
 }
 
 export function createIntegrations(env: Env = process.env): Integrations {
-  return { mailer: createMailer(env), storage: createStorage(env), vat: createVatValidator(env) };
+  return {
+    mailer: createMailer(env),
+    storage: createStorage(env),
+    vat: createVatValidator(env),
+    peppol: createPeppolProvider(env),
+  };
 }

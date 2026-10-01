@@ -64,3 +64,29 @@ export function formatIban(input: string): string {
 export function isValidBic(input: string): boolean {
   return /^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(input.replace(/\s+/g, '').toUpperCase());
 }
+
+/**
+ * Numéro de registre national / INSS (11 chiffres) : contrôle = 97 − (9 premiers chiffres mod 97),
+ * avec un préfixe « 2 » pour les personnes nées à partir de 2000.
+ */
+export function normalizeInss(input: string): string | null {
+  const digits = input.replace(/[^\d]/g, '');
+  return digits.length === 11 ? digits : null;
+}
+
+export function isValidInss(input: string): boolean {
+  const n = normalizeInss(input);
+  if (!n) return false;
+  const base = n.slice(0, 9);
+  const check = Number(n.slice(9));
+  const before2000 = 97 - (Number(base) % 97);
+  const after2000 = 97 - (Number(`2${base}`) % 97);
+  return check === before2000 || check === after2000;
+}
+
+/** Format affiché « 85.07.30-033.28 ». */
+export function formatInss(input: string): string {
+  const n = normalizeInss(input);
+  if (!n) return input;
+  return `${n.slice(0, 2)}.${n.slice(2, 4)}.${n.slice(4, 6)}-${n.slice(6, 9)}.${n.slice(9)}`;
+}

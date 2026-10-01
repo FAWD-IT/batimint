@@ -57,6 +57,7 @@ async function main(): Promise<void> {
       process.exit(result.status ?? 1);
     }
   }
+  if (mode === 'dev') spawnSync(prismaBin, ['generate'], { cwd, stdio: 'inherit', env: process.env });
   const { appUser, sameAsOwner } = await provisionAppRole(ownerUrl!, appUrl!);
   if (sameAsOwner) {
     console.warn(

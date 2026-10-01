@@ -1,6 +1,6 @@
 import { createPrismaClient, type PrismaClient } from '@batimint/db';
 import { testDatabaseUrls } from '@batimint/db/testing';
-import { MemoryStorage, MockMailer, MockVatValidator } from '@batimint/integrations';
+import { MemoryStorage, MockMailer, MockPeppolProvider, MockVatValidator } from '@batimint/integrations';
 import type { FastifyInstance, LightMyRequestResponse } from 'fastify';
 import { v7 as uuidv7 } from 'uuid';
 import { loadConfig } from '../src/config';
@@ -35,7 +35,12 @@ export async function createTestApp(): Promise<TestApp> {
   const deps: AppDeps = {
     config,
     prisma,
-    integrations: { mailer, storage: new MemoryStorage(), vat: new MockVatValidator() },
+    integrations: {
+      mailer,
+      storage: new MemoryStorage(),
+      vat: new MockVatValidator(),
+      peppol: new MockPeppolProvider(),
+    },
     cipher: new FieldCipher(config.FIELD_ENCRYPTION_KEY),
     realtime: new RealtimeHub(null),
   };

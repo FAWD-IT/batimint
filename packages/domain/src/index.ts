@@ -7,3 +7,6 @@ export * from './permissions';
 export * from './state-machine';
 export * from './budget';
 export * from './belgium';
+export * from './plans';
+export * from './color';
+export * from './onboarding';

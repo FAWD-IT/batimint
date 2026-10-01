@@ -38,38 +38,38 @@ enum MembershipStatus {
 }
 
 model Tenant {
-  id                     String    @id @default(uuid(7)) @db.Uuid
-  name                   String
-  legalName              String?   @map("legal_name")
-  slug                   String    @unique
-  legalForm              String?   @map("legal_form")
-  enterpriseNumber       String?   @map("enterprise_number")
-  vatNumber              String?   @map("vat_number")
-  vatValidatedAt         DateTime? @map("vat_validated_at") @db.Timestamptz(3)
-  street                 String?
-  postalCode             String?   @map("postal_code")
-  city                   String?
-  country                String    @default("BE")
-  email                  String?
-  phone                  String?
-  website                String?
-  iban                   String?
-  bic                    String?
-  logoKey                String?   @map("logo_key")
-  brandColor             String?   @map("brand_color")
-  termsAndConditions     String?   @map("terms_and_conditions")
-  legalMentions          String?   @map("legal_mentions")
-  documentLocale         String    @default("fr") @map("document_locale")
+  id                    String    @id @default(uuid(7)) @db.Uuid
+  name                  String
+  legalName             String?   @map("legal_name")
+  slug                  String    @unique
+  legalForm             String?   @map("legal_form")
+  enterpriseNumber      String?   @map("enterprise_number")
+  vatNumber             String?   @map("vat_number")
+  vatValidatedAt        DateTime? @map("vat_validated_at") @db.Timestamptz(3)
+  street                String?
+  postalCode            String?   @map("postal_code")
+  city                  String?
+  country               String    @default("BE")
+  email                 String?
+  phone                 String?
+  website               String?
+  iban                  String?
+  bic                   String?
+  logoKey               String?   @map("logo_key")
+  brandColor            String?   @map("brand_color")
+  termsAndConditions    String?   @map("terms_and_conditions")
+  legalMentions         String?   @map("legal_mentions")
+  documentLocale        String    @default("fr") @map("document_locale")
   /// Paramètres métier (taux, coefficients, relances…) validés par zod (packages/contracts).
-  settings               Json      @default("{}")
-  plan                   Plan      @default(pro)
-  trialEndsAt            DateTime? @map("trial_ends_at") @db.Timestamptz(3)
-  featureFlags           Json      @default("{}") @map("feature_flags")
+  settings              Json      @default("{}")
+  plan                  Plan      @default(pro)
+  trialEndsAt           DateTime? @map("trial_ends_at") @db.Timestamptz(3)
+  featureFlags          Json      @default("{}") @map("feature_flags")
   /// Préfixe (0–999) des communications structurées.
-  structuredCommPrefix   Int       @default(0) @map("structured_comm_prefix")
-  onboardingCompletedAt  DateTime? @map("onboarding_completed_at") @db.Timestamptz(3)
-  createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt              DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  structuredCommPrefix  Int       @default(0) @map("structured_comm_prefix")
+  onboardingCompletedAt DateTime? @map("onboarding_completed_at") @db.Timestamptz(3)
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   memberships     Membership[]
   invitations     Invitation[]
@@ -77,23 +77,27 @@ model Tenant {
   outboxEvents    OutboxEvent[]
   notifications   Notification[]
   numberSequences NumberSequence[]
+  teams           Team[]
+  employees       Employee[]
+  absences        Absence[]
+  integrations    IntegrationConnection[]
 
   @@map("tenants")
 }
 
 model User {
-  id               String    @id @default(uuid(7)) @db.Uuid
-  email            String    @unique
-  name             String
-  passwordHash     String?   @map("password_hash")
-  emailVerifiedAt  DateTime? @map("email_verified_at") @db.Timestamptz(3)
-  totpSecretEnc    String?   @map("totp_secret_enc")
-  totpEnabledAt    DateTime? @map("totp_enabled_at") @db.Timestamptz(3)
-  isPlatformAdmin  Boolean   @default(false) @map("is_platform_admin")
-  locale           String    @default("fr")
-  lastLoginAt      DateTime? @map("last_login_at") @db.Timestamptz(3)
-  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  id              String    @id @default(uuid(7)) @db.Uuid
+  email           String    @unique
+  name            String
+  passwordHash    String?   @map("password_hash")
+  emailVerifiedAt DateTime? @map("email_verified_at") @db.Timestamptz(3)
+  totpSecretEnc   String?   @map("totp_secret_enc")
+  totpEnabledAt   DateTime? @map("totp_enabled_at") @db.Timestamptz(3)
+  isPlatformAdmin Boolean   @default(false) @map("is_platform_admin")
+  locale          String    @default("fr")
+  lastLoginAt     DateTime? @map("last_login_at") @db.Timestamptz(3)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   memberships   Membership[]
   sessions      Session[]
@@ -290,4 +294,129 @@ model NumberSequence {
 
   @@id([tenantId, docType, year])
   @@map("number_sequences")
+}
+
+// ---------------------------------------------------------------------------
+// Équipes, employés, absences (03 §1)
+// ---------------------------------------------------------------------------
+
+model Team {
+  id               String    @id @default(uuid(7)) @db.Uuid
+  tenantId         String    @map("tenant_id") @db.Uuid
+  name             String
+  color            String    @default("#2F4BFF")
+  leaderEmployeeId String?   @map("leader_employee_id") @db.Uuid
+  archivedAt       DateTime? @map("archived_at") @db.Timestamptz(3)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdBy        String?   @map("created_by") @db.Uuid
+
+  tenant  Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  members Employee[] @relation("TeamMembers")
+
+  @@index([tenantId])
+  @@map("teams")
+}
+
+model Employee {
+  id              String    @id @default(uuid(7)) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  userId          String?   @map("user_id") @db.Uuid
+  firstName       String    @map("first_name")
+  lastName        String    @map("last_name")
+  email           String?
+  phone           String?
+  jobTitle        String?   @map("job_title")
+  /// Clé du profil de taux horaire (paramètres du tenant).
+  rateProfile     String?   @map("rate_profile")
+  /// Coût horaire chargé, en centimes.
+  hourlyCost      BigInt    @default(0) @map("hourly_cost")
+  skills          String[]  @default([])
+  /// INSS chiffré (AES-256-GCM, 05 §9) ; seuls Owner et Admin le déchiffrent.
+  inssEnc         String?   @map("inss_enc")
+  inssLast4       String?   @map("inss_last4")
+  teamId          String?   @map("team_id") @db.Uuid
+  isSubcontractor Boolean   @default(false) @map("is_subcontractor")
+  active          Boolean   @default(true)
+  hiredOn         DateTime? @map("hired_on") @db.Date
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdBy       String?   @map("created_by") @db.Uuid
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  team     Team?     @relation("TeamMembers", fields: [teamId], references: [id], onDelete: SetNull)
+  absences Absence[]
+
+  @@unique([tenantId, userId])
+  @@index([tenantId, active])
+  @@map("employees")
+}
+
+enum AbsenceKind {
+  leave
+  sick
+  training
+  public_holiday
+  other
+}
+
+model Absence {
+  id         String      @id @default(uuid(7)) @db.Uuid
+  tenantId   String      @map("tenant_id") @db.Uuid
+  employeeId String      @map("employee_id") @db.Uuid
+  kind       AbsenceKind
+  startsOn   DateTime    @map("starts_on") @db.Date
+  endsOn     DateTime    @map("ends_on") @db.Date
+  /// Demi-journée : « am », « pm » ou null (journée entière).
+  halfDay    String?     @map("half_day")
+  note       String?
+  createdAt  DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdBy  String?     @map("created_by") @db.Uuid
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, employeeId, startsOn])
+  @@map("absences")
+}
+
+// ---------------------------------------------------------------------------
+// Intégrations (07) : état de connexion par tenant et par type
+// ---------------------------------------------------------------------------
+
+enum IntegrationKind {
+  peppol
+  accounting
+  payments
+  attendance
+  ai
+  inbound_email
+}
+
+enum IntegrationStatus {
+  not_connected
+  pending
+  active
+  error
+}
+
+model IntegrationConnection {
+  id            String            @id @default(uuid(7)) @db.Uuid
+  tenantId      String            @map("tenant_id") @db.Uuid
+  kind          IntegrationKind
+  provider      String
+  status        IntegrationStatus @default(not_connected)
+  externalId    String?           @map("external_id")
+  config        Json              @default("{}")
+  secretsEnc    String?           @map("secrets_enc")
+  lastCheckedAt DateTime?         @map("last_checked_at") @db.Timestamptz(3)
+  lastError     String?           @map("last_error")
+  createdAt     DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, kind])
+  @@map("integration_connections")
 }

@@ -9,3 +9,6 @@ export { S3Storage } from './storage/s3';
 export type * from './vat/types';
 export { MockVatValidator } from './vat/mock';
 export { ViesVatValidator } from './vat/vies';
+export type * from './peppol/types';
+export { MockPeppolProvider } from './peppol/mock';
+export * from './mail/templates';

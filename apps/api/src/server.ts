@@ -17,9 +17,15 @@ import { jsonReplacer } from './lib/json';
 import { authPlugin } from './plugins/auth';
 import { errorsPlugin } from './plugins/errors';
 import { idempotencyPlugin } from './plugins/idempotency';
+import { adminRoutes } from './routes/admin';
 import { authRoutes } from './routes/auth';
+import { companyRoutes } from './routes/company';
 import { healthRoutes } from './routes/health';
+import { integrationRoutes } from './routes/integrations';
+import { memberRoutes } from './routes/members';
 import { notificationRoutes } from './routes/notifications';
+import { peopleRoutes } from './routes/people';
+import { profileRoutes } from './routes/profile';
 import { realtimeRoutes } from './routes/realtime';
 
 export interface BuildOptions {
@@ -98,6 +104,12 @@ export async function buildServer(deps: AppDeps, options: BuildOptions = {}): Pr
       await v1.register(authRoutes, { deps });
       await v1.register(notificationRoutes, { deps });
       await v1.register(realtimeRoutes, { deps });
+      await v1.register(profileRoutes, { deps });
+      await v1.register(companyRoutes, { deps });
+      await v1.register(memberRoutes, { deps });
+      await v1.register(peopleRoutes, { deps });
+      await v1.register(integrationRoutes, { deps });
+      await v1.register(adminRoutes, { deps });
       v1.get('/openapi.json', { schema: { hide: true }, config: { rateLimit: false } }, async () =>
         app.swagger(),
       );
