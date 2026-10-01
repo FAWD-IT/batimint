@@ -5,6 +5,15 @@ import { sendInvitation } from './invitations';
 import { leadIntake } from './leads';
 import { memberJoined } from './members';
 import { diagnosticNotification } from './notifications';
+import {
+  budgetDriftWatch,
+  changeOrderEmail,
+  changeOrderSignedProject,
+  commentNotifications,
+  projectPortalShare,
+  projectRealtime,
+  projectTimeline,
+} from './projects';
 import { quoteReminder, quoteSignedProject, quoteTimeline, sendQuoteEmail } from './quotes';
 
 export const CONSUMERS: readonly Consumer[] = [
@@ -17,6 +26,13 @@ export const CONSUMERS: readonly Consumer[] = [
   quoteTimeline,
   quoteSignedProject,
   quoteReminder,
+  changeOrderEmail,
+  changeOrderSignedProject,
+  projectPortalShare,
+  projectTimeline,
+  budgetDriftWatch,
+  commentNotifications,
+  projectRealtime,
   realtimeBroadcast,
 ];
 

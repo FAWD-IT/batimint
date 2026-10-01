@@ -504,6 +504,8 @@ model Customer {
   leads         Lead[]
   quotes        Quote[]
 
+  projects Project[]
+
   @@index([tenantId, status])
   @@index([tenantId, email])
   @@index([tenantId, vatNumber])
@@ -555,6 +557,7 @@ model Site {
   customer      Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
   opportunities Opportunity[]
   quotes        Quote[]
+  projects      Project[]
 
   @@index([tenantId, customerId])
   @@map("sites")
@@ -1096,6 +1099,8 @@ model Project {
 
   tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   quote        Quote?        @relation(fields: [quoteId], references: [id], onDelete: SetNull)
+  customer     Customer      @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  site         Site?         @relation(fields: [siteId], references: [id], onDelete: SetNull)
   budgetLines  BudgetLine[]
   tasks        Task[]
   invoices     Invoice[]
@@ -1267,6 +1272,7 @@ model TimelineEntry {
   @@index([tenantId, projectId, occurredAt])
   @@index([tenantId, quoteId])
   @@index([tenantId, customerId])
+  @@index([tenantId, changeOrderId], map: "timeline_entries_change_order_idx")
   @@map("timeline_entries")
 }
 

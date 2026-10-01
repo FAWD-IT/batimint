@@ -29,6 +29,7 @@ import type { AppDeps } from '../context';
 import { AppError, badRequest, conflict } from '../lib/errors';
 import { iso } from '../lib/tenant';
 import { refreshVersionTotals, renderVersionPdf, totalsDto } from '../services/quotes';
+import { projectLinkFromQuoteToken } from './portal-projects';
 
 const CERTIFICATE_TEXT_VERSION = '2026-1';
 
@@ -209,6 +210,29 @@ export const portalRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (app
         });
       });
       return { ok: true as const };
+    },
+  );
+
+  app.post(
+    '/portal/quotes/:token/project-link',
+    {
+      schema: {
+        tags: ['portail'],
+        summary: 'Après la signature : lien de suivi du chantier',
+        params: tokenParams,
+        response: { 200: z.object({ url: z.string() }) },
+      },
+      config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+    },
+    async (req) => {
+      const t = await resolveToken(deps, req.params.token);
+      const url = await projectLinkFromQuoteToken(deps, t);
+      if (!url)
+        throw conflict(
+          'project_not_ready',
+          'Votre chantier est en cours de création. Réessayez dans un instant.',
+        );
+      return { url };
     },
   );
 

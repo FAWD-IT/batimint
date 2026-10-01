@@ -535,9 +535,11 @@ export type PortalProjectDto = z.infer<typeof PortalProjectSchema>;
 
 export const PortalChangeOrderSignSchema = z.object({
   signerName: z.string().trim().min(2).max(120),
-  signatureImage: z.string().max(200_000).nullable().optional(),
-  acceptTerms: z.literal(true),
+  acceptTerms: z.literal(true, { error: 'Cochez la case pour accepter l’avenant.' }),
+  /** Tracé SVG (path « d ») de la signature manuscrite, facultatif. */
+  signaturePath: z.string().max(60_000).nullable().optional(),
 });
+export const PortalChangeOrderRefuseSchema = z.object({ reason: optText(1000) });
 export const PortalCommentCreateSchema = z.object({
   subjectType: z.enum(['project', 'change_order']),
   subjectId: Uuid,

@@ -247,6 +247,7 @@ export const AttachmentSchema = z
     transcript: z.string().nullable(),
     transcriptStatus: z.string().nullable(),
     visibleToClient: z.boolean(),
+    taskId: Uuid.nullable().optional(),
     createdAt: z.string(),
   })
   .meta({ id: 'Attachment' });

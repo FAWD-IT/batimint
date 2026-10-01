@@ -16,6 +16,8 @@ export interface CommittedCosts {
   stock: Cents;
   equipment: Cents;
   subcontracts: Cents;
+  /** Autres coûts imputés manuellement. */
+  other?: Cents;
 }
 
 export const EMPTY_COMMITTED: CommittedCosts = {
@@ -64,7 +66,15 @@ export function clampRatio(value: DecimalInput): Dec {
 }
 
 export function committedTotal(c: CommittedCosts): Cents {
-  return c.supplierInvoices + c.openPurchaseOrders + c.labour + c.stock + c.equipment + c.subcontracts;
+  return (
+    c.supplierInvoices +
+    c.openPurchaseOrders +
+    c.labour +
+    c.stock +
+    c.equipment +
+    c.subcontracts +
+    (c.other ?? 0n)
+  );
 }
 
 export function projectedCost(budgetedCost: Cents, committed: Cents, progress: DecimalInput): Cents {

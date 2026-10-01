@@ -26,6 +26,8 @@ let listener: pg.Client;
 const received: { channel: string; topic: string; tenantId: string; ref?: string }[] = [];
 const tenantId = uuidv7();
 const userId = uuidv7();
+/** E-mails envoyés par le worker de fond (relais + pg-boss). */
+const bgMailer = new MockMailer();
 const silent = process.env['DEBUG_WORKER']
   ? { info: console.info, warn: console.warn, error: console.error }
   : { info: () => undefined, warn: () => undefined, error: () => undefined };
@@ -41,8 +43,8 @@ beforeAll(async () => {
   });
   const deps = {
     prisma,
-    integrations: createMockIntegrations(),
-    appUrl: 'http://localhost:3000',
+    integrations: createMockIntegrations({ mailer: bgMailer }),
+    appUrl: 'https://app.test',
   };
   listener = new pg.Client({ connectionString: urls.appUrl });
   await listener.connect();
@@ -409,9 +411,7 @@ describe('devis signé → chantier (03 §4 acceptation)', () => {
 describe('relances et échéances des devis', () => {
   it('J+7 sans signature → une relance (une seule) ; validité dépassée → expiré', async () => {
     const { runQuoteMaintenance } = await import('../src/schedules');
-    const { quoteReminder } = await import('../src/consumers/quotes');
-    const mailer = new MockMailer();
-    const deps = { prisma, integrations: createMockIntegrations({ mailer }), appUrl: 'https://app.test' };
+    const deps = { prisma, integrations: createMockIntegrations(), appUrl: 'https://app.test' };
     const now = new Date();
     const [due, old] = await withTenant(prisma, tenantId, userId, async (tx) => {
       const c = await tx.customer.create({
@@ -443,9 +443,240 @@ describe('relances et échéances des devis', () => {
     expect(state.reminders).toHaveLength(1);
     expect(state.due.reminderSentAt).not.toBeNull();
     expect(state.old.status).toBe('expired');
-    expect(await runConsumer(deps, quoteReminder, state.reminders[0]!.id)).toBe('done');
-    const mail = mailer.lastTo('relance@example.be')!;
+    // L'événement est traité par le worker de fond (relais + pg-boss), une seule fois.
+    const mail = await waitFor(() => bgMailer.lastTo('relance@example.be'));
     expect(mail.subject).toMatch(/Rappel : votre devis/);
     expect(mail.text).toMatch(/https:\/\/app\.test\/p\//);
+  });
+});
+
+describe('chantier : avenant signé, dérive, photos (03 §5)', () => {
+  async function project() {
+    return withTenant(prisma, tenantId, userId, async (tx) => {
+      const customer = await tx.customer.create({
+        data: {
+          tenantId,
+          kind: 'individual',
+          status: 'customer',
+          displayName: 'Jean Dupont',
+          email: 'jd-m4@example.be',
+        },
+      });
+      const p = await tx.project.create({
+        data: {
+          tenantId,
+          number: `CH-${uuidv7().slice(-6)}`,
+          name: 'Salle de bain Dupont',
+          customerId: customer.id,
+          status: 'in_progress',
+          contractAmount: 1_000_000n,
+          managerUserId: userId,
+          endDate: new Date('2026-10-09T00:00:00Z'),
+        },
+      });
+      const carrelage = await tx.budgetLine.create({
+        data: {
+          tenantId,
+          projectId: p.id,
+          position: 0,
+          label: 'Carrelage',
+          saleAmount: 500_000n,
+          budgetedCost: 300_000n,
+          laborHours: '10',
+        },
+      });
+      return { p, carrelage };
+    });
+  }
+
+  it('avenant signé : poste existant et nouveau poste, contrat, tâches, date de fin, fil ; rejeu sans double', async () => {
+    const { changeOrderSignedProject } = await import('../src/consumers/projects');
+    const { p, carrelage } = await project();
+    const event = await withTenant(prisma, tenantId, userId, async (tx) => {
+      const co = await tx.changeOrder.create({
+        data: {
+          tenantId,
+          projectId: p.id,
+          ordinal: 1,
+          title: 'Niche et éclairage',
+          status: 'signed',
+          signedAt: new Date(),
+          delayDays: 2,
+          totalNet: 125_000n,
+          totalVat: 7_500n,
+          totalGross: 132_500n,
+          lines: {
+            create: [
+              {
+                tenantId,
+                position: 0,
+                budgetLineId: carrelage.id,
+                description: 'Niche murale',
+                unit: 'u',
+                quantity: '1',
+                unitPrice: 95_000n,
+                unitCost: 60_000n,
+                laborHours: '4',
+                vatRegime: 'reduced_6',
+              },
+              {
+                tenantId,
+                position: 1,
+                newPostLabel: 'Éclairage',
+                description: 'Spot LED',
+                unit: 'u',
+                quantity: '2',
+                unitPrice: 15_000n,
+                unitCost: 8_000n,
+                vatRegime: 'reduced_6',
+              },
+            ],
+          },
+        },
+      });
+      return emitEvent(tx, {
+        tenantId,
+        type: 'change_order.signed.v1',
+        aggregateType: 'project',
+        aggregateId: p.id,
+        payload: { projectId: p.id, changeOrderId: co.id, signatureId: uuidv7() },
+        actor: { type: 'portal', id: uuidv7(), label: 'Jean Dupont' },
+      });
+    });
+    const deps = { prisma, integrations: createMockIntegrations(), appUrl: '' };
+    await runConsumer(deps, changeOrderSignedProject, event.id);
+    await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.timelineEntry.findFirst({ where: { eventId: event.id } }),
+      ),
+    );
+    // Rejeu forcé (sans la garde ProcessedEvent) : la garde métier évite tout double effet.
+    await withTenant(prisma, tenantId, userId, (tx) =>
+      tx.processedEvent.deleteMany({ where: { consumer: 'change-order-signed-project', eventId: event.id } }),
+    );
+    await runConsumer(deps, changeOrderSignedProject, event.id);
+    const state = await withTenant(prisma, tenantId, userId, async (tx) => ({
+      project: await tx.project.findUniqueOrThrow({ where: { id: p.id } }),
+      lines: await tx.budgetLine.findMany({ where: { projectId: p.id }, orderBy: { position: 'asc' } }),
+      tasks: await tx.task.findMany({ where: { projectId: p.id } }),
+      timeline: await tx.timelineEntry.findMany({ where: { projectId: p.id, type: 'change_order.signed' } }),
+      notifications: await tx.notification.findMany({ where: { eventId: event.id } }),
+    }));
+    expect(state.project.contractAmount).toBe(1_125_000n);
+    expect(state.project.endDate?.toISOString().slice(0, 10)).toBe('2026-10-13');
+    expect(state.lines.map((l) => [l.label, l.saleAmount, l.budgetedCost, l.laborHours.toString()])).toEqual([
+      ['Carrelage', 595_000n, 360_000n, '14'],
+      ['Éclairage', 30_000n, 16_000n, '0'],
+    ]);
+    expect(state.lines[1]!.changeOrderId).toBeTruthy();
+    expect(state.tasks.map((t) => [t.title, t.amount]).sort()).toEqual([
+      ['Niche murale', 95_000n],
+      ['Spot LED', 30_000n],
+    ]);
+    expect(state.timeline).toHaveLength(1);
+    expect(state.timeline[0]).toMatchObject({
+      title: 'Avenant n°1 signé par Jean Dupont',
+      amount: 125_000n,
+      visibleToClient: true,
+    });
+    expect(state.notifications.map((n) => n.userId)).toEqual([userId]);
+    expect(received.some((m) => m.channel === `project:${p.id}`)).toBe(true);
+    expect(received.some((m) => m.channel === `portal:project:${p.id}`)).toBe(true);
+  });
+
+  it('un coût qui fait dériver un poste alerte une seule fois', async () => {
+    const { p, carrelage } = await project();
+    const record = (amount: bigint) =>
+      withTenant(prisma, tenantId, userId, async (tx) => {
+        const cost = await tx.projectCost.create({
+          data: {
+            tenantId,
+            projectId: p.id,
+            budgetLineId: carrelage.id,
+            category: 'other',
+            sourceType: 'manual',
+            sourceId: uuidv7(),
+            label: 'Faïence',
+            amount,
+          },
+        });
+        await emitEvent(tx, {
+          tenantId,
+          type: 'project.cost_recorded.v1',
+          aggregateType: 'project',
+          aggregateId: p.id,
+          payload: {
+            projectId: p.id,
+            costId: cost.id,
+            budgetLineId: carrelage.id,
+            category: 'other',
+            amount: String(amount),
+          },
+        });
+      });
+    await record(200_000n); // 67 % du budget : rien
+    await record(140_000n); // 340 000 > 300 000 × 1,10 → dérive
+    const drift = await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.timelineEntry.findFirst({ where: { projectId: p.id, type: 'budget.drift_detected' } }),
+      ),
+    );
+    expect(drift.title).toBe('Le poste Carrelage dépasse son budget de 13 %');
+    await record(10_000n);
+    await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.timelineEntry
+          .count({ where: { projectId: p.id, type: 'project.cost_recorded' } })
+          .then((n) => n === 3),
+      ),
+    );
+    await new Promise((r) => setTimeout(r, 1500));
+    const alerts = await withTenant(prisma, tenantId, userId, (tx) =>
+      tx.outboxEvent.count({ where: { aggregateId: p.id, type: 'budget.drift_detected.v1' } }),
+    );
+    expect(alerts).toBe(1);
+  });
+
+  it('les photos envoyées d’affilée forment une seule entrée « 2 photos »', async () => {
+    const { p } = await project();
+    for (const visible of [true, false])
+      await withTenant(prisma, tenantId, userId, async (tx) => {
+        const a = await tx.attachment.create({
+          data: {
+            tenantId,
+            ownerType: 'project',
+            ownerId: p.id,
+            kind: 'photo',
+            storageKey: `k/${uuidv7()}`,
+            fileName: 'photo.jpg',
+            contentType: 'image/jpeg',
+            sizeBytes: 10,
+            visibleToClient: visible,
+          },
+        });
+        await emitEvent(tx, {
+          tenantId,
+          type: 'attachment.added.v1',
+          aggregateType: 'project',
+          aggregateId: p.id,
+          payload: { attachmentId: a.id, ownerType: 'project', ownerId: p.id, kind: 'photo' },
+          actor: { type: 'user', id: userId, label: 'Karim' },
+        });
+        // Laisse le worker traiter la première photo avant la seconde (ordre réel d'envoi).
+        await new Promise((r) => setTimeout(r, 800));
+      });
+    const entry = await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.timelineEntry.findFirst({
+          where: { projectId: p.id, type: 'photo.added', title: { contains: '2 photos' } },
+        }),
+      ),
+    );
+    expect(entry).toMatchObject({ title: 'Karim a ajouté 2 photos', visibleToClient: true });
+    expect((entry.data as { photoIds: string[] }).photoIds).toHaveLength(2);
+    const count = await withTenant(prisma, tenantId, userId, (tx) =>
+      tx.timelineEntry.count({ where: { projectId: p.id, type: 'photo.added' } }),
+    );
+    expect(count).toBe(1);
   });
 });

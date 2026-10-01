@@ -14,18 +14,21 @@ import { badRequest, forbidden, notFound } from '../lib/errors';
 import { inTenant, iso } from '../lib/tenant';
 
 const MAX_BYTES = 25 * 1024 * 1024;
-const OWNER_TYPES = ['opportunity', 'site_visit', 'customer'] as const;
+const OWNER_TYPES = ['opportunity', 'site_visit', 'customer', 'project'] as const;
 type OwnerType = (typeof OWNER_TYPES)[number];
 
 const WRITE_PERMISSION: Record<OwnerType, Action> = {
   opportunity: 'site_visits.write',
   site_visit: 'site_visits.write',
   customer: 'customers.write',
+  // Les photos de chantier sont ajoutées par le bureau, le chef de chantier et les ouvriers.
+  project: 'tasks.update',
 };
 const READ_PERMISSION: Record<OwnerType, Action> = {
   opportunity: 'leads.read',
   site_visit: 'leads.read',
   customer: 'customers.read',
+  project: 'projects.read',
 };
 
 const ALLOWED =
@@ -46,6 +49,7 @@ export const toAttachmentDto = (a: Row) => ({
   transcript: a.transcript,
   transcriptStatus: a.transcriptStatus,
   visibleToClient: a.visibleToClient,
+  taskId: a.taskId,
   createdAt: a.createdAt.toISOString(),
 });
 
@@ -54,6 +58,8 @@ async function ownerExists(tx: Tx, type: OwnerType, id: string): Promise<boolean
     return Boolean(await tx.opportunity.findUnique({ where: { id }, select: { id: true } }));
   if (type === 'site_visit')
     return Boolean(await tx.siteVisit.findUnique({ where: { id }, select: { id: true } }));
+  if (type === 'project')
+    return Boolean(await tx.project.findUnique({ where: { id }, select: { id: true } }));
   return Boolean(await tx.customer.findUnique({ where: { id }, select: { id: true } }));
 }
 
@@ -79,6 +85,8 @@ export const attachmentRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async 
           lat: z.coerce.number().min(-90).max(90).optional(),
           lng: z.coerce.number().min(-180).max(180).optional(),
           caption: z.string().max(500).optional(),
+          taskId: z.uuid().optional(),
+          visibleToClient: z.stringbool().optional(),
         }),
         response: { 201: AttachmentSchema },
       },
@@ -100,6 +108,14 @@ export const attachmentRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async 
         .slice(0, 120);
       const dto = await inTenant(deps, req, WRITE_PERMISSION[q.ownerType], async ({ tx, auth, actor }) => {
         if (!(await ownerExists(tx, q.ownerType, q.ownerId))) throw notFound('Cet élément');
+        if (q.taskId && q.ownerType !== 'project') throw badRequest('invalid_task', 'Tâche inattendue.');
+        if (
+          q.taskId &&
+          !(await tx.task.findFirst({ where: { id: q.taskId, projectId: q.ownerId }, select: { id: true } }))
+        )
+          throw notFound('Cette tâche');
+        // Seul le bureau décide de ce que le client voit (03 §5).
+        const visibleToClient = Boolean(q.visibleToClient) && can(auth.role, 'projects.write');
         if (q.id) {
           const existing = await tx.attachment.findUnique({ where: { id: q.id } });
           if (existing) return toAttachmentDto(existing);
@@ -124,6 +140,8 @@ export const attachmentRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async 
             longitude: q.lng ?? null,
             caption: q.caption ?? null,
             transcriptStatus: q.kind === 'voice_note' ? 'pending' : null,
+            taskId: q.taskId ?? null,
+            visibleToClient,
             createdBy: auth.userId,
           },
         });
@@ -147,7 +165,12 @@ export const attachmentRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async 
       schema: {
         tags: ['fichiers'],
         summary: "Pièces jointes d'un objet",
-        querystring: z.object({ ownerType: z.enum(OWNER_TYPES), ownerId: z.uuid() }),
+        querystring: z.object({
+          ownerType: z.enum(OWNER_TYPES),
+          ownerId: z.uuid(),
+          taskId: z.uuid().optional(),
+          kind: z.enum(['photo', 'document', 'voice_note']).optional(),
+        }),
         response: { 200: z.object({ items: z.array(AttachmentSchema) }) },
       },
     },
@@ -155,8 +178,13 @@ export const attachmentRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async 
       inTenant(deps, req, READ_PERMISSION[req.query.ownerType], async ({ tx }) => ({
         items: (
           await tx.attachment.findMany({
-            where: { ownerType: req.query.ownerType, ownerId: req.query.ownerId },
-            orderBy: { createdAt: 'desc' },
+            where: {
+              ownerType: req.query.ownerType,
+              ownerId: req.query.ownerId,
+              ...(req.query.taskId ? { taskId: req.query.taskId } : {}),
+              ...(req.query.kind ? { kind: req.query.kind } : {}),
+            },
+            orderBy: [{ takenAt: 'desc' }, { createdAt: 'desc' }],
           })
         ).map(toAttachmentDto),
       })),
@@ -187,6 +215,58 @@ export const attachmentRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async 
     },
   );
 
+  app.patch(
+    '/attachments/:id',
+    {
+      schema: {
+        tags: ['fichiers'],
+        summary: 'Légende, tâche ou visibilité client d’une pièce jointe',
+        params: z.object({ id: z.uuid() }),
+        body: z.object({
+          caption: z.string().trim().max(500).nullable().optional(),
+          visibleToClient: z.boolean().optional(),
+          taskId: z.uuid().nullable().optional(),
+        }),
+        response: { 200: AttachmentSchema },
+      },
+    },
+    (req) =>
+      inTenant(deps, req, null, async ({ tx, auth, actor, audit }) => {
+        const a = await tx.attachment.findUnique({ where: { id: req.params.id } });
+        if (!a) throw notFound('Ce fichier');
+        const b = req.body;
+        const perm = WRITE_PERMISSION[a.ownerType as OwnerType] ?? 'projects.write';
+        if (!can(auth.role, perm)) throw forbidden();
+        if (b.visibleToClient !== undefined && !can(auth.role, 'projects.write')) throw forbidden();
+        if (b.taskId && !(await tx.task.findFirst({ where: { id: b.taskId, projectId: a.ownerId } })))
+          throw notFound('Cette tâche');
+        const updated = await tx.attachment.update({
+          where: { id: a.id },
+          data: {
+            ...(b.caption !== undefined ? { caption: b.caption || null } : {}),
+            ...(b.visibleToClient !== undefined ? { visibleToClient: b.visibleToClient } : {}),
+            ...(b.taskId !== undefined ? { taskId: b.taskId } : {}),
+          },
+        });
+        if (b.visibleToClient !== undefined && b.visibleToClient !== a.visibleToClient) {
+          await audit('attachment.visibility_changed', a.ownerType, a.ownerId, {
+            attachmentId: a.id,
+            visibleToClient: b.visibleToClient,
+          });
+          if (a.ownerType === 'project')
+            await emitEvent(tx, {
+              tenantId: auth.tenantId,
+              type: 'project.updated.v1',
+              aggregateType: 'project',
+              aggregateId: a.ownerId,
+              payload: { projectId: a.ownerId, fields: ['attachments'] },
+              actor,
+            });
+        }
+        return toAttachmentDto(updated);
+      }),
+  );
+
   app.delete(
     '/attachments/:id',
     {
@@ -203,6 +283,9 @@ export const attachmentRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async 
         if (!a) throw notFound('Ce fichier');
         const perm = WRITE_PERMISSION[a.ownerType as OwnerType] ?? 'projects.write';
         if (!can(auth.role, perm)) throw forbidden();
+        // Sur un chantier, l'ouvrier ne supprime que ses propres photos.
+        if (a.ownerType === 'project' && !can(auth.role, 'projects.write') && a.createdBy !== auth.userId)
+          throw forbidden();
         await tx.attachment.delete({ where: { id: a.id } });
         await audit('attachment.deleted', a.ownerType, a.ownerId, { fileName: a.fileName });
         return { ok: true as const };

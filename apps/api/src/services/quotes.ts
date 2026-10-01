@@ -402,7 +402,7 @@ export async function saveQuoteContent(
 // PDF
 // ---------------------------------------------------------------------------
 
-function addressLines(o: { street: string | null; postalCode: string | null; city: string | null }) {
+export function addressLines(o: { street: string | null; postalCode: string | null; city: string | null }) {
   return [o.street, [o.postalCode, o.city].filter(Boolean).join(' ')].filter((x): x is string =>
     Boolean(x && x.trim()),
   );

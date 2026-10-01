@@ -7,7 +7,7 @@
  *  - quote.reminder_due → relance du client à J+7.
  */
 import { createHash, randomBytes } from 'node:crypto';
-import { parseEventPayload, tenantChannel, userChannel } from '@batimint/contracts';
+import { parseEventPayload, tenantChannel } from '@batimint/contracts';
 import { emitEvent, loadVersionContent, nextSequenceValue, type Tx } from '@batimint/db';
 import {
   computeDocumentTotals,
@@ -20,7 +20,8 @@ import {
   type VatRegime,
 } from '@batimint/domain';
 import { buildEmail } from '@batimint/integrations';
-import type { Consumer, ConsumerContext } from '../consumer';
+import type { Consumer } from '../consumer';
+import { dateFr, notify, office } from './shared';
 
 const PORTAL_LINK_DAYS = 120;
 
@@ -44,41 +45,6 @@ async function createPortalLink(
     },
   });
   return `${appUrl}/p/${encodeURIComponent(token)}`;
-}
-
-const dateFr = (d: Date) =>
-  d.toLocaleDateString('fr-BE', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'Europe/Brussels',
-  });
-
-async function office(tx: Tx, tenantId: string, roles: string[] = ['owner', 'admin', 'office']) {
-  return tx.membership.findMany({ where: { tenantId, status: 'active', role: { in: roles as never[] } } });
-}
-
-async function notify(
-  ctx: ConsumerContext,
-  userIds: string[],
-  n: { type: string; title: string; body?: string; link: string },
-): Promise<void> {
-  const ids = [...new Set(userIds)];
-  if (!ids.length) return;
-  await ctx.tx.notification.createMany({
-    data: ids.map((userId) => ({
-      tenantId: ctx.event.tenantId,
-      userId,
-      type: n.type,
-      title: n.title,
-      body: n.body ?? null,
-      link: n.link,
-      eventId: ctx.event.id,
-    })),
-    skipDuplicates: true,
-  });
-  for (const id of ids)
-    await ctx.publish({ channel: userChannel(id), topic: 'notifications', data: { title: n.title } });
 }
 
 export const sendQuoteEmail: Consumer = {
@@ -314,6 +280,7 @@ export const quoteSignedProject: Consumer = {
             quantity: String(l.quantity),
             unit: l.unit,
             plannedHours: lineTotals.get(l.id)?.laborHours.toDecimalPlaces(2).toString() ?? '0',
+            amount: lineTotals.get(l.id)?.netAmount ?? 0n,
           })),
         });
     }

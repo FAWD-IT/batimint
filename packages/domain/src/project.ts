@@ -180,7 +180,8 @@ export type ProjectTodo =
 const SEVERITY_ORDER = { crit: 0, warn: 1, info: 2 } as const;
 
 function daysBetween(from: IsoDate, to: IsoDate): number {
-  return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
+  // Deux minuits UTC : la différence est un multiple exact d'un jour.
+  return (Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000;
 }
 
 /** Construit la liste « À faire » du chantier, triée par gravité puis ancienneté. */
