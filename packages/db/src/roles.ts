@@ -38,11 +38,22 @@ export async function provisionAppRole(
     const sameAsOwner = owner.user === app.user;
     const role = quoteIdent(app.user);
     if (!sameAsOwner) {
-      const exists = await client.query('SELECT 1 FROM pg_roles WHERE rolname = $1', [app.user]);
-      const verb = exists.rowCount ? 'ALTER' : 'CREATE';
-      await client.query(
-        `${verb} ROLE ${role} WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS PASSWORD ${quoteLiteral(app.password)}`,
-      );
+      // Le rôle est global au cluster : deux bases provisionnées en parallèle (suites de tests,
+      // migrations concurrentes) peuvent se heurter (« tuple concurrently updated », rôle déjà créé).
+      for (let attempt = 1; ; attempt++) {
+        try {
+          const exists = await client.query('SELECT 1 FROM pg_roles WHERE rolname = $1', [app.user]);
+          const verb = exists.rowCount ? 'ALTER' : 'CREATE';
+          await client.query(
+            `${verb} ROLE ${role} WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS PASSWORD ${quoteLiteral(app.password)}`,
+          );
+          break;
+        } catch (err) {
+          const code = (err as { code?: string }).code;
+          if (attempt >= 5 || (code !== 'XX000' && code !== '23505' && code !== '42710')) throw err;
+          await new Promise((r) => setTimeout(r, 50 * attempt));
+        }
+      }
       const db = (await client.query<{ db: string }>('SELECT current_database() AS db')).rows[0]!.db;
       await client.query(`GRANT CONNECT ON DATABASE ${quoteIdent(db)} TO ${role}`);
       await client.query(`GRANT USAGE ON SCHEMA public, rls TO ${role}`);

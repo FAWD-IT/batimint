@@ -154,7 +154,7 @@ test.describe('P1 — inscription et mise en route', () => {
     await page.getByRole('button', { name: /Luca Rossi/ }).click();
     await expect(page.getByText('••.••.••-•••.28')).toBeVisible();
     await page.getByRole('button', { name: 'Afficher' }).click();
-    await expect(page.getByText('85.07.30-033.28')).toBeVisible();
+    await expect(page.getByText('85.07.30-033.28', { exact: true })).toBeVisible();
     await page.keyboard.press('Escape');
 
     await page.getByRole('tab', { name: /Équipes/ }).click();
