@@ -199,7 +199,10 @@ export function VisitEditor({ visit, canWrite }: { visit: Visit; canWrite: boole
         {v.measurements.length === 0 ? <p className="text-[14px] text-muted">{t('noMeasurements')}</p> : null}
         <ul className="flex flex-col gap-2">
           {v.measurements.map((m, i) => (
-            <li key={i} className="grid grid-cols-[1fr_88px_72px_auto] items-center gap-2">
+            <li
+              key={i}
+              className="grid grid-cols-[1fr_80px_auto] items-center gap-2 border-b border-line-soft pb-2 last:border-b-0 sm:grid-cols-[1fr_88px_72px_auto] sm:border-b-0 sm:pb-0"
+            >
               <input
                 aria-label={`${t('label')} ${i + 1}`}
                 value={m.label}
@@ -207,7 +210,7 @@ export function VisitEditor({ visit, canWrite }: { visit: Visit; canWrite: boole
                 disabled={!canWrite}
                 placeholder={t('label')}
                 maxLength={80}
-                className="h-11 min-w-0 rounded-[10px] border border-line bg-surface px-3 text-[15px] focus-visible:outline-2 focus-visible:outline-accent"
+                className="col-span-3 h-11 min-w-0 rounded-[10px] border border-line bg-surface px-3 text-[15px] focus-visible:outline-2 focus-visible:outline-accent sm:col-span-1"
               />
               <input
                 aria-label={`${t('value')} ${m.label || i + 1}`}

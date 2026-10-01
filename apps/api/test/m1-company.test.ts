@@ -331,8 +331,10 @@ describe('onboarding et abonnement', () => {
       peppol: true,
       team: true,
       terms: false,
+      library: false,
     });
     await inject(owner, 'PATCH', '/v1/company', { termsAndConditions: 'Conditions générales de vente…' });
+    await inject(owner, 'POST', '/v1/library/starters', { trades: ['electrical'] });
     expect((await inject(owner, 'GET', '/v1/company/onboarding')).json().complete).toBe(true);
   });
 

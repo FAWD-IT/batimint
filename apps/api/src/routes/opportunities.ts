@@ -35,7 +35,7 @@ export function toOpportunityDto(o: OppRow, role: Role, attachmentCount = 0) {
     customerId: o.customerId,
     customerName: o.customer.displayName,
     siteId: o.siteId,
-    siteLabel: o.site ? o.site.label || `${o.site.street}, ${o.site.city}` : null,
+    siteLabel: o.site ? `${o.site.label || o.site.street}, ${o.site.city}` : null,
     title: o.title,
     description: o.description,
     stage: o.stage,

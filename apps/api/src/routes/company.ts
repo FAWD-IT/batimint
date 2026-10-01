@@ -51,6 +51,7 @@ export const ONBOARDING_AVAILABLE: OnboardingStep[] = [
   'branding',
   'terms',
   'rates',
+  'library',
   'peppol',
   'team',
 ];
@@ -323,6 +324,7 @@ export const companyRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (ap
           tx.integrationConnection.findUnique({
             where: { tenantId_kind: { tenantId: auth.tenantId, kind: 'peppol' } },
           }),
+          tx.item.count({ where: { archivedAt: null } }),
         ]);
         const checklist = onboardingChecklist(
           {

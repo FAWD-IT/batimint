@@ -1,6 +1,6 @@
 /**
  * P1 — Inscription et mise en route (Marc, moins de 10 minutes).
- * Hors import de bibliothèque (M2) ; Peppol en simulation.
+ * Peppol en simulation.
  */
 import { expect, type Page, test } from '@playwright/test';
 import { expectNoA11yViolations, lastEmailTo, PASSWORD, signup, uniqueEmail } from './helpers';
@@ -42,7 +42,7 @@ test.describe('P1 — inscription et mise en route', () => {
       .getByRole('region', { name: 'Mise en route' })
       .or(page.locator('[aria-labelledby="onboarding-title"]'));
     await expect(checklist).toBeVisible();
-    await expect(checklist.getByText(/1 sur 7 étapes/)).toBeVisible();
+    await expect(checklist.getByText(/1 sur 8 étapes/)).toBeVisible();
 
     // 3. Logo, IBAN, conditions générales.
     await checklist.getByRole('link', { name: "Ajouter l'IBAN" }).click();
@@ -114,8 +114,23 @@ test.describe('P1 — inscription et mise en route', () => {
     await expect(lucaPage.getByText('Mise en route')).toHaveCount(0);
     await phone.close();
 
-    // Marc est notifié en direct ; la checklist est complète (hors bibliothèque, livrée en M2).
+    // Marc est notifié en direct.
     await expect(page.getByTestId('unread-count')).toBeVisible({ timeout: 15_000 });
+
+    // P1.4 : il importe sa liste de prix (CSV exporté de son ancien tableur).
+    await page.goto('/bibliotheque/import');
+    await page.getByTestId('import-file').setInputFiles({
+      name: 'tarifs.csv',
+      mimeType: 'text/csv',
+      buffer: Buffer.from(
+        'Référence;Désignation;Unité;Prix achat\nCAR-01;Carrelage grès 60x60;m2;34,50\nCOL-01;Colle C2TE 25 kg;pce;18,90\nMO-01;Pose carrelage;m²;22\n',
+      ),
+    });
+    await expect(page.getByText(/3 lignes détectées dans tarifs\.csv/)).toBeVisible();
+    await page.getByRole('button', { name: 'Importer', exact: true }).click();
+    await expect(page.getByText(/Import terminé en/)).toBeVisible();
+
+    // La checklist de mise en route est complète.
     await page.goto('/aujourdhui');
     await expect(page.locator('[aria-labelledby="onboarding-title"]')).toHaveCount(0);
     expect(Date.now() - start).toBeLessThan(10 * 60_000);

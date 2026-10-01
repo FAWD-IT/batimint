@@ -4,6 +4,7 @@
  * Les mots de passe de démo sont documentés dans le README (dev / instance de démo uniquement).
  */
 import { createPrismaClient, withSystem } from '../src/index';
+import { seedCrm } from './seed-crm';
 import { loadEnv } from './env';
 import { hashPassword } from './password';
 
@@ -234,6 +235,7 @@ async function main(): Promise<void> {
           users.set(p.email, user.id);
         }
         await seedPeople(tx, tenant.id, users);
+        await seedCrm(tx, tenant.id, users.get('sophie@renov-habitat.be') ?? null);
       },
       { timeoutMs: 120_000 },
     );

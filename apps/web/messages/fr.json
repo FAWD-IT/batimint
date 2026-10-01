@@ -690,7 +690,15 @@
     "emailInvalid": "Adresse e-mail invalide.",
     "kindLabel": "Type de client",
     "lookupHint": "Nous récupérons le nom et l'adresse officiels (VIES).",
-    "paymentTermsHint": "Vide : délai par défaut de l'entreprise."
+    "paymentTermsHint": "Vide : délai par défaut de l'entreprise.",
+    "sources": {
+      "web_form": "formulaire web",
+      "email": "e-mail",
+      "phone": "téléphone",
+      "manual": "saisie",
+      "recommendation": "recommandation",
+      "merge": "fusion"
+    }
   },
   "leads": {
     "title": "Demandes",
@@ -800,8 +808,8 @@
     "photos": "Photos",
     "addPhoto": "Ajouter des photos",
     "voice": "Note vocale",
-    "record": "Enregistrer",
-    "stop": "Arrêter",
+    "record": "Dicter une note",
+    "stop": "Arrêter la dictée",
     "recording": "Enregistrement… {seconds} s",
     "transcribing": "Transcription en cours…",
     "transcriptFailed": "Transcription indisponible : réécoutez l'enregistrement.",
@@ -928,7 +936,7 @@
     "import": "Importer",
     "edit": "Modifier",
     "search": "Rechercher un article ou un ouvrage (code, désignation)…",
-    "empty": "Votre bibliothèque est vide. Partez d'une bibliothèque type par métier, ou importez votre fichier Excel.",
+    "empty": "Partez d'une bibliothèque type par métier, ou importez votre fichier Excel ou CSV.",
     "starterTitle": "Bibliothèques types",
     "starterDescription": "Des articles et ouvrages aux prix du marché belge, à ajuster ensuite.",
     "install": "Ajouter à ma bibliothèque",

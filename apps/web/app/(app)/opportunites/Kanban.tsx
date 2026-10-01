@@ -4,7 +4,7 @@ import type { OpportunityDto } from '@batimint/contracts';
 import { formatEuros, OPPORTUNITY_STAGES, type OpportunityStage } from '@batimint/domain';
 import { Button, Chip, cn, EmptyState, ErrorState, Skeleton, StatusDot, useToast } from '@batimint/ui';
 import { useQueryClient } from '@tanstack/react-query';
-import { Briefcase, ChevronDown, ClipboardCheck, MapPin, Paperclip } from 'lucide-react';
+import { Briefcase, ArrowRightLeft, ClipboardCheck, MapPin, Paperclip } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { type DragEvent, useEffect, useRef, useState } from 'react';
@@ -307,7 +307,7 @@ function Card({
     >
       <Link
         href={`/opportunites/${o.id}`}
-        className="text-[14px] leading-snug font-semibold after:absolute after:inset-0 after:rounded-[12px] focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-accent"
+        className="pr-8 text-[14px] leading-snug font-semibold after:absolute after:inset-0 after:rounded-[12px] focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-accent"
         draggable={false}
       >
         {o.title}
@@ -372,7 +372,7 @@ function MoveMenu({
   }, [open]);
 
   return (
-    <div className="relative z-10 self-start">
+    <div className="absolute top-2 right-2 z-10">
       <button
         ref={buttonRef}
         type="button"
@@ -380,10 +380,10 @@ function MoveMenu({
         aria-expanded={open}
         aria-label={`${tc('moveTo')} (${title})`}
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex h-8 items-center gap-1 rounded-[8px] px-2 text-[12px] font-medium text-muted hover:bg-line-soft hover:text-ink focus-visible:outline-2 focus-visible:outline-accent"
+        title={tc('moveTo')}
+        className="flex size-8 items-center justify-center rounded-[8px] text-muted hover:bg-line-soft hover:text-ink focus-visible:outline-2 focus-visible:outline-accent"
       >
-        {tc('moveTo')}
-        <ChevronDown aria-hidden className="size-3.5" />
+        <ArrowRightLeft aria-hidden className="size-4" />
       </button>
       {open ? (
         <ul
@@ -404,7 +404,7 @@ function MoveMenu({
               if (e.key === 'Escape') buttonRef.current?.focus();
             }
           }}
-          className="absolute top-9 left-0 w-52 rounded-[12px] border border-line bg-surface p-1 shadow-lg"
+          className="absolute top-9 right-0 w-52 rounded-[12px] border border-line bg-surface p-1 shadow-lg"
         >
           {targets.map((s) => (
             <li key={s} role="none">

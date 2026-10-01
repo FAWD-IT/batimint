@@ -169,7 +169,7 @@ export function Checkbox({
       htmlFor={fieldId}
       className={cn('flex min-h-11 cursor-pointer items-center gap-3 text-[14px]', className)}
     >
-      <input id={fieldId} type="checkbox" className="size-5 accent-[var(--ink)]" {...rest} />
+      <input id={fieldId} type="checkbox" className="size-5 shrink-0 accent-[var(--ink)]" {...rest} />
       <span>{label}</span>
     </label>
   );

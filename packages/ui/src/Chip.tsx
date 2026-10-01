@@ -49,7 +49,14 @@ export function Chip({
 
 export function StatusDot({ tone, className }: { tone: Tone; className?: string }) {
   return (
-    <span aria-hidden className={cn('inline-block size-2 shrink-0 rounded-full', DOTS[tone], className)} />
+    <span
+      aria-hidden
+      className={cn(
+        'inline-block size-2 shrink-0 rounded-full',
+        tone === 'dark' ? 'bg-ink' : DOTS[tone],
+        className,
+      )}
+    />
   );
 }
 

@@ -3,15 +3,12 @@
 Ce fichier est le point de reprise entre sessions cloud. Une nouvelle session doit pouvoir reprendre le travail en ne lisant que lui et `CLAUDE.md`.
 
 ## Jalon en cours
-**M1 — Entreprise et onboarding** — écrans et API livrés, E2E P1 vert (hors import de bibliothèque, livré en M2). Reste : relire les écrans mobiles M1, puis passer à M2.
+**M2 — CRM et bibliothèque** — API, écrans, seed et E2E livrés. Reste : vérifier la CI sur la branche, puis démarrer M3.
 
 (L'étiquette `m0-done` existe localement mais le push de tags est refusé par la politique de la session : seule la branche est poussée.)
 
 ## Prochaine action
-Finir M1 : passe mobile (390×844) sur Paramètres, Équipes, Compte ; puis démarrer M2 (CRM et bibliothèque, ajouter l'étape « bibliothèque » à `ONBOARDING_AVAILABLE` dans `apps/api/src/routes/company.ts`).
-
-### Plan initial de M1 (pour mémoire)
-M1 : paramètres entreprise (BCE/TVA via VIES mock, adresse, IBAN, logo, couleur, CGV, taux horaires, coefficients, pauses, délais, relances, retenue de garantie, séries de numérotation), utilisateurs et invitations (consommateur `user.invited` qui envoie l'e-mail), équipes, employés (INSS chiffré), checklist d'onboarding, page Sécurité (sessions, TOTP — l'API existe déjà), super-admin (tenants, flags, impersonation auditée, files en échec). Puis E2E P1 complet.
+Démarrer M3 (devis et signature) : modèle Quote/QuoteLine/versions dans `packages/db`, calculs dans `packages/domain` (déjà : TVA, arrondis), éditeur de devis depuis l'affaire (`/opportunites/[id]` → carte « Devis »), portail client `/p/[token]`.
 
 ## Relancer l'environnement
 ```bash
@@ -54,6 +51,17 @@ docker compose -f docker-compose.coolify.yml -f docker/docker-compose.sandbox.ym
 - Seed : CGV, couleur, profils horaires, Peppol actif, 8 employés en 2 équipes, congés.
 - Tests : 35 intégration API, 66 domaine, 5 worker ; E2E P1 (Marc paramètre et invite ; Luca accepte sur mobile), équipes/INSS, compte.
 
+### M2 — CRM et bibliothèque ✅
+- Clients (particuliers / entreprises) : recherche floue instantanée (pg_trgm + unaccent), VIES, alerte de doublon (e-mail, TVA, téléphone) avec « Créer quand même », fusion, archivage, contacts, adresses de chantier (logement privé, âge → « 6 % possible »), Peppol joignable, historique unifié.
+- Demandes : formulaire public intégrable `/f/{slug}` (+ `/embed.js`), e-mail entrant (webhook signé HMAC), saisie ; le consommateur `lead-intake` crée ou retrouve le prospect, ouvre l'affaire et notifie le bureau en direct. Paramètres → Formulaire web (lien, code d'intégration, aperçu, adresse de réception).
+- Pipeline kanban : glisser-déposer, alternative clavier « Déplacer vers… », motif de perte obligatoire, « Annuler », totaux par colonne, temps réel (ADR 0011).
+- Visite technique (mobile d'abord) : modèles de points à vérifier par métier, mesures, notes, photos compressées côté navigateur, note vocale (MediaRecorder ou fichier) transcrite par le worker (IA mock).
+- Bibliothèque : recherche instantanée, filtres, tiroir article/ouvrage avec prix de vente et marge en direct, ouvrages composés, historique des prix, archivage annulable, bibliothèques types (4 métiers), import Excel/CSV en 3 étapes (mapping proposé, vérification, rapport) — 2 000 lignes < 30 s (test d'intégration).
+- Onboarding : étape « Bibliothèque » ajoutée à la checklist (8 étapes).
+- Seed : 4 bibliothèques types, 40 clients (28 particuliers, M. Dupont, 11 entreprises dont ACP, commune, ASBL), 17 affaires à toutes les étapes, demandes, visite de Karim chez M. Dupont.
+- Outillage : `apps/web/scripts/check-messages.mjs` (dans `pnpm lint`) vérifie que toute clé de traduction utilisée existe.
+- Tests : 11 intégration API M2, consommateur lead-intake ; E2E P2.1 (formulaire → pipeline en direct, deux navigateurs), clients/VIES/doublon, pipeline clavier/perte/annuler, bibliothèque (type, recherche, marge, ouvrage), P2.2 sur mobile (photo, note vocale transcrite, pas de débordement horizontal), P1 complet avec import CSV.
+
 ## Reste à faire
 M1 → M13 selon `docs/11-plan-de-livraison.md`.
 
@@ -81,5 +89,10 @@ M1 → M13 selon `docs/11-plan-de-livraison.md`.
 - Régime intracommunautaire pour un client assujetti étranger (proposé automatiquement, `domain/vat.ts`)
 
 ## Améliorations repérées en jouant les parcours
+- M2 · Karim (mobile) · visite : la barre « Modifications non enregistrées » débordait de l'écran à 390 px → libellé masqué et boutons pleine largeur sur téléphone.
+- M2 · Karim (mobile) · visite : photos et note vocale étaient tout en bas → affichées juste après l'adresse sur téléphone ; libellés de mesure sur leur propre ligne.
+- M2 · Sophie · bibliothèque : prestations au temps à 0,00 € dans les bibliothèques types → temps × taux de référence.
+- M2 · Sophie · pipeline : bouton « Déplacer vers… » encombrant sur chaque carte → icône discrète en coin (toujours accessible au clavier).
+- M2 · Sophie · « Enregistrer » ambigu (note vocale / visite) → « Dicter une note ».
 - M0 · Luca (Ouvrier) · Paramètres : le lien menait à une page sans rien d'utilisable → lien et page conditionnés aux sections autorisées.
 - M0 · tous · police : l'import Google Fonts cassait le CSS et posait un problème RGPD → Geist embarquée.

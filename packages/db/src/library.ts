@@ -2,9 +2,20 @@
  * Opérations de bibliothèque partagées (API, seed) : installation des bibliothèques types,
  * recalcul du prix de revient des ouvrages.
  */
-import { type CostableItem, computeItemCost, eurosToCents, type ItemKind } from '@batimint/domain';
+import {
+  type CostableItem,
+  computeItemCost,
+  eurosToCents,
+  type ItemKind,
+  multiplyCents,
+} from '@batimint/domain';
 import type { Tx } from './client';
-import { STARTER_LIBRARIES, type StarterTrade, TRADE_DEPENDENCIES } from './data/starter-libraries';
+import {
+  DEFAULT_LABOUR_RATE_EUROS,
+  STARTER_LIBRARIES,
+  type StarterTrade,
+  TRADE_DEPENDENCIES,
+} from './data/starter-libraries';
 
 type ItemWithComponents = Awaited<ReturnType<typeof loadAssembly>>;
 
@@ -98,7 +109,11 @@ export async function installStarterLibraries(
         code: r[0],
         name: r[1],
         unit: r[2],
-        purchasePrice: eurosToCents(r[3]),
+        // Prestation au temps sans prix propre : temps de pose × taux horaire de référence.
+        purchasePrice:
+          r[3] === 0 && r[4] === 'labour'
+            ? multiplyCents(eurosToCents(DEFAULT_LABOUR_RATE_EUROS), r[5].toString())
+            : eurosToCents(r[3]),
         kind: r[4],
         laborHours: r[5].toString(),
         category: r[6],

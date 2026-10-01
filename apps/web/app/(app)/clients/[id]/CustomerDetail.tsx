@@ -72,6 +72,8 @@ const TIMELINE_ICONS: Record<TimelineItem['type'], typeof Inbox> = {
   invoice: Briefcase,
 };
 
+const SOURCES = new Set(['web_form', 'email', 'phone', 'manual', 'recommendation', 'merge']);
+
 export function CustomerDetail({ id }: { id: string }) {
   const t = useTranslations('customers');
   const tp = useTranslations('pipeline');
@@ -167,7 +169,11 @@ export function CustomerDetail({ id }: { id: string }) {
             <Chip>{t(`kind.${c.kind}`)}</Chip>
             {c.kind === 'company' && c.vatLiable ? <Chip>{t('b2b')}</Chip> : null}
             {c.source ? (
-              <span className="text-[13px] text-muted">{t('sourceLabel', { source: c.source })}</span>
+              <span className="text-[13px] text-muted">
+                {t('sourceLabel', {
+                  source: SOURCES.has(c.source) ? t(`sources.${c.source}`) : c.source,
+                })}
+              </span>
             ) : null}
           </span>
         }

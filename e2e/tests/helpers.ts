@@ -79,3 +79,11 @@ export async function lastEmailTo(
   }
   throw new Error(`Aucun e-mail pour ${address}`);
 }
+
+/** Sur téléphone, rien ne doit dépasser de l'écran (pas de défilement horizontal). */
+export async function expectNoHorizontalOverflow(page: Page) {
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  expect(overflow, 'débordement horizontal (px)').toBeLessThanOrEqual(1);
+}

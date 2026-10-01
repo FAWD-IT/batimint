@@ -40,7 +40,7 @@ export function StarterLibraries({ compact = false }: { compact?: boolean }) {
               <Checkbox
                 label={
                   <span>
-                    <span className="font-semibold">{s.label}</span>
+                    <span className="font-semibold">{s.label}</span>{' '}
                     <span className="ml-2 text-muted">{t('items', { count: s.itemCount })}</span>
                     {!compact ? <span className="block text-[13px] text-muted">{s.description}</span> : null}
                   </span>

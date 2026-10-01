@@ -164,9 +164,10 @@ export function OpportunityDetail({ id }: { id: string }) {
         </Notice>
       ) : null}
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_400px]">
-        <div className="flex min-w-0 flex-col gap-6">
-          <Card className="flex flex-col gap-3">
+      {/* Sur téléphone : adresse, puis photos et notes vocales, puis la visite (P2.2). */}
+      <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[1fr_400px] lg:items-start">
+        <div className="contents lg:flex lg:min-w-0 lg:flex-col lg:gap-6">
+          <Card className="order-1 flex flex-col gap-3 lg:order-none">
             <Overline>{t('site')}</Overline>
             {siteRow ? (
               <>
@@ -197,37 +198,39 @@ export function OpportunityDetail({ id }: { id: string }) {
             {o.description ? <p className="text-[14px] whitespace-pre-line">{o.description}</p> : null}
           </Card>
 
-          {visit ? (
-            <VisitEditor key={visit.id} visit={visit} canWrite={canVisit} />
-          ) : (
-            <Card className="flex flex-col items-start gap-3">
-              <CardTitle>{tv('title')}</CardTitle>
-              <p className="text-[14px] text-muted">{tv('none')}</p>
-              {canVisit ? (
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    size="lg"
-                    icon={<ClipboardCheck aria-hidden className="size-5" />}
-                    loading={startVisit.isPending}
-                    onClick={() => startVisit.mutate({ trade: o.trade })}
-                  >
-                    {tv('start')}
-                  </Button>
-                  <Button
-                    size="lg"
-                    variant="secondary"
-                    icon={<CalendarPlus aria-hidden className="size-5" />}
-                    onClick={() => setDialog('plan')}
-                  >
-                    {tv('plan')}
-                  </Button>
-                </div>
-              ) : null}
-            </Card>
-          )}
+          <div className="order-3 flex min-w-0 flex-col gap-6 lg:order-none">
+            {visit ? (
+              <VisitEditor key={visit.id} visit={visit} canWrite={canVisit} />
+            ) : (
+              <Card className="flex flex-col items-start gap-3">
+                <CardTitle>{tv('title')}</CardTitle>
+                <p className="text-[14px] text-muted">{tv('none')}</p>
+                {canVisit ? (
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      size="lg"
+                      icon={<ClipboardCheck aria-hidden className="size-5" />}
+                      loading={startVisit.isPending}
+                      onClick={() => startVisit.mutate({ trade: o.trade })}
+                    >
+                      {tv('start')}
+                    </Button>
+                    <Button
+                      size="lg"
+                      variant="secondary"
+                      icon={<CalendarPlus aria-hidden className="size-5" />}
+                      onClick={() => setDialog('plan')}
+                    >
+                      {tv('plan')}
+                    </Button>
+                  </div>
+                ) : null}
+              </Card>
+            )}
+          </div>
         </div>
 
-        <aside className="flex min-w-0 flex-col gap-6">
+        <aside className="order-2 flex min-w-0 flex-col gap-6 lg:order-none">
           <MediaPanel ownerType="opportunity" ownerId={o.id} canWrite={canVisit} />
           {can('quotes.read') ? (
             <Card className="flex flex-col gap-2">

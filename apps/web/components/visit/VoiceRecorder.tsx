@@ -95,6 +95,7 @@ export function VoiceRecorder({
           ref={fileInput}
           type="file"
           accept="audio/*"
+          data-testid="voice-input"
           className="hidden"
           aria-hidden
           tabIndex={-1}

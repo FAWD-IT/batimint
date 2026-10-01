@@ -105,7 +105,7 @@ export function Segmented<T extends string>({
     <div
       role="tablist"
       aria-label={label}
-      className="inline-flex rounded-[12px] border border-line bg-surface p-1"
+      className="inline-flex w-fit max-w-full shrink-0 rounded-[12px] border border-line bg-surface p-1"
     >
       {options.map((o) => (
         <button

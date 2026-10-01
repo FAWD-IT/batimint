@@ -32,6 +32,9 @@ export interface StarterLibrary {
   assemblies: StarterAssembly[];
 }
 
+/** Coût horaire de référence pour les prestations de main-d'œuvre sans prix propre (temps × taux). */
+export const DEFAULT_LABOUR_RATE_EUROS = 36;
+
 const LABOUR: Row[] = [
   ['MO-OUV', 'Main-d’œuvre ouvrier qualifié', 'h', 36, 'labour', 1, 'Main-d’œuvre'],
   ['MO-CHEF', 'Main-d’œuvre chef de chantier', 'h', 44, 'labour', 1, 'Main-d’œuvre'],
