@@ -25,8 +25,18 @@ export function AppShell({ children }: { children: ReactNode }) {
       </a>
       <Sidebar />
       {menuOpen ? (
-        <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label={t('nav.main')}>
-          <button type="button" aria-label={t('nav.closeMenu')} className="absolute inset-0 bg-black/40" onClick={() => setMenuOpen(false)} />
+        <div
+          className="fixed inset-0 z-40 lg:hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-label={t('nav.main')}
+        >
+          <button
+            type="button"
+            aria-label={t('nav.closeMenu')}
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setMenuOpen(false)}
+          />
           <div className="absolute inset-y-0 left-0 w-[280px] bg-panel text-white">
             <button
               type="button"
@@ -54,11 +64,17 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Logo />
           </span>
           {me.impersonating ? (
-            <span className="rounded-full bg-warn px-3 py-1 text-[12px] font-semibold text-white">{t('nav.impersonating')}</span>
+            <span className="rounded-full bg-warn px-3 py-1 text-[12px] font-semibold text-white">
+              {t('nav.impersonating')}
+            </span>
           ) : null}
           <div className="ml-auto flex items-center gap-3">
             <span className="hidden sm:inline-flex">
-              <LiveIndicator label={t('common.live')} offlineLabel={t('common.reconnecting')} connected={connected} />
+              <LiveIndicator
+                label={t('common.live')}
+                offlineLabel={t('common.reconnecting')}
+                connected={connected}
+              />
             </span>
             <NotificationsBell />
           </div>

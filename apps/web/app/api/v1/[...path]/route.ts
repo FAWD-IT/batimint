@@ -18,9 +18,18 @@ const FORWARDED_REQUEST_HEADERS = [
   'x-request-id',
 ];
 
-const DROPPED_RESPONSE_HEADERS = new Set(['connection', 'keep-alive', 'transfer-encoding', 'content-encoding', 'content-length']);
+const DROPPED_RESPONSE_HEADERS = new Set([
+  'connection',
+  'keep-alive',
+  'transfer-encoding',
+  'content-encoding',
+  'content-length',
+]);
 
-async function forward(request: NextRequest, { params }: { params: Promise<{ path: string[] }> }): Promise<Response> {
+async function forward(
+  request: NextRequest,
+  { params }: { params: Promise<{ path: string[] }> },
+): Promise<Response> {
   const { path } = await params;
   const base = process.env['API_INTERNAL_URL'] ?? 'http://localhost:4000';
   const target = new URL(`/v1/${path.map(encodeURIComponent).join('/')}`, base);
@@ -31,10 +40,14 @@ async function forward(request: NextRequest, { params }: { params: Promise<{ pat
     const value = request.headers.get(name);
     if (value) headers.set(name, value);
   }
-  const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? request.headers.get('x-real-ip');
+  const clientIp =
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? request.headers.get('x-real-ip');
   if (clientIp) headers.set('x-forwarded-for', clientIp);
   headers.set('x-forwarded-host', request.headers.get('x-forwarded-host') ?? request.nextUrl.host);
-  headers.set('x-forwarded-proto', request.headers.get('x-forwarded-proto') ?? request.nextUrl.protocol.replace(':', ''));
+  headers.set(
+    'x-forwarded-proto',
+    request.headers.get('x-forwarded-proto') ?? request.nextUrl.protocol.replace(':', ''),
+  );
 
   const hasBody = !['GET', 'HEAD'].includes(request.method);
   let upstream: Response;
@@ -51,7 +64,12 @@ async function forward(request: NextRequest, { params }: { params: Promise<{ pat
     });
   } catch {
     return Response.json(
-      { error: { code: 'api_unreachable', message: 'Le service est momentanément indisponible. Réessayez dans un instant.' } },
+      {
+        error: {
+          code: 'api_unreachable',
+          message: 'Le service est momentanément indisponible. Réessayez dans un instant.',
+        },
+      },
       { status: 503 },
     );
   }

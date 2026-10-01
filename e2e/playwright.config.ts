@@ -21,10 +21,20 @@ export default defineConfig({
     timezoneId: 'Europe/Brussels',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
-    launchOptions: process.env['PLAYWRIGHT_CHROMIUM_PATH'] ? { executablePath: process.env['PLAYWRIGHT_CHROMIUM_PATH'] } : {},
+    launchOptions: process.env['PLAYWRIGHT_CHROMIUM_PATH']
+      ? { executablePath: process.env['PLAYWRIGHT_CHROMIUM_PATH'] }
+      : {},
   },
   projects: [
-    { name: 'desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } }, grepInvert: /@mobile/ },
-    { name: 'mobile', use: { ...devices['Pixel 7'], viewport: { width: 390, height: 844 } }, grep: /@mobile/ },
+    {
+      name: 'desktop',
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
+      grepInvert: /@mobile/,
+    },
+    {
+      name: 'mobile',
+      use: { ...devices['Pixel 7'], viewport: { width: 390, height: 844 } },
+      grep: /@mobile/,
+    },
   ],
 });

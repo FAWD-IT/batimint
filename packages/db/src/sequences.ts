@@ -5,7 +5,12 @@
  */
 import type { Tx } from './client';
 
-export async function nextSequenceValue(tx: Tx, tenantId: string, docType: string, year: number): Promise<number> {
+export async function nextSequenceValue(
+  tx: Tx,
+  tenantId: string,
+  docType: string,
+  year: number,
+): Promise<number> {
   const rows = await tx.$queryRaw<{ last_value: number }[]>`
     INSERT INTO number_sequences (tenant_id, doc_type, year, last_value, updated_at)
     VALUES (${tenantId}::uuid, ${docType}, ${year}, 1, now())

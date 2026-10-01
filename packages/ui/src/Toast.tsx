@@ -1,6 +1,15 @@
 'use client';
 
-import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  createContext,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { cn } from './cn';
 
 export type ToastTone = 'neutral' | 'good' | 'crit' | 'accent';
@@ -40,7 +49,10 @@ export function ToastProvider({ children, closeLabel }: { children: ReactNode; c
   return (
     <ToastContext.Provider value={api}>
       {children}
-      <div aria-live="polite" className="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex flex-col items-center gap-2 px-4 md:right-6 md:left-auto md:items-end">
+      <div
+        aria-live="polite"
+        className="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex flex-col items-center gap-2 px-4 md:right-6 md:left-auto md:items-end"
+      >
         {items.map((t) => (
           <ToastView key={t.id} item={t} onDismiss={() => dismiss(t.id)} closeLabel={closeLabel} />
         ))}
@@ -49,12 +61,25 @@ export function ToastProvider({ children, closeLabel }: { children: ReactNode; c
   );
 }
 
-function ToastView({ item, onDismiss, closeLabel }: { item: ToastItem; onDismiss: () => void; closeLabel: string }) {
+function ToastView({
+  item,
+  onDismiss,
+  closeLabel,
+}: {
+  item: ToastItem;
+  onDismiss: () => void;
+  closeLabel: string;
+}) {
   useEffect(() => {
     const timer = setTimeout(onDismiss, item.durationMs ?? (item.action ? 5000 : 4000));
     return () => clearTimeout(timer);
   }, [item, onDismiss]);
-  const accent = { neutral: 'bg-white/40', good: 'bg-[#3DBE73]', crit: 'bg-[#EF6B5E]', accent: 'bg-[#7D93FF]' }[item.tone ?? 'neutral'];
+  const accent = {
+    neutral: 'bg-white/40',
+    good: 'bg-[#3DBE73]',
+    crit: 'bg-[#EF6B5E]',
+    accent: 'bg-[#7D93FF]',
+  }[item.tone ?? 'neutral'];
   return (
     <div
       role={item.tone === 'crit' ? 'alert' : 'status'}
@@ -83,7 +108,15 @@ function ToastView({ item, onDismiss, closeLabel }: { item: ToastItem; onDismiss
         onClick={onDismiss}
         className="flex size-8 items-center justify-center rounded-[8px] text-[#B8B8B8] hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-[#7D93FF]"
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden>
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.2"
+          aria-hidden
+        >
           <path d="M6 6l12 12M18 6L6 18" />
         </svg>
       </button>

@@ -19,7 +19,9 @@ describe('intégrations mock (règle n°5 : tout tourne sans clé)', () => {
   it('le stockage refuse l’écrasement d’un document légal', async () => {
     const s = new MemoryStorage();
     await s.put({ bucket: 'legal', key: 'f.pdf', body: 'a', contentType: 'application/pdf' });
-    await expect(s.put({ bucket: 'legal', key: 'f.pdf', body: 'b', contentType: 'application/pdf' })).rejects.toThrow();
+    await expect(
+      s.put({ bucket: 'legal', key: 'f.pdf', body: 'b', contentType: 'application/pdf' }),
+    ).rejects.toThrow();
     await s.put({ bucket: 'uploads', key: 'p.jpg', body: 'a', contentType: 'image/jpeg' });
     await s.put({ bucket: 'uploads', key: 'p.jpg', body: 'b', contentType: 'image/jpeg' });
     expect(new TextDecoder().decode(await s.get('uploads', 'p.jpg'))).toBe('b');

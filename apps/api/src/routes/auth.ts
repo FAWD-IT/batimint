@@ -62,7 +62,12 @@ export const authRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (app, 
   app.post(
     '/auth/signup',
     {
-      schema: { tags: ['auth'], summary: 'Créer un compte et son entreprise', body: SignupRequestSchema, response: { 201: LoginResponseSchema } },
+      schema: {
+        tags: ['auth'],
+        summary: 'Créer un compte et son entreprise',
+        body: SignupRequestSchema,
+        response: { 201: LoginResponseSchema },
+      },
       config: authRateLimit,
     },
     async (req, reply) => {
@@ -75,7 +80,12 @@ export const authRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (app, 
   app.post(
     '/auth/login',
     {
-      schema: { tags: ['auth'], summary: 'Connexion par e-mail et mot de passe', body: LoginRequestSchema, response: { 200: LoginResponseSchema } },
+      schema: {
+        tags: ['auth'],
+        summary: 'Connexion par e-mail et mot de passe',
+        body: LoginRequestSchema,
+        response: { 200: LoginResponseSchema },
+      },
       config: authRateLimit,
     },
     async (req, reply) => {
@@ -98,7 +108,15 @@ export const authRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (app, 
 
   app.post(
     '/auth/magic-link',
-    { schema: { tags: ['auth'], summary: 'Recevoir un lien de connexion', body: MagicLinkRequestSchema, response: { 200: OkSchema } }, config: authRateLimit },
+    {
+      schema: {
+        tags: ['auth'],
+        summary: 'Recevoir un lien de connexion',
+        body: MagicLinkRequestSchema,
+        response: { 200: OkSchema },
+      },
+      config: authRateLimit,
+    },
     async (req) => {
       await requestMagicLink(deps, req.body.email);
       return { ok: true as const };
@@ -107,7 +125,15 @@ export const authRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (app, 
 
   app.post(
     '/auth/magic-link/verify',
-    { schema: { tags: ['auth'], summary: 'Se connecter avec un lien magique', body: TokenRequestSchema, response: { 200: LoginResponseSchema } }, config: authRateLimit },
+    {
+      schema: {
+        tags: ['auth'],
+        summary: 'Se connecter avec un lien magique',
+        body: TokenRequestSchema,
+        response: { 200: LoginResponseSchema },
+      },
+      config: authRateLimit,
+    },
     async (req, reply) => {
       const session = await verifyMagicLink(deps, req.body.token, meta(req));
       setSessionCookie(reply, session);
@@ -117,7 +143,15 @@ export const authRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (app, 
 
   app.post(
     '/auth/password/forgot',
-    { schema: { tags: ['auth'], summary: 'Demander une réinitialisation', body: MagicLinkRequestSchema, response: { 200: OkSchema } }, config: authRateLimit },
+    {
+      schema: {
+        tags: ['auth'],
+        summary: 'Demander une réinitialisation',
+        body: MagicLinkRequestSchema,
+        response: { 200: OkSchema },
+      },
+      config: authRateLimit,
+    },
     async (req) => {
       await requestPasswordReset(deps, req.body.email);
       return { ok: true as const };
@@ -126,7 +160,15 @@ export const authRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (app, 
 
   app.post(
     '/auth/password/reset',
-    { schema: { tags: ['auth'], summary: 'Choisir un nouveau mot de passe', body: PasswordResetConfirmSchema, response: { 200: LoginResponseSchema } }, config: authRateLimit },
+    {
+      schema: {
+        tags: ['auth'],
+        summary: 'Choisir un nouveau mot de passe',
+        body: PasswordResetConfirmSchema,
+        response: { 200: LoginResponseSchema },
+      },
+      config: authRateLimit,
+    },
     async (req, reply) => {
       const session = await resetPassword(deps, req.body.token, req.body.password, meta(req));
       setSessionCookie(reply, session);
@@ -134,13 +176,28 @@ export const authRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (app, 
     },
   );
 
-  app.get('/me', { schema: { tags: ['auth'], summary: 'Utilisateur courant, entreprise active et permissions', response: { 200: MeResponseSchema } } }, async (req) =>
-    buildMe(deps, requireAuth(req)),
+  app.get(
+    '/me',
+    {
+      schema: {
+        tags: ['auth'],
+        summary: 'Utilisateur courant, entreprise active et permissions',
+        response: { 200: MeResponseSchema },
+      },
+    },
+    async (req) => buildMe(deps, requireAuth(req)),
   );
 
   app.post(
     '/auth/switch-tenant',
-    { schema: { tags: ['auth'], summary: "Changer d'entreprise active", body: SwitchTenantSchema, response: { 200: OkSchema } } },
+    {
+      schema: {
+        tags: ['auth'],
+        summary: "Changer d'entreprise active",
+        body: SwitchTenantSchema,
+        response: { 200: OkSchema },
+      },
+    },
     async (req) => {
       await switchTenant(deps.prisma, requireAuth(req), req.body.tenantId);
       return { ok: true as const };
@@ -149,7 +206,13 @@ export const authRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (app, 
 
   app.get(
     '/auth/sessions',
-    { schema: { tags: ['auth'], summary: 'Sessions ouvertes', response: { 200: z.object({ items: z.array(SessionInfoSchema) }) } } },
+    {
+      schema: {
+        tags: ['auth'],
+        summary: 'Sessions ouvertes',
+        response: { 200: z.object({ items: z.array(SessionInfoSchema) }) },
+      },
+    },
     async (req) => {
       const auth = requireAuth(req);
       const sessions = await listSessions(deps.prisma, auth.userId);
@@ -168,7 +231,14 @@ export const authRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (app, 
 
   app.delete(
     '/auth/sessions/:id',
-    { schema: { tags: ['auth'], summary: 'Révoquer une session', params: z.object({ id: z.uuid() }), response: { 200: OkSchema } } },
+    {
+      schema: {
+        tags: ['auth'],
+        summary: 'Révoquer une session',
+        params: z.object({ id: z.uuid() }),
+        response: { 200: OkSchema },
+      },
+    },
     async (req) => {
       const auth = requireAuth(req);
       if (!(await revokeSession(deps.prisma, auth.userId, req.params.id))) throw notFound('Cette session');
@@ -178,13 +248,26 @@ export const authRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (app, 
 
   app.post(
     '/auth/totp/setup',
-    { schema: { tags: ['auth'], summary: 'Préparer la double authentification', response: { 200: z.object({ secret: z.string(), otpauthUrl: z.string() }) } } },
+    {
+      schema: {
+        tags: ['auth'],
+        summary: 'Préparer la double authentification',
+        response: { 200: z.object({ secret: z.string(), otpauthUrl: z.string() }) },
+      },
+    },
     async (req) => totpSetup(deps, requireAuth(req)),
   );
 
   app.post(
     '/auth/totp/enable',
-    { schema: { tags: ['auth'], summary: 'Activer la double authentification', body: TotpVerifySchema, response: { 200: OkSchema } } },
+    {
+      schema: {
+        tags: ['auth'],
+        summary: 'Activer la double authentification',
+        body: TotpVerifySchema,
+        response: { 200: OkSchema },
+      },
+    },
     async (req) => {
       await totpEnable(deps, requireAuth(req), req.body.code);
       return { ok: true as const };
@@ -193,7 +276,14 @@ export const authRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (app, 
 
   app.post(
     '/auth/totp/disable',
-    { schema: { tags: ['auth'], summary: 'Désactiver la double authentification', body: TotpVerifySchema, response: { 200: OkSchema } } },
+    {
+      schema: {
+        tags: ['auth'],
+        summary: 'Désactiver la double authentification',
+        body: TotpVerifySchema,
+        response: { 200: OkSchema },
+      },
+    },
     async (req) => {
       await totpDisable(deps, requireAuth(req), req.body.code);
       return { ok: true as const };

@@ -5,7 +5,12 @@
 import Decimal from 'decimal.js';
 
 /** Décimal exact, arrondi « half away from zero » (arrondi commercial, EN 16931). */
-export const Dec = Decimal.clone({ precision: 50, rounding: Decimal.ROUND_HALF_UP, toExpNeg: -30, toExpPos: 40 });
+export const Dec = Decimal.clone({
+  precision: 50,
+  rounding: Decimal.ROUND_HALF_UP,
+  toExpNeg: -30,
+  toExpPos: 40,
+});
 export type Dec = InstanceType<typeof Dec>;
 export type DecimalInput = Dec | string | number | bigint;
 
@@ -35,7 +40,8 @@ export function dec(value: DecimalInput): Dec {
 export function cents(value: bigint | number | string): Cents {
   if (typeof value === 'bigint') return value;
   if (typeof value === 'number') {
-    if (!Number.isSafeInteger(value)) throw new MoneyError(`Un montant en centimes doit être un entier : ${value}`);
+    if (!Number.isSafeInteger(value))
+      throw new MoneyError(`Un montant en centimes doit être un entier : ${value}`);
     return BigInt(value);
   }
   if (!/^-?\d+$/.test(value.trim())) throw new MoneyError(`Montant en centimes invalide : « ${value} »`);
@@ -134,7 +140,10 @@ const NBSP = ' ';
 /**
  * Formate un montant en euros, à la belge (« 1 234,56 € »). Exact pour tout bigint.
  */
-export function formatEuros(value: Cents, options: { withSymbol?: boolean; decimals?: boolean } = {}): string {
+export function formatEuros(
+  value: Cents,
+  options: { withSymbol?: boolean; decimals?: boolean } = {},
+): string {
   const { withSymbol = true, decimals = true } = options;
   const negative = value < 0n;
   let abs = negative ? -value : value;

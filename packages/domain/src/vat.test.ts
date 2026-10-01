@@ -20,10 +20,20 @@ describe('05 §4 — arrondis EN 16931', () => {
     expect(line.grossAmount).toBe(43738n);
     expect(line.netAmount).toBe(43738n);
     // Remise de 10 % arrondie séparément : 43,738 → 43,74
-    const discounted = computeLine({ quantity: '12.5', unitPrice: 3499n, discountPercent: '10', vatRegime: 'standard_21' });
+    const discounted = computeLine({
+      quantity: '12.5',
+      unitPrice: 3499n,
+      discountPercent: '10',
+      vatRegime: 'standard_21',
+    });
     expect(discounted.allowanceAmount).toBe(4374n);
     expect(discounted.netAmount).toBe(39364n);
-    const withAmount = computeLine({ quantity: 1, unitPrice: 10000n, discountAmount: 500n, vatRegime: 'reduced_6' });
+    const withAmount = computeLine({
+      quantity: 1,
+      unitPrice: 10000n,
+      discountAmount: 500n,
+      vatRegime: 'reduced_6',
+    });
     expect(withAmount.netAmount).toBe(9500n);
   });
 
@@ -110,33 +120,49 @@ describe('05 §3 — détermination automatique du régime de TVA', () => {
   it('logement de moins de 10 ans, âge inconnu ou non résidentiel → 21 %', () => {
     expect(determineVatRegime({ ...base, dwellingAgeYears: 9 }).regime).toBe('standard_21');
     expect(determineVatRegime(base).regime).toBe('standard_21');
-    expect(determineVatRegime({ ...base, isPrivateDwelling: false, dwellingAgeYears: 50 }).regime).toBe('standard_21');
+    expect(determineVatRegime({ ...base, isPrivateDwelling: false, dwellingAgeYears: 50 }).regime).toBe(
+      'standard_21',
+    );
   });
 
   it('entreprise non déposante (ex. ASBL, assujetti exonéré) → pas d’autoliquidation', () => {
     expect(
-      determineVatRegime({ ...base, customerKind: 'company', customerFilesPeriodicVatReturns: false, isPrivateDwelling: false })
-        .regime,
+      determineVatRegime({
+        ...base,
+        customerKind: 'company',
+        customerFilesPeriodicVatReturns: false,
+        isPrivateDwelling: false,
+      }).regime,
     ).toBe('standard_21');
   });
 
   it('assujetti étranger → intracommunautaire', () => {
     expect(
-      determineVatRegime({ ...base, customerKind: 'company', customerFilesPeriodicVatReturns: true, customerCountry: 'fr' })
-        .regime,
+      determineVatRegime({
+        ...base,
+        customerKind: 'company',
+        customerFilesPeriodicVatReturns: true,
+        customerCountry: 'fr',
+      }).regime,
     ).toBe('intra_community');
   });
 
   it('services hors travaux immobiliers → 21 %', () => {
     expect(
-      determineVatRegime({ ...base, customerKind: 'company', customerFilesPeriodicVatReturns: true, isImmovableWork: false })
-        .regime,
+      determineVatRegime({
+        ...base,
+        customerKind: 'company',
+        customerFilesPeriodicVatReturns: true,
+        isImmovableWork: false,
+      }).regime,
     ).toBe('standard_21');
   });
 
   it('sans attestation signée, le 6 % ne peut pas être émis', () => {
     const lines = [{ vatRegime: 'reduced_6' as const }, { vatRegime: 'standard_21' as const }];
-    expect(vatIssuanceBlockers(lines, { reducedRateCertificateSigned: false })).toEqual(['reduced_rate_certificate_missing']);
+    expect(vatIssuanceBlockers(lines, { reducedRateCertificateSigned: false })).toEqual([
+      'reduced_rate_certificate_missing',
+    ]);
     expect(vatIssuanceBlockers(lines, { reducedRateCertificateSigned: true })).toEqual([]);
   });
 
@@ -147,7 +173,11 @@ describe('05 §3 — détermination automatique du régime de TVA', () => {
       error: 'justification_required',
     });
     expect(
-      validateVatOverride({ suggested: 'reduced_6', chosen: 'standard_21', justification: 'Logement de 8 ans' }),
+      validateVatOverride({
+        suggested: 'reduced_6',
+        chosen: 'standard_21',
+        justification: 'Logement de 8 ans',
+      }),
     ).toEqual({ ok: true });
   });
 });

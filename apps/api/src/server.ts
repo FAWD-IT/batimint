@@ -36,9 +36,17 @@ export async function buildServer(deps: AppDeps, options: BuildOptions = {}): Pr
         : {
             level: config.LOG_LEVEL,
             redact: ['req.headers.authorization', 'req.headers.cookie', 'res.headers["set-cookie"]'],
-            ...(config.isProduction ? {} : { transport: { target: 'pino-pretty', options: { translateTime: 'HH:MM:ss', ignore: 'pid,hostname' } } }),
+            ...(config.isProduction
+              ? {}
+              : {
+                  transport: {
+                    target: 'pino-pretty',
+                    options: { translateTime: 'HH:MM:ss', ignore: 'pid,hostname' },
+                  },
+                }),
           }),
-    genReqId: (req) => (typeof req.headers['x-request-id'] === 'string' ? req.headers['x-request-id'] : uuidv7()),
+    genReqId: (req) =>
+      typeof req.headers['x-request-id'] === 'string' ? req.headers['x-request-id'] : uuidv7(),
     trustProxy: config.TRUST_PROXY || config.isProduction,
     bodyLimit: 2 * 1024 * 1024,
   }).withTypeProvider<ZodTypeProvider>();
@@ -46,7 +54,10 @@ export async function buildServer(deps: AppDeps, options: BuildOptions = {}): Pr
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(createSerializerCompiler({ replacer: jsonReplacer }));
 
-  await app.register(helmet, { contentSecurityPolicy: false, crossOriginResourcePolicy: { policy: 'same-site' } });
+  await app.register(helmet, {
+    contentSecurityPolicy: false,
+    crossOriginResourcePolicy: { policy: 'same-site' },
+  });
   await app.register(cors, { origin: config.allowedOrigins, credentials: true });
   await app.register(cookie, { secret: config.SESSION_SECRET });
   await app.register(rateLimit, {
@@ -87,7 +98,9 @@ export async function buildServer(deps: AppDeps, options: BuildOptions = {}): Pr
       await v1.register(authRoutes, { deps });
       await v1.register(notificationRoutes, { deps });
       await v1.register(realtimeRoutes, { deps });
-      v1.get('/openapi.json', { schema: { hide: true }, config: { rateLimit: false } }, async () => app.swagger());
+      v1.get('/openapi.json', { schema: { hide: true }, config: { rateLimit: false } }, async () =>
+        app.swagger(),
+      );
     },
     { prefix: '/v1' },
   );

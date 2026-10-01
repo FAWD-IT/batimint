@@ -28,7 +28,11 @@ export async function runConsumer(deps: WorkerDeps, consumer: Consumer, eventId:
       event,
       deps,
       publish: async (message) => {
-        const payload = JSON.stringify({ ...message, tenantId: event.tenantId, at: new Date().toISOString() });
+        const payload = JSON.stringify({
+          ...message,
+          tenantId: event.tenantId,
+          at: new Date().toISOString(),
+        });
         await tx.$executeRaw`SELECT pg_notify(${REALTIME_PG_CHANNEL}, ${payload})`;
       },
     });

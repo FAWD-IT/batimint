@@ -1,7 +1,17 @@
 import { Card } from '@batimint/ui';
 import type { ReactNode } from 'react';
 
-export function AuthCard({ title, subtitle, children, footer }: { title: string; subtitle?: string; children: ReactNode; footer?: ReactNode }) {
+export function AuthCard({
+  title,
+  subtitle,
+  children,
+  footer,
+}: {
+  title: string;
+  subtitle?: string;
+  children: ReactNode;
+  footer?: ReactNode;
+}) {
   return (
     <div className="flex flex-col gap-4">
       <Card className="flex flex-col gap-6 p-6 md:p-8">

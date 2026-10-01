@@ -28,7 +28,8 @@ export async function api<T>(path: string, options: ApiOptions = {}): Promise<T>
   const method = options.method ?? (options.body === undefined ? 'GET' : 'POST');
   const headers: Record<string, string> = { accept: 'application/json' };
   if (options.body !== undefined) headers['content-type'] = 'application/json';
-  if (method !== 'GET' && options.idempotencyKey !== false) headers['idempotency-key'] = options.idempotencyKey ?? uuidv7();
+  if (method !== 'GET' && options.idempotencyKey !== false)
+    headers['idempotency-key'] = options.idempotencyKey ?? uuidv7();
   let res: Response;
   try {
     res = await fetch(`/api/v1${path}`, {

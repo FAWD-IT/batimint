@@ -42,7 +42,12 @@ export class SmtpMailer implements Mailer {
       });
       return { messageId: info.messageId };
     } catch (err) {
-      throw new IntegrationError('smtp', "L'e-mail n'a pas pu être envoyé. Le serveur d'envoi ne répond pas.", true, err);
+      throw new IntegrationError(
+        'smtp',
+        "L'e-mail n'a pas pu être envoyé. Le serveur d'envoi ne répond pas.",
+        true,
+        err,
+      );
     }
   }
 }

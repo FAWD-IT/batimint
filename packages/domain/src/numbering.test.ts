@@ -10,8 +10,12 @@ import {
 
 describe('05 §2 — numérotation continue par série et par année', () => {
   it('formate selon le modèle', () => {
-    expect(formatDocumentNumber(DEFAULT_NUMBER_PATTERNS.invoice, { year: 2026, sequence: 118 })).toBe('2026-118');
-    expect(formatDocumentNumber(DEFAULT_NUMBER_PATTERNS.quote, { year: 2026, sequence: 7 })).toBe('D2026-007');
+    expect(formatDocumentNumber(DEFAULT_NUMBER_PATTERNS.invoice, { year: 2026, sequence: 118 })).toBe(
+      '2026-118',
+    );
+    expect(formatDocumentNumber(DEFAULT_NUMBER_PATTERNS.quote, { year: 2026, sequence: 7 })).toBe(
+      'D2026-007',
+    );
     expect(formatDocumentNumber('F{YY}/{SEQ:5}', { year: 2027, sequence: 42 })).toBe('F27/00042');
     expect(formatDocumentNumber('{SEQ}', { year: 2027, sequence: 1234 })).toBe('1234');
   });

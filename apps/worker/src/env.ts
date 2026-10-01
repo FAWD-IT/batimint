@@ -4,7 +4,10 @@ import { fileURLToPath } from 'node:url';
 /** En développement, charge le .env racine sans écraser l'environnement existant. */
 export function loadDotEnv(): void {
   if (process.env['NODE_ENV'] === 'production') return;
-  const candidates = [new URL('../../../../.env', import.meta.url), new URL('../../../.env', import.meta.url)];
+  const candidates = [
+    new URL('../../../../.env', import.meta.url),
+    new URL('../../../.env', import.meta.url),
+  ];
   for (const c of candidates) {
     const path = fileURLToPath(c);
     if (!existsSync(path)) continue;

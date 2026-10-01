@@ -7,7 +7,12 @@ import { Uuid } from './common';
 
 export const EventPayloads = {
   'diagnostic.ping.v1': z.object({ requestedBy: Uuid, message: z.string().max(200) }),
-  'user.invited.v1': z.object({ invitationId: Uuid, email: z.string(), role: z.string(), invitedBy: Uuid.nullable() }),
+  'user.invited.v1': z.object({
+    invitationId: Uuid,
+    email: z.string(),
+    role: z.string(),
+    invitedBy: Uuid.nullable(),
+  }),
   'tenant.created.v1': z.object({ tenantId: Uuid, ownerUserId: Uuid }),
 } as const;
 

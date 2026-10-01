@@ -15,7 +15,8 @@ export function Providers({ children }: { children: ReactNode }) {
           queries: {
             staleTime: 30_000,
             refetchOnWindowFocus: true,
-            retry: (count, err) => !(err instanceof ApiError && err.status >= 400 && err.status < 500) && count < 2,
+            retry: (count, err) =>
+              !(err instanceof ApiError && err.status >= 400 && err.status < 500) && count < 2,
           },
         },
       }),

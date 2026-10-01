@@ -23,7 +23,7 @@ export function quantityToString(value: DecimalInput): string {
 export function formatQuantity(value: DecimalInput, maxDecimals = 2): string {
   const d = dec(value).toDecimalPlaces(maxDecimals, Dec.ROUND_HALF_UP);
   const [int = '0', frac] = d.abs().toFixed().split('.');
-  const grouped = int.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  const grouped = int.replace(/\B(?=(\d{3})+(?!\d))/g, '\u202f');
   return `${d.isNegative() ? '−' : ''}${grouped}${frac ? `,${frac}` : ''}`;
 }
 
@@ -32,5 +32,5 @@ export function formatPercent(ratioValue: DecimalInput, decimals = 1): string {
   const pct = dec(ratioValue).times(100).toDecimalPlaces(decimals, Dec.ROUND_HALF_UP);
   const [int = '0', frac] = pct.abs().toFixed(decimals).split('.');
   const body = frac && /[1-9]/.test(frac) ? `${int},${frac.replace(/0+$/, '')}` : int;
-  return `${pct.isNegative() ? '−' : ''}${body} %`;
+  return `${pct.isNegative() ? '−' : ''}${body}\u202f%`;
 }

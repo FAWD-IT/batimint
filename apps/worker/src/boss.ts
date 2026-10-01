@@ -54,13 +54,26 @@ export async function registerConsumers(
           try {
             const result = await runConsumer(deps, consumer, job.data.eventId);
             logger.info(
-              { consumer: consumer.name, eventId: job.data.eventId, type: job.data.type, result, ms: Date.now() - started },
+              {
+                consumer: consumer.name,
+                eventId: job.data.eventId,
+                type: job.data.type,
+                result,
+                ms: Date.now() - started,
+              },
               'événement traité',
             );
             results.push({ id: job.id, status: 'completed', output: { result } });
           } catch (err) {
-            logger.error({ err, consumer: consumer.name, eventId: job.data.eventId }, 'échec du consommateur (nouvel essai programmé)');
-            results.push({ id: job.id, status: 'failed', output: { message: err instanceof Error ? err.message : String(err) } });
+            logger.error(
+              { err, consumer: consumer.name, eventId: job.data.eventId },
+              'échec du consommateur (nouvel essai programmé)',
+            );
+            results.push({
+              id: job.id,
+              status: 'failed',
+              output: { message: err instanceof Error ? err.message : String(err) },
+            });
           }
         }
         return results;

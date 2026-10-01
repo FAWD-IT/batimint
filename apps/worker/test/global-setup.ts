@@ -3,5 +3,5 @@ import { loadDotEnv } from '../src/env';
 
 export default async function setup(): Promise<void> {
   loadDotEnv();
-  await prepareTestDatabase();
+  await prepareTestDatabase('worker');
 }

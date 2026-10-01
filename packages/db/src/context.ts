@@ -53,6 +53,10 @@ export function withTenant<T>(
   return withContext(prisma, { tenantId, userId }, fn, options);
 }
 
-export function withSystem<T>(prisma: PrismaClient, fn: (tx: Tx) => Promise<T>, options?: TxOptions): Promise<T> {
+export function withSystem<T>(
+  prisma: PrismaClient,
+  fn: (tx: Tx) => Promise<T>,
+  options?: TxOptions,
+): Promise<T> {
   return withContext(prisma, { system: true }, fn, options);
 }

@@ -22,9 +22,25 @@ const DOTS: Record<Tone, string> = {
 };
 
 /** Pastille : la couleur porte un état et est toujours doublée d'un libellé (08). */
-export function Chip({ tone = 'neutral', dot = false, children, className }: { tone?: Tone; dot?: boolean; children: ReactNode; className?: string }) {
+export function Chip({
+  tone = 'neutral',
+  dot = false,
+  children,
+  className,
+}: {
+  tone?: Tone;
+  dot?: boolean;
+  children: ReactNode;
+  className?: string;
+}) {
   return (
-    <span className={cn('inline-flex h-6 items-center gap-1.5 rounded-full border px-2.5 text-[12px] font-medium whitespace-nowrap', TONES[tone], className)}>
+    <span
+      className={cn(
+        'inline-flex h-6 items-center gap-1.5 rounded-full border px-2.5 text-[12px] font-medium whitespace-nowrap',
+        TONES[tone],
+        className,
+      )}
+    >
       {dot ? <span aria-hidden className={cn('size-1.5 rounded-full', DOTS[tone])} /> : null}
       {children}
     </span>
@@ -32,18 +48,34 @@ export function Chip({ tone = 'neutral', dot = false, children, className }: { t
 }
 
 export function StatusDot({ tone, className }: { tone: Tone; className?: string }) {
-  return <span aria-hidden className={cn('inline-block size-2 shrink-0 rounded-full', DOTS[tone], className)} />;
+  return (
+    <span aria-hidden className={cn('inline-block size-2 shrink-0 rounded-full', DOTS[tone], className)} />
+  );
 }
 
 /** Indicateur « En direct » : l'accent est réservé au live (08). */
-export function LiveIndicator({ label, connected = true, offlineLabel }: { label: string; connected?: boolean; offlineLabel?: string }) {
+export function LiveIndicator({
+  label,
+  connected = true,
+  offlineLabel,
+}: {
+  label: string;
+  connected?: boolean;
+  offlineLabel?: string;
+}) {
   return (
     <span className="inline-flex items-center gap-2 text-[12px] font-semibold" role="status">
       <span className="relative flex size-2">
-        {connected ? <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent opacity-60 motion-reduce:hidden" /> : null}
-        <span className={cn('relative inline-flex size-2 rounded-full', connected ? 'bg-accent' : 'bg-muted')} />
+        {connected ? (
+          <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent opacity-60 motion-reduce:hidden" />
+        ) : null}
+        <span
+          className={cn('relative inline-flex size-2 rounded-full', connected ? 'bg-accent' : 'bg-muted')}
+        />
       </span>
-      <span className={connected ? 'text-accent' : 'text-muted'}>{connected ? label : (offlineLabel ?? label)}</span>
+      <span className={connected ? 'text-accent' : 'text-muted'}>
+        {connected ? label : (offlineLabel ?? label)}
+      </span>
     </span>
   );
 }

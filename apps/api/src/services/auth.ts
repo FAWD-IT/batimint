@@ -64,7 +64,11 @@ async function uniqueSlug(tx: Tx, base: string): Promise<string> {
 }
 
 /** P1.1 — inscription : utilisateur + entreprise + appartenance Owner + session. */
-export async function signup(deps: AppDeps, input: SignupRequest, meta: RequestMeta): Promise<CreatedSession & { tenantId: string; userId: string }> {
+export async function signup(
+  deps: AppDeps,
+  input: SignupRequest,
+  meta: RequestMeta,
+): Promise<CreatedSession & { tenantId: string; userId: string }> {
   const passwordHash = await hashPassword(input.password);
   return withSystem(deps.prisma, async (tx) => {
     const existing = await tx.user.findUnique({ where: { email: input.email } });
@@ -86,7 +90,9 @@ export async function signup(deps: AppDeps, input: SignupRequest, meta: RequestM
         email: input.email,
       },
     });
-    await tx.membership.create({ data: { tenantId: tenant.id, userId: user.id, role: 'owner', createdBy: user.id } });
+    await tx.membership.create({
+      data: { tenantId: tenant.id, userId: user.id, role: 'owner', createdBy: user.id },
+    });
     const actor = { type: 'user' as const, id: user.id, label: user.name };
     await writeAudit(tx, {
       tenantId: tenant.id,
@@ -133,12 +139,20 @@ export async function login(
   const user = await withSystem(deps.prisma, (tx) => tx.user.findUnique({ where: { email: input.email } }));
   const ok = await verifyPassword(input.password, user?.passwordHash);
   if (!user || !ok) {
-    throw new AppError(401, 'invalid_credentials', 'E-mail ou mot de passe incorrect. Vérifiez la saisie, ou recevez un lien de connexion par e-mail.');
+    throw new AppError(
+      401,
+      'invalid_credentials',
+      'E-mail ou mot de passe incorrect. Vérifiez la saisie, ou recevez un lien de connexion par e-mail.',
+    );
   }
   if (user.totpEnabledAt && user.totpSecretEnc) {
     if (!input.totp) return { status: 'mfa_required' };
     if (!verifyTotp(deps.cipher.decrypt(user.totpSecretEnc), input.totp)) {
-      throw new AppError(401, 'invalid_totp', "Code de vérification incorrect. Utilisez le code affiché maintenant dans votre application d'authentification.");
+      throw new AppError(
+        401,
+        'invalid_totp',
+        "Code de vérification incorrect. Utilisez le code affiché maintenant dans votre application d'authentification.",
+      );
     }
   }
   const session = await withSystem(deps.prisma, async (tx) => {
@@ -168,7 +182,9 @@ export async function requestMagicLink(deps: AppDeps, email: string): Promise<vo
   });
   if (!user) return;
   const link = `${deps.config.APP_URL}/connexion/lien?token=${encodeURIComponent(token)}`;
-  await deps.integrations.mailer.send(renderEmail('magicLink', { to: email, name: user.name, link, minutes: MAGIC_LINK_TTL_MIN }));
+  await deps.integrations.mailer.send(
+    renderEmail('magicLink', { to: email, name: user.name, link, minutes: MAGIC_LINK_TTL_MIN }),
+  );
 }
 
 async function consumeAuthToken(tx: Tx, token: string, purpose: 'magic_link' | 'password_reset') {
@@ -186,10 +202,17 @@ async function consumeAuthToken(tx: Tx, token: string, purpose: 'magic_link' | '
   return row as typeof row & { userId: string };
 }
 
-export async function verifyMagicLink(deps: AppDeps, token: string, meta: RequestMeta): Promise<CreatedSession> {
+export async function verifyMagicLink(
+  deps: AppDeps,
+  token: string,
+  meta: RequestMeta,
+): Promise<CreatedSession> {
   return withSystem(deps.prisma, async (tx) => {
     const row = await consumeAuthToken(tx, token, 'magic_link');
-    await tx.user.update({ where: { id: row.userId }, data: { emailVerifiedAt: new Date(), lastLoginAt: new Date() } });
+    await tx.user.update({
+      where: { id: row.userId },
+      data: { emailVerifiedAt: new Date(), lastLoginAt: new Date() },
+    });
     return createSession(tx, row.userId, await firstActiveTenantId(tx, row.userId), meta);
   });
 }
@@ -212,24 +235,40 @@ export async function requestPasswordReset(deps: AppDeps, email: string): Promis
   });
   if (!user) return;
   const link = `${deps.config.APP_URL}/mot-de-passe/nouveau?token=${encodeURIComponent(token)}`;
-  await deps.integrations.mailer.send(renderEmail('passwordReset', { to: email, name: user.name, link, minutes: RESET_TTL_MIN }));
+  await deps.integrations.mailer.send(
+    renderEmail('passwordReset', { to: email, name: user.name, link, minutes: RESET_TTL_MIN }),
+  );
 }
 
 /** Réinitialisation : nouveau mot de passe, toutes les sessions existantes sont révoquées. */
-export async function resetPassword(deps: AppDeps, token: string, password: string, meta: RequestMeta): Promise<CreatedSession> {
+export async function resetPassword(
+  deps: AppDeps,
+  token: string,
+  password: string,
+  meta: RequestMeta,
+): Promise<CreatedSession> {
   const passwordHash = await hashPassword(password);
   return withSystem(deps.prisma, async (tx) => {
     const row = await consumeAuthToken(tx, token, 'password_reset');
     await tx.user.update({ where: { id: row.userId }, data: { passwordHash, emailVerifiedAt: new Date() } });
-    await tx.session.updateMany({ where: { userId: row.userId, revokedAt: null }, data: { revokedAt: new Date() } });
+    await tx.session.updateMany({
+      where: { userId: row.userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
     return createSession(tx, row.userId, await firstActiveTenantId(tx, row.userId), meta);
   });
 }
 
 /** Résout une session à partir du jeton (cookie ou Bearer). */
-export async function resolveSession(prisma: PrismaClient, token: string): Promise<Omit<AuthContext, 'via'> | null> {
+export async function resolveSession(
+  prisma: PrismaClient,
+  token: string,
+): Promise<Omit<AuthContext, 'via'> | null> {
   return withSystem(prisma, async (tx) => {
-    const session = await tx.session.findUnique({ where: { tokenHash: sha256(token) }, include: { user: true } });
+    const session = await tx.session.findUnique({
+      where: { tokenHash: sha256(token) },
+      include: { user: true },
+    });
     if (!session || session.revokedAt || session.expiresAt < new Date()) return null;
     let role: Role | null = null;
     let tenantId: string | null = null;
@@ -262,9 +301,16 @@ export async function resolveSession(prisma: PrismaClient, token: string): Promi
   });
 }
 
-export async function revokeSession(prisma: PrismaClient, userId: string, sessionId: string): Promise<boolean> {
+export async function revokeSession(
+  prisma: PrismaClient,
+  userId: string,
+  sessionId: string,
+): Promise<boolean> {
   const res = await withContext(prisma, { userId }, (tx) =>
-    tx.session.updateMany({ where: { id: sessionId, userId, revokedAt: null }, data: { revokedAt: new Date() } }),
+    tx.session.updateMany({
+      where: { id: sessionId, userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    }),
   );
   return res.count > 0;
 }
@@ -280,8 +326,11 @@ export async function listSessions(prisma: PrismaClient, userId: string) {
 
 export async function switchTenant(prisma: PrismaClient, auth: AuthContext, tenantId: string): Promise<void> {
   await withContext(prisma, { userId: auth.userId }, async (tx) => {
-    const m = await tx.membership.findUnique({ where: { tenantId_userId: { tenantId, userId: auth.userId } } });
-    if (!m || m.status !== 'active') throw badRequest('not_a_member', "Vous n'êtes pas membre de cette entreprise.");
+    const m = await tx.membership.findUnique({
+      where: { tenantId_userId: { tenantId, userId: auth.userId } },
+    });
+    if (!m || m.status !== 'active')
+      throw badRequest('not_a_member', "Vous n'êtes pas membre de cette entreprise.");
     await tx.session.update({ where: { id: auth.sessionId }, data: { activeTenantId: tenantId } });
   });
 }
@@ -294,7 +343,10 @@ export async function buildMe(deps: AppDeps, auth: AuthContext): Promise<MeRespo
       include: { tenant: true },
       orderBy: { createdAt: 'asc' },
     });
-    const toSummary = (t: { id: string; name: string; slug: string; logoKey: string | null; brandColor: string | null }, role: Role): TenantSummary => ({
+    const toSummary = (
+      t: { id: string; name: string; slug: string; logoKey: string | null; brandColor: string | null },
+      role: Role,
+    ): TenantSummary => ({
       id: t.id,
       name: t.name,
       slug: t.slug,
@@ -328,7 +380,10 @@ export async function buildMe(deps: AppDeps, auth: AuthContext): Promise<MeRespo
 
 // --- TOTP (2FA optionnel) -------------------------------------------------------
 
-export async function totpSetup(deps: AppDeps, auth: AuthContext): Promise<{ secret: string; otpauthUrl: string }> {
+export async function totpSetup(
+  deps: AppDeps,
+  auth: AuthContext,
+): Promise<{ secret: string; otpauthUrl: string }> {
   const secret = new OTPAuth.Secret({ size: 20 });
   const totp = new OTPAuth.TOTP({ issuer: 'Batimint', label: auth.email, secret, digits: 6, period: 30 });
   await withContext(deps.prisma, { userId: auth.userId }, (tx) =>
@@ -343,7 +398,11 @@ export async function totpSetup(deps: AppDeps, auth: AuthContext): Promise<{ sec
 export async function totpEnable(deps: AppDeps, auth: AuthContext, code: string): Promise<void> {
   await withContext(deps.prisma, { userId: auth.userId }, async (tx) => {
     const user = await tx.user.findUniqueOrThrow({ where: { id: auth.userId } });
-    if (!user.totpSecretEnc) throw badRequest('totp_not_setup', "Commencez par scanner le QR code dans votre application d'authentification.");
+    if (!user.totpSecretEnc)
+      throw badRequest(
+        'totp_not_setup',
+        "Commencez par scanner le QR code dans votre application d'authentification.",
+      );
     if (!verifyTotp(deps.cipher.decrypt(user.totpSecretEnc), code)) {
       throw badRequest('invalid_totp', 'Code incorrect. Vérifiez l’heure de votre téléphone et réessayez.');
     }

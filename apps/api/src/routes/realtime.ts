@@ -30,7 +30,11 @@ export const realtimeRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (a
     },
     async (req, reply) => {
       const auth = requireTenant(req);
-      const channels = new Set<string>([userChannel(auth.userId), tenantChannel(auth.tenantId), `tenant:${auth.tenantId}:inbox`]);
+      const channels = new Set<string>([
+        userChannel(auth.userId),
+        tenantChannel(auth.tenantId),
+        `tenant:${auth.tenantId}:inbox`,
+      ]);
       for (const c of req.query.channels?.split(',') ?? []) {
         // Les canaux projet sont autorisés pour les membres du tenant ; la RLS garantit que
         // les données rechargées ensuite appartiennent bien au tenant.

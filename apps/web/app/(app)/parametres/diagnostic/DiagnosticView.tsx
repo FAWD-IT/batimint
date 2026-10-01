@@ -22,7 +22,9 @@ export function DiagnosticView() {
   const [step, setStep] = useState<Step>('idle');
   const [error, setError] = useState<string | null>(null);
   const [roundTrip, setRoundTrip] = useState<number | null>(null);
-  const pending = useRef<{ eventId: string; started: number; timer: ReturnType<typeof setTimeout> } | null>(null);
+  const pending = useRef<{ eventId: string; started: number; timer: ReturnType<typeof setTimeout> } | null>(
+    null,
+  );
 
   useRealtimeListener((msg) => {
     const p = pending.current;

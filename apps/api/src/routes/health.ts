@@ -6,7 +6,10 @@ import type { AppDeps } from '../context';
 export const healthRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (app, { deps }) => {
   app.get(
     '/health',
-    { schema: { hide: true, response: { 200: z.object({ status: z.literal('ok') }) } }, config: { rateLimit: false } },
+    {
+      schema: { hide: true, response: { 200: z.object({ status: z.literal('ok') }) } },
+      config: { rateLimit: false },
+    },
     async () => ({ status: 'ok' as const }),
   );
 
@@ -26,8 +29,10 @@ export const healthRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (app
       const checks: Record<string, string> = {};
       let fatal = false;
       try {
-        const rows = await withSystem(deps.prisma, (tx) =>
-          tx.$queryRaw<{ ok: boolean }[]>`SELECT to_regclass('public.outbox_events') IS NOT NULL AS ok`,
+        const rows = await withSystem(
+          deps.prisma,
+          (tx) =>
+            tx.$queryRaw<{ ok: boolean }[]>`SELECT to_regclass('public.outbox_events') IS NOT NULL AS ok`,
         );
         checks['database'] = 'ok';
         checks['migrations'] = rows[0]?.ok ? 'ok' : 'missing';

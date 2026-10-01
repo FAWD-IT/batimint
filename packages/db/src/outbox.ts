@@ -32,7 +32,9 @@ const EVENT_TYPE = /^[a-z_]+(\.[a-z_]+)+\.v\d+$/;
 
 /** Sérialise un payload pour JSONB (bigint → chaîne). */
 export function toJsonValue(value: unknown): Prisma.InputJsonValue {
-  return JSON.parse(JSON.stringify(value, (_k, v: unknown) => (typeof v === 'bigint' ? v.toString() : v))) as Prisma.InputJsonValue;
+  return JSON.parse(
+    JSON.stringify(value, (_k, v: unknown) => (typeof v === 'bigint' ? v.toString() : v)),
+  ) as Prisma.InputJsonValue;
 }
 
 export async function emitEvent<P>(tx: Tx, event: NewEvent<P>): Promise<StoredEvent<P>> {

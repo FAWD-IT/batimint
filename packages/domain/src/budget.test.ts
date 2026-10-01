@@ -13,7 +13,14 @@ import {
 describe('04 — calcul budgétaire', () => {
   it('engagé = somme de toutes les sources de coût', () => {
     expect(
-      committedTotal({ supplierInvoices: 1n, openPurchaseOrders: 2n, labour: 3n, stock: 4n, equipment: 5n, subcontracts: 6n }),
+      committedTotal({
+        supplierInvoices: 1n,
+        openPurchaseOrders: 2n,
+        labour: 3n,
+        stock: 4n,
+        equipment: 5n,
+        subcontracts: 6n,
+      }),
     ).toBe(21n);
   });
 
@@ -66,14 +73,25 @@ describe('04 — calcul budgétaire', () => {
     const f = computeProjectFinancials([]);
     expect(f.plannedMargin).toBeNull();
     expect(f.progress.toString()).toBe('0');
-    const line = computeBudgetLine({ id: 'x', revenue: 0n, budgetedCost: 0n, committed: EMPTY_COMMITTED, progress: 0 });
+    const line = computeBudgetLine({
+      id: 'x',
+      revenue: 0n,
+      budgetedCost: 0n,
+      committed: EMPTY_COMMITTED,
+      progress: 0,
+    });
     expect(line.consumption).toBeNull();
   });
 
   it('avancement d’un poste depuis ses tâches pondérées', () => {
     expect(progressFromTasks([]).toString()).toBe('0');
     expect(progressFromTasks([{ done: true }, { done: false }]).toString()).toBe('0.5');
-    expect(progressFromTasks([{ done: true, weight: 3 }, { done: false, weight: 1, progress: '0.5' }]).toString()).toBe('0.875');
+    expect(
+      progressFromTasks([
+        { done: true, weight: 3 },
+        { done: false, weight: 1, progress: '0.5' },
+      ]).toString(),
+    ).toBe('0.875');
     expect(progressFromTasks([{ done: true, weight: 0 }]).toString()).toBe('0');
   });
 });

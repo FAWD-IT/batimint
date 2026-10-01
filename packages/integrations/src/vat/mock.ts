@@ -3,9 +3,24 @@ import type { VatValidationResult, VatValidator } from './types';
 
 /** Registre fictif : quelques entreprises connues du seed, le reste est généré de façon déterministe. */
 const KNOWN: Record<string, { name: string; street: string; postalCode: string; city: string }> = {
-  '0123456749': { name: "Rénov'Habitat SRL", street: 'Rue de Montigny 112', postalCode: '6000', city: 'Charleroi' },
-  '0417497106': { name: 'Brico Pro SA', street: 'Chaussée de Bruxelles 210', postalCode: '6040', city: 'Jumet' },
-  '0456789034': { name: 'Électro Pirson SPRL', street: 'Rue du Pont 8', postalCode: '6200', city: 'Châtelet' },
+  '0123456749': {
+    name: "Rénov'Habitat SRL",
+    street: 'Rue de Montigny 112',
+    postalCode: '6000',
+    city: 'Charleroi',
+  },
+  '0417497106': {
+    name: 'Brico Pro SA',
+    street: 'Chaussée de Bruxelles 210',
+    postalCode: '6040',
+    city: 'Jumet',
+  },
+  '0456789034': {
+    name: 'Électro Pirson SPRL',
+    street: 'Rue du Pont 8',
+    postalCode: '6200',
+    city: 'Châtelet',
+  },
 };
 
 export class MockVatValidator implements VatValidator {

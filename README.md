@@ -1,4 +1,48 @@
-# Batimint — pack de démarrage pour Claude Code (cloud)
+# Batimint
+
+SaaS de gestion pour les PME belges du BTP : le chantier est l'objet pivot, chaque action se propage seule et chacun voit le même état en direct. Spécification dans `docs/` ; avancement dans `docs/PROGRESS.md`.
+
+## Démarrer en local
+
+Prérequis : Node 22, pnpm 10 (`corepack enable`), Docker.
+
+```bash
+pnpm install
+pnpm dev            # Postgres + MinIO + Mailpit (docker compose), migrations, puis web/api/worker
+pnpm db:seed        # tenant de démo « Rénov'Habitat » (idempotent ; pnpm db:reset pour repartir de zéro)
+```
+
+| Adresse | Quoi |
+|---|---|
+| http://localhost:3000 | Interface (back-office, portails, terrain) |
+| http://localhost:4000/docs | API (OpenAPI 3.1, `/v1/openapi.json`) |
+| http://localhost:8025 | Mailpit (e-mails envoyés en dev) |
+| http://localhost:9001 | Console MinIO (`batimint` / `batimint-dev-secret`) |
+
+### Comptes de démonstration (dev et instance de démo uniquement)
+Mot de passe commun : `batimint-demo`.
+
+| Persona | E-mail | Rôle |
+|---|---|---|
+| Marc Lefèvre, patron | marc@renov-habitat.be | Owner |
+| Sophie Martin, bureau | sophie@renov-habitat.be | Bureau |
+| Karim Benali, chef de chantier | karim@renov-habitat.be | Chef de chantier |
+| Luca Rossi, ouvrier | luca@renov-habitat.be | Ouvrier |
+| Isabelle Lambert, comptable | lambert@fiduciaire-lambert.be | Comptable |
+
+### Commandes
+`pnpm test` (unitaires + intégration contre Postgres) · `pnpm test:e2e` (Playwright, app démarrée) · `pnpm lint` · `pnpm typecheck` · `pnpm build` · `pnpm db:migrate` · `pnpm db:seed` · `pnpm admin:create -- --email …`
+
+### Stack de production en local
+```bash
+cp .env.example .env
+docker compose -f docker-compose.coolify.yml up --build    # ajouter SEED_DEMO=true dans .env pour la démo
+```
+Déploiement : `docs/10-deploiement-coolify.md`. Décisions d'architecture : `docs/adr/`.
+
+---
+
+# Pack de démarrage pour Claude Code (cloud)
 
 Spécification complète du SaaS BTP « Batimint » (*bâtiment* en wallon), prête à être construite par Claude Code dans une session cloud, puis déployée sur Coolify depuis GitHub.
 

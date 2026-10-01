@@ -75,10 +75,17 @@ async function main(): Promise<void> {
   }
   console.info('Migrations appliquées, RLS vérifiée sur toutes les tables métier.');
   if (process.env['SEED_DEMO'] === 'true' && mode === 'deploy') {
-    const seed = spawnSync(process.execPath, [...process.execArgv, fileURLToPath(new URL(import.meta.url.endsWith('.ts') ? './seed.ts' : './seed.js', import.meta.url))], {
-      stdio: 'inherit',
-      env: process.env,
-    });
+    const seed = spawnSync(
+      process.execPath,
+      [
+        ...process.execArgv,
+        fileURLToPath(new URL(import.meta.url.endsWith('.ts') ? './seed.ts' : './seed.js', import.meta.url)),
+      ],
+      {
+        stdio: 'inherit',
+        env: process.env,
+      },
+    );
     if (seed.status !== 0) process.exit(seed.status ?? 1);
   }
 }

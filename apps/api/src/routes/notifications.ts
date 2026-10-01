@@ -1,4 +1,9 @@
-import { DiagnosticPingRequestSchema, DiagnosticPingResponseSchema, NotificationListSchema, OkSchema } from '@batimint/contracts';
+import {
+  DiagnosticPingRequestSchema,
+  DiagnosticPingResponseSchema,
+  NotificationListSchema,
+  OkSchema,
+} from '@batimint/contracts';
 import { emitEvent, withTenant, writeAudit } from '@batimint/db';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
@@ -46,11 +51,21 @@ export const notificationRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = asyn
 
   app.post(
     '/notifications/:id/read',
-    { schema: { tags: ['notifications'], summary: 'Marquer comme lue', params: z.object({ id: z.uuid() }), response: { 200: OkSchema } } },
+    {
+      schema: {
+        tags: ['notifications'],
+        summary: 'Marquer comme lue',
+        params: z.object({ id: z.uuid() }),
+        response: { 200: OkSchema },
+      },
+    },
     async (req) => {
       const auth = requireTenant(req);
       const res = await withTenant(deps.prisma, auth.tenantId, auth.userId, (tx) =>
-        tx.notification.updateMany({ where: { id: req.params.id, userId: auth.userId }, data: { readAt: new Date() } }),
+        tx.notification.updateMany({
+          where: { id: req.params.id, userId: auth.userId },
+          data: { readAt: new Date() },
+        }),
       );
       if (res.count === 0) throw notFound('Cette notification');
       return { ok: true as const };
@@ -63,7 +78,10 @@ export const notificationRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = asyn
     async (req) => {
       const auth = requireTenant(req);
       await withTenant(deps.prisma, auth.tenantId, auth.userId, (tx) =>
-        tx.notification.updateMany({ where: { userId: auth.userId, readAt: null }, data: { readAt: new Date() } }),
+        tx.notification.updateMany({
+          where: { userId: auth.userId, readAt: null },
+          data: { readAt: new Date() },
+        }),
       );
       return { ok: true as const };
     },
@@ -87,13 +105,23 @@ export const notificationRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = asyn
       const auth = requireTenant(req, 'diagnostics.run');
       const event = await withTenant(deps.prisma, auth.tenantId, auth.userId, async (tx) => {
         const actor = { type: 'user' as const, id: auth.userId, label: auth.name };
-        await writeAudit(tx, { tenantId: auth.tenantId, actor, action: 'diagnostic.ping', entityType: 'tenant', entityId: auth.tenantId, requestId: req.id });
+        await writeAudit(tx, {
+          tenantId: auth.tenantId,
+          actor,
+          action: 'diagnostic.ping',
+          entityType: 'tenant',
+          entityId: auth.tenantId,
+          requestId: req.id,
+        });
         return emitEvent(tx, {
           tenantId: auth.tenantId,
           type: 'diagnostic.ping.v1',
           aggregateType: 'tenant',
           aggregateId: auth.tenantId,
-          payload: { requestedBy: auth.userId, message: req.body.message ?? 'Chaîne temps réel opérationnelle' },
+          payload: {
+            requestedBy: auth.userId,
+            message: req.body.message ?? 'Chaîne temps réel opérationnelle',
+          },
           actor,
         });
       });

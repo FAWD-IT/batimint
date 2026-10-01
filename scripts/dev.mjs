@@ -22,7 +22,9 @@ if (process.env.SKIP_SERVICES !== '1') {
 }
 console.info('▶ Migrations…');
 run('pnpm', ['db:migrate']);
-console.info('▶ Applications : web http://localhost:3000 · api http://localhost:4000/docs · e-mails http://localhost:8025');
+console.info(
+  '▶ Applications : web http://localhost:3000 · api http://localhost:4000/docs · e-mails http://localhost:8025',
+);
 const child = spawn('pnpm', ['dev:apps'], { stdio: 'inherit' });
 const stop = (sig) => child.kill(sig);
 process.on('SIGINT', stop);

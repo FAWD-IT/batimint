@@ -56,7 +56,9 @@ export function isValidIban(input: string): boolean {
 
 /** Format affiché par groupes de 4. */
 export function formatIban(input: string): string {
-  return normalizeIban(input).replace(/(.{4})/g, '$1 ').trim();
+  return normalizeIban(input)
+    .replace(/(.{4})/g, '$1 ')
+    .trim();
 }
 
 export function isValidBic(input: string): boolean {

@@ -1,12 +1,10 @@
 import type { Metadata, Viewport } from 'next';
-import { Geist } from 'next/font/google';
+import { GeistSans } from 'geist/font/sans';
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 import { Providers } from './providers';
 import './globals.css';
-
-const geist = Geist({ subsets: ['latin'], variable: '--font-geist', display: 'swap' });
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('meta');
@@ -25,7 +23,7 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const locale = await getLocale();
   return (
-    <html lang={locale} className={geist.variable} suppressHydrationWarning>
+    <html lang={locale} className={GeistSans.variable} suppressHydrationWarning>
       <body className="min-h-dvh bg-bg text-ink">
         <NextIntlClientProvider>
           <Providers>{children}</Providers>

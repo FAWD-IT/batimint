@@ -18,7 +18,7 @@ import { OutboxRelay } from '../src/relay';
 import { runConsumer } from '../src/runner';
 
 loadDotEnv();
-const urls = testDatabaseUrls();
+const urls = testDatabaseUrls('worker');
 let prisma: PrismaClient;
 let boss: PgBoss;
 let relay: OutboxRelay;
@@ -33,7 +33,9 @@ const silent = process.env['DEBUG_WORKER']
 beforeAll(async () => {
   prisma = createPrismaClient({ url: urls.appUrl });
   await withSystem(prisma, async (tx) => {
-    await tx.tenant.create({ data: { id: tenantId, name: 'Worker test', slug: `worker-${tenantId.slice(-8)}` } });
+    await tx.tenant.create({
+      data: { id: tenantId, name: 'Worker test', slug: `worker-${tenantId.slice(-8)}` },
+    });
     await tx.user.create({ data: { id: userId, email: `w-${userId.slice(-8)}@example.test`, name: 'W' } });
     await tx.membership.create({ data: { tenantId, userId, role: 'owner' } });
   });
@@ -60,7 +62,10 @@ afterAll(async () => {
   await prisma?.$disconnect();
 });
 
-async function waitFor<T>(fn: () => Promise<T | null | undefined> | T | null | undefined, timeoutMs = 15_000): Promise<T> {
+async function waitFor<T>(
+  fn: () => Promise<T | null | undefined> | T | null | undefined,
+  timeoutMs = 15_000,
+): Promise<T> {
   const start = Date.now();
   for (;;) {
     const v = await fn();
@@ -87,12 +92,16 @@ describe('outbox → worker → temps réel', () => {
       }),
     );
     const notif = await waitFor(() =>
-      withTenant(prisma, tenantId, userId, (tx) => tx.notification.findFirst({ where: { eventId: event.id } })),
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.notification.findFirst({ where: { eventId: event.id } }),
+      ),
     );
     expect(notif.title).toBe('Bonjour du worker');
     const msg = await waitFor(() => received.find((m) => m.ref === notif.id));
     expect(msg).toMatchObject({ channel: `user:${userId}`, topic: 'notifications', tenantId });
-    const published = await withSystem(prisma, (tx) => tx.outboxEvent.findUnique({ where: { id: event.id } }));
+    const published = await withSystem(prisma, (tx) =>
+      tx.outboxEvent.findUnique({ where: { id: event.id } }),
+    );
     expect(published?.publishedAt).not.toBeNull();
   });
 
@@ -106,11 +115,21 @@ describe('outbox → worker → temps réel', () => {
         payload: { requestedBy: userId, message: 'Rejeu' },
       }),
     );
-    await waitFor(() => withTenant(prisma, tenantId, userId, (tx) => tx.notification.findFirst({ where: { eventId: event.id } })));
-    const deps = { prisma, integrations: { mailer: new MockMailer(), storage: new MemoryStorage(), vat: new MockVatValidator() }, appUrl: '' };
+    await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.notification.findFirst({ where: { eventId: event.id } }),
+      ),
+    );
+    const deps = {
+      prisma,
+      integrations: { mailer: new MockMailer(), storage: new MemoryStorage(), vat: new MockVatValidator() },
+      appUrl: '',
+    };
     expect(await runConsumer(deps, diagnosticNotification, event.id)).toBe('skipped');
     expect(await runConsumer(deps, diagnosticNotification, event.id)).toBe('skipped');
-    const count = await withTenant(prisma, tenantId, userId, (tx) => tx.notification.count({ where: { eventId: event.id } }));
+    const count = await withTenant(prisma, tenantId, userId, (tx) =>
+      tx.notification.count({ where: { eventId: event.id } }),
+    );
     expect(count).toBe(1);
     expect(await runConsumer(deps, diagnosticNotification, uuidv7())).toBe('missing');
   });
@@ -125,10 +144,22 @@ describe('outbox → worker → temps réel', () => {
         payload: { requestedBy: userId, message: 'Échec' },
       }),
     );
-    const deps = { prisma, integrations: { mailer: new MockMailer(), storage: new MemoryStorage(), vat: new MockVatValidator() }, appUrl: '' };
-    const failing = { ...diagnosticNotification, name: 'failing-test', handle: async () => { throw new Error('boom'); } };
+    const deps = {
+      prisma,
+      integrations: { mailer: new MockMailer(), storage: new MemoryStorage(), vat: new MockVatValidator() },
+      appUrl: '',
+    };
+    const failing = {
+      ...diagnosticNotification,
+      name: 'failing-test',
+      handle: async () => {
+        throw new Error('boom');
+      },
+    };
     await expect(runConsumer(deps, failing, event.id)).rejects.toThrow('boom');
-    const processed = await withSystem(prisma, (tx) => tx.processedEvent.count({ where: { consumer: 'failing-test', eventId: event.id } }));
+    const processed = await withSystem(prisma, (tx) =>
+      tx.processedEvent.count({ where: { consumer: 'failing-test', eventId: event.id } }),
+    );
     expect(processed).toBe(0);
   });
 });

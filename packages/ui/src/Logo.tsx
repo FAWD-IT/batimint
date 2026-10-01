@@ -1,6 +1,14 @@
 import { cn } from './cn';
 
-export function Logo({ className, inverted = false, name = 'Batimint' }: { className?: string; inverted?: boolean; name?: string }) {
+export function Logo({
+  className,
+  inverted = false,
+  name = 'Batimint',
+}: {
+  className?: string;
+  inverted?: boolean;
+  name?: string;
+}) {
   return (
     <span className={cn('inline-flex items-center gap-2.5', className)}>
       <span
@@ -12,7 +20,9 @@ export function Logo({ className, inverted = false, name = 'Batimint' }: { class
       >
         B
       </span>
-      <span className={cn('text-[18px] font-bold tracking-[-0.02em]', inverted ? 'text-white' : 'text-ink')}>{name}</span>
+      <span className={cn('text-[18px] font-bold tracking-[-0.02em]', inverted ? 'text-white' : 'text-ink')}>
+        {name}
+      </span>
     </span>
   );
 }

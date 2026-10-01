@@ -18,7 +18,9 @@ test.describe('M0 — fondations', () => {
     await expect(page.getByTestId('diagnostic-success')).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText(/Tout fonctionne : aller-retour en \d+ ms/)).toBeVisible();
     // Le système agit puis informe : toast et pastille de notifications, sans recharger.
-    await expect(page.getByRole('status').filter({ hasText: 'Chaîne temps réel opérationnelle' })).toBeVisible();
+    await expect(
+      page.getByRole('status').filter({ hasText: 'Chaîne temps réel opérationnelle' }),
+    ).toBeVisible();
     await expect(page.getByTestId('unread-count')).toHaveText('1');
     await expectNoA11yViolations(page);
   });

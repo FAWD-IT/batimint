@@ -1,4 +1,11 @@
-import { forwardRef, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes, useId } from 'react';
+import {
+  forwardRef,
+  type InputHTMLAttributes,
+  type ReactNode,
+  type SelectHTMLAttributes,
+  type TextareaHTMLAttributes,
+  useId,
+} from 'react';
 import { cn } from './cn';
 
 const CONTROL =
@@ -57,7 +64,14 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function T
   const fieldId = id ?? auto;
   const describedBy = error ? `${fieldId}-error` : hint ? `${fieldId}-hint` : undefined;
   return (
-    <FieldShell label={label} hint={hint} error={error} optionalLabel={optionalLabel} className={containerClassName} id={fieldId}>
+    <FieldShell
+      label={label}
+      hint={hint}
+      error={error}
+      optionalLabel={optionalLabel}
+      className={containerClassName}
+      id={fieldId}
+    >
       <div className="relative">
         <input
           ref={ref}
@@ -88,7 +102,14 @@ export const TextAreaField = forwardRef<HTMLTextAreaElement, TextAreaFieldProps>
   const auto = useId();
   const fieldId = id ?? auto;
   return (
-    <FieldShell label={label} hint={hint} error={error} optionalLabel={optionalLabel} className={containerClassName} id={fieldId}>
+    <FieldShell
+      label={label}
+      hint={hint}
+      error={error}
+      optionalLabel={optionalLabel}
+      className={containerClassName}
+      id={fieldId}
+    >
       <textarea
         ref={ref}
         id={fieldId}
@@ -135,11 +156,19 @@ export const SelectField = forwardRef<HTMLSelectElement, SelectFieldProps>(funct
   );
 });
 
-export function Checkbox({ label, id, className, ...rest }: InputHTMLAttributes<HTMLInputElement> & { label: ReactNode }) {
+export function Checkbox({
+  label,
+  id,
+  className,
+  ...rest
+}: InputHTMLAttributes<HTMLInputElement> & { label: ReactNode }) {
   const auto = useId();
   const fieldId = id ?? auto;
   return (
-    <label htmlFor={fieldId} className={cn('flex min-h-11 cursor-pointer items-center gap-3 text-[14px]', className)}>
+    <label
+      htmlFor={fieldId}
+      className={cn('flex min-h-11 cursor-pointer items-center gap-3 text-[14px]', className)}
+    >
       <input id={fieldId} type="checkbox" className="size-5 accent-[var(--ink)]" {...rest} />
       <span>{label}</span>
     </label>

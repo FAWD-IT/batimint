@@ -14,7 +14,9 @@ describe('05 §5 — communication structurée belge', () => {
   it('contrôle = base mod 97', () => {
     // 0123456789 mod 97 = 39
     expect(structuredCommunicationCheckDigits('0123456789')).toBe('39');
-    expect(formatStructuredCommunication(structuredCommunicationDigits('0123456789'))).toBe('+++012/3456/78939+++');
+    expect(formatStructuredCommunication(structuredCommunicationDigits('0123456789'))).toBe(
+      '+++012/3456/78939+++',
+    );
   });
 
   it('97 si le reste vaut 0', () => {
@@ -38,10 +40,19 @@ describe('05 §5 — communication structurée belge', () => {
 
   it('propriété : toute communication générée est valide', () => {
     fc.assert(
-      fc.property(fc.integer({ min: 0, max: 999 }), fc.integer({ min: 2000, max: 2099 }), fc.integer({ min: 0, max: 99_999 }), (p, y, s) => {
-        const { formatted } = buildInvoiceStructuredCommunication({ tenantPrefix: p, year: y, sequence: s });
-        expect(isValidStructuredCommunication(formatted)).toBe(true);
-      }),
+      fc.property(
+        fc.integer({ min: 0, max: 999 }),
+        fc.integer({ min: 2000, max: 2099 }),
+        fc.integer({ min: 0, max: 99_999 }),
+        (p, y, s) => {
+          const { formatted } = buildInvoiceStructuredCommunication({
+            tenantPrefix: p,
+            year: y,
+            sequence: s,
+          });
+          expect(isValidStructuredCommunication(formatted)).toBe(true);
+        },
+      ),
     );
   });
 
@@ -49,7 +60,11 @@ describe('05 §5 — communication structurée belge', () => {
     const r = buildInvoiceStructuredCommunication({ tenantPrefix: 104, year: 2026, sequence: 118 });
     expect(r.digits.slice(0, 10)).toBe('1042600118');
     expect(r.formatted).toMatch(/^\+\+\+104\/2600\/118\d{2}\+\+\+$/);
-    expect(() => buildInvoiceStructuredCommunication({ tenantPrefix: 1000, year: 2026, sequence: 1 })).toThrow();
-    expect(() => buildInvoiceStructuredCommunication({ tenantPrefix: 1, year: 2026, sequence: 100_000 })).toThrow();
+    expect(() =>
+      buildInvoiceStructuredCommunication({ tenantPrefix: 1000, year: 2026, sequence: 1 }),
+    ).toThrow();
+    expect(() =>
+      buildInvoiceStructuredCommunication({ tenantPrefix: 1, year: 2026, sequence: 100_000 }),
+    ).toThrow();
   });
 });

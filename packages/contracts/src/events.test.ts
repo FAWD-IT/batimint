@@ -12,13 +12,21 @@ describe('contrats', () => {
   it('valide les payloads', () => {
     expect(() => parseEventPayload('diagnostic.ping.v1', { requestedBy: 'x', message: 'a' })).toThrow();
     expect(
-      parseEventPayload('diagnostic.ping.v1', { requestedBy: '0199a0a0-0000-7000-8000-000000000000', message: 'a' }).message,
+      parseEventPayload('diagnostic.ping.v1', {
+        requestedBy: '0199a0a0-0000-7000-8000-000000000000',
+        message: 'a',
+      }).message,
     ).toBe('a');
   });
 
   it('normalise les e-mails et exige un mot de passe robuste', () => {
     expect(Email.parse('  Marc@Renov.BE ')).toBe('marc@renov.be');
-    const r = SignupRequestSchema.safeParse({ companyName: 'R', name: 'Marc', email: 'marc@x.be', password: 'court' });
+    const r = SignupRequestSchema.safeParse({
+      companyName: 'R',
+      name: 'Marc',
+      email: 'marc@x.be',
+      password: 'court',
+    });
     expect(r.success).toBe(false);
   });
 });

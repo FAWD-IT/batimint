@@ -75,13 +75,22 @@ export function projectedCost(budgetedCost: Cents, committed: Cents, progress: D
 }
 
 /** 04 — alerte de dérive : engagé > budgété × (1 + seuil). */
-export function isDrifting(budgetedCost: Cents, committed: Cents, threshold: DecimalInput = DEFAULT_DRIFT_THRESHOLD): boolean {
+export function isDrifting(
+  budgetedCost: Cents,
+  committed: Cents,
+  threshold: DecimalInput = DEFAULT_DRIFT_THRESHOLD,
+): boolean {
   if (committed <= 0n) return false;
   if (budgetedCost <= 0n) return committed > 0n;
-  return new Dec(committed.toString()).greaterThan(new Dec(budgetedCost.toString()).times(new Dec(1).plus(dec(threshold))));
+  return new Dec(committed.toString()).greaterThan(
+    new Dec(budgetedCost.toString()).times(new Dec(1).plus(dec(threshold))),
+  );
 }
 
-export function computeBudgetLine(line: BudgetLineInput, threshold: DecimalInput = DEFAULT_DRIFT_THRESHOLD): BudgetLineResult {
+export function computeBudgetLine(
+  line: BudgetLineInput,
+  threshold: DecimalInput = DEFAULT_DRIFT_THRESHOLD,
+): BudgetLineResult {
   const total = committedTotal(line.committed);
   return {
     id: line.id,
@@ -148,7 +157,9 @@ export function computeProjectFinancials(
 }
 
 /** Avancement d'un poste à partir de ses tâches pondérées (02 P7.1). */
-export function progressFromTasks(tasks: readonly { weight?: DecimalInput; done: boolean; progress?: DecimalInput }[]): Dec {
+export function progressFromTasks(
+  tasks: readonly { weight?: DecimalInput; done: boolean; progress?: DecimalInput }[],
+): Dec {
   if (tasks.length === 0) return new Dec(0);
   let total = new Dec(0);
   let achieved = new Dec(0);

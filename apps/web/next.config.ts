@@ -15,7 +15,7 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   output: 'standalone',
   outputFileTracingRoot: root,
-  transpilePackages: ['@batimint/ui', '@batimint/contracts', '@batimint/domain'],
+  transpilePackages: ['@batimint/ui', '@batimint/contracts', '@batimint/domain', 'geist'],
   poweredByHeader: false,
   // Le flux SSE transite par le proxy /api/v1 : pas de compression qui bufferiserait.
   compress: false,

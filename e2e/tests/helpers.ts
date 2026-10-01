@@ -31,7 +31,9 @@ export async function login(page: Page, email: string, password = PASSWORD) {
 
 /** Aucune violation axe critique ou sérieuse (09). */
 export async function expectNoA11yViolations(page: Page) {
-  const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
+  const results = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+    .analyze();
   const blocking = results.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious');
   expect(
     blocking.map((v) => `${v.id}: ${v.help} (${v.nodes.map((n) => n.target.join(' ')).join(', ')})`),
@@ -46,7 +48,10 @@ interface MailpitMessage {
 }
 
 /** Dernier e-mail reçu par Mailpit pour une adresse. */
-export async function lastEmailTo(address: string, subjectPattern?: RegExp): Promise<{ subject: string; text: string; html: string }> {
+export async function lastEmailTo(
+  address: string,
+  subjectPattern?: RegExp,
+): Promise<{ subject: string; text: string; html: string }> {
   const deadline = Date.now() + 15_000;
   while (Date.now() < deadline) {
     const res = await fetch(`${MAILPIT}/api/v1/search?query=${encodeURIComponent(`to:"${address}"`)}`);
@@ -54,7 +59,11 @@ export async function lastEmailTo(address: string, subjectPattern?: RegExp): Pro
       const body = (await res.json()) as { messages: MailpitMessage[] };
       const msg = body.messages.find((m) => !subjectPattern || subjectPattern.test(m.Subject));
       if (msg) {
-        const full = (await (await fetch(`${MAILPIT}/api/v1/message/${msg.ID}`)).json()) as { Subject: string; Text: string; HTML: string };
+        const full = (await (await fetch(`${MAILPIT}/api/v1/message/${msg.ID}`)).json()) as {
+          Subject: string;
+          Text: string;
+          HTML: string;
+        };
         return { subject: full.Subject, text: full.Text, html: full.HTML };
       }
     }

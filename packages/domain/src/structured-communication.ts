@@ -12,7 +12,8 @@ export class StructuredCommunicationError extends Error {
 }
 
 export function structuredCommunicationCheckDigits(base: string): string {
-  if (!/^\d{10}$/.test(base)) throw new StructuredCommunicationError('La base doit compter exactement 10 chiffres.');
+  if (!/^\d{10}$/.test(base))
+    throw new StructuredCommunicationError('La base doit compter exactement 10 chiffres.');
   const remainder = Number(BigInt(base) % 97n);
   return (remainder === 0 ? 97 : remainder).toString().padStart(2, '0');
 }

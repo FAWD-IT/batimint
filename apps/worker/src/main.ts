@@ -11,7 +11,11 @@ const isProduction = process.env['NODE_ENV'] === 'production';
 const logger = pino({
   level: process.env['LOG_LEVEL'] ?? 'info',
   base: { service: 'worker' },
-  ...(isProduction ? {} : { transport: { target: 'pino-pretty', options: { translateTime: 'HH:MM:ss', ignore: 'pid,hostname' } } }),
+  ...(isProduction
+    ? {}
+    : {
+        transport: { target: 'pino-pretty', options: { translateTime: 'HH:MM:ss', ignore: 'pid,hostname' } },
+      }),
 });
 
 const databaseUrl = process.env['DATABASE_URL'];
@@ -23,7 +27,11 @@ if (!databaseUrl) {
 export const HEALTH_FILE = process.env['WORKER_HEALTH_FILE'] ?? '/tmp/batimint-worker-heartbeat';
 
 const prisma = createPrismaClient({ url: databaseUrl, applicationName: 'batimint-worker', max: 10 });
-const deps = { prisma, integrations: createIntegrations(), appUrl: process.env['APP_URL'] ?? 'http://localhost:3000' };
+const deps = {
+  prisma,
+  integrations: createIntegrations(),
+  appUrl: process.env['APP_URL'] ?? 'http://localhost:3000',
+};
 const boss = createBoss(databaseUrl);
 boss.on('error', (err) => logger.error({ err }, 'pg-boss'));
 await boss.start();

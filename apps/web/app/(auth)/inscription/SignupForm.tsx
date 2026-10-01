@@ -21,7 +21,8 @@ export function SignupForm() {
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
-  const set = (k: keyof typeof values) => (e: { target: { value: string } }) => setValues((v) => ({ ...v, [k]: e.target.value }));
+  const set = (k: keyof typeof values) => (e: { target: { value: string } }) =>
+    setValues((v) => ({ ...v, [k]: e.target.value }));
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -59,7 +60,15 @@ export function SignupForm() {
     >
       <form noValidate onSubmit={(e) => void submit(e)} className="flex flex-col gap-4">
         {formError ? <Notice tone="crit">{formError}</Notice> : null}
-        <TextField label={t('name')} name="name" autoComplete="name" required value={values.name} onChange={set('name')} error={errors['name']} />
+        <TextField
+          label={t('name')}
+          name="name"
+          autoComplete="name"
+          required
+          value={values.name}
+          onChange={set('name')}
+          error={errors['name']}
+        />
         <TextField
           label={t('companyName')}
           name="companyName"

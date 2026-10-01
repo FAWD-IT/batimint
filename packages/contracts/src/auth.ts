@@ -20,14 +20,26 @@ export const SignupRequestSchema = z
 export type SignupRequest = z.infer<typeof SignupRequestSchema>;
 
 export const LoginRequestSchema = z
-  .object({ email: Email, password: z.string().min(1).max(200), totp: z.string().regex(/^\d{6}$/).optional() })
+  .object({
+    email: Email,
+    password: z.string().min(1).max(200),
+    totp: z
+      .string()
+      .regex(/^\d{6}$/)
+      .optional(),
+  })
   .meta({ id: 'LoginRequest' });
 export type LoginRequest = z.infer<typeof LoginRequestSchema>;
 
 export const MagicLinkRequestSchema = z.object({ email: Email }).meta({ id: 'MagicLinkRequest' });
 export const TokenRequestSchema = z.object({ token: z.string().min(20).max(200) });
-export const PasswordResetConfirmSchema = z.object({ token: z.string().min(20).max(200), password: Password });
-export const TotpVerifySchema = z.object({ code: z.string().regex(/^\d{6}$/, { error: 'Code à 6 chiffres' }) });
+export const PasswordResetConfirmSchema = z.object({
+  token: z.string().min(20).max(200),
+  password: Password,
+});
+export const TotpVerifySchema = z.object({
+  code: z.string().regex(/^\d{6}$/, { error: 'Code à 6 chiffres' }),
+});
 
 export const LoginResponseSchema = z
   .object({

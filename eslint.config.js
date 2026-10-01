@@ -41,7 +41,7 @@ export default tseslint.config(
         'error',
         {
           selector: "CallExpression[callee.name='parseFloat']",
-          message: "parseFloat est interdit dans le domaine : utiliser Cents (bigint) ou Decimal.",
+          message: 'parseFloat est interdit dans le domaine : utiliser Cents (bigint) ou Decimal.',
         },
         {
           selector: "MemberExpression[object.name='Math'][property.name='round']",

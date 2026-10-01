@@ -55,7 +55,11 @@ export function requireAuth(req: FastifyRequest): AuthContext {
 export function requireTenant(req: FastifyRequest, action?: Action): TenantAuthContext {
   const auth = requireAuth(req);
   if (!auth.tenantId || !auth.role) {
-    throw new AppError(403, 'no_tenant', "Aucune entreprise active. Choisissez une entreprise ou créez-en une.");
+    throw new AppError(
+      403,
+      'no_tenant',
+      'Aucune entreprise active. Choisissez une entreprise ou créez-en une.',
+    );
   }
   if (action && !can(auth.role, action)) throw forbidden();
   if (auth.impersonatorId && UNSAFE.has(req.method)) {

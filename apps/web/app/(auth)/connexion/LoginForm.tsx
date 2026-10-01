@@ -143,7 +143,10 @@ export function LoginForm() {
             {mode === 'password' ? t('magicLinkInstead') : t('passwordInstead')}
           </button>
           {mode === 'password' ? (
-            <Link href="/mot-de-passe-oublie" className="text-muted underline-offset-4 hover:text-ink hover:underline">
+            <Link
+              href="/mot-de-passe-oublie"
+              className="text-muted underline-offset-4 hover:text-ink hover:underline"
+            >
               {t('forgot')}
             </Link>
           ) : null}

@@ -93,14 +93,22 @@ export interface VatBreakdownEntry {
 }
 
 /** 05 §4 — TVA calculée par catégorie et taux sur la somme des nets, arrondie à 2 décimales. */
-export function computeVatBreakdown(lines: readonly { netAmount: Cents; vatRegime: VatRegime }[]): VatBreakdownEntry[] {
+export function computeVatBreakdown(
+  lines: readonly { netAmount: Cents; vatRegime: VatRegime }[],
+): VatBreakdownEntry[] {
   const groups = new Map<string, VatBreakdownEntry>();
   for (const line of lines) {
     const info = VAT_REGIMES[line.vatRegime];
     const key = `${info.category}|${info.ratePercent}`;
     let entry = groups.get(key);
     if (!entry) {
-      entry = { category: info.category, ratePercent: info.ratePercent, regimes: [], taxableAmount: 0n, taxAmount: 0n };
+      entry = {
+        category: info.category,
+        ratePercent: info.ratePercent,
+        regimes: [],
+        taxableAmount: 0n,
+        taxAmount: 0n,
+      };
       groups.set(key, entry);
     }
     if (!entry.regimes.includes(line.vatRegime)) entry.regimes.push(line.vatRegime);
@@ -260,4 +268,3 @@ export function validateVatOverride(input: {
   }
   return { ok: true };
 }
-

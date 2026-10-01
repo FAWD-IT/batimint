@@ -36,7 +36,12 @@ export class ViesVatValidator implements VatValidator {
         valid: Boolean(body.isValid),
         name: body.name && body.name !== '---' ? body.name : null,
         address: raw
-          ? { street: match?.[1]?.trim() ?? null, postalCode: match?.[2] ?? null, city: match?.[3]?.trim() ?? null, raw }
+          ? {
+              street: match?.[1]?.trim() ?? null,
+              postalCode: match?.[2] ?? null,
+              city: match?.[3]?.trim() ?? null,
+              raw,
+            }
           : null,
         checkedAt: new Date(),
         source: 'vies',
@@ -44,7 +49,14 @@ export class ViesVatValidator implements VatValidator {
       this.cache.set(key, { at: Date.now(), result });
       return result;
     } catch {
-      return { vatNumber: key, valid: false, name: null, address: null, checkedAt: new Date(), source: 'unavailable' };
+      return {
+        vatNumber: key,
+        valid: false,
+        name: null,
+        address: null,
+        checkedAt: new Date(),
+        source: 'unavailable',
+      };
     }
   }
 }

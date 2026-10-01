@@ -22,7 +22,7 @@ export interface TestApp {
 }
 
 export async function createTestApp(): Promise<TestApp> {
-  const urls = testDatabaseUrls();
+  const urls = testDatabaseUrls('api');
   const config = loadConfig({
     ...process.env,
     NODE_ENV: 'test',

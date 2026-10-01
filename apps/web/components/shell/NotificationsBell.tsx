@@ -23,7 +23,10 @@ export function NotificationsBell() {
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const ref = useRef<HTMLDivElement>(null);
-  const { data, isLoading } = useQuery({ queryKey: ['notifications'], queryFn: () => api<NotificationList>('/notifications') });
+  const { data, isLoading } = useQuery({
+    queryKey: ['notifications'],
+    queryFn: () => api<NotificationList>('/notifications'),
+  });
 
   // Le système agit puis informe : chaque notification arrivée en direct s'affiche en toast.
   useRealtimeListener((msg) => {
@@ -62,13 +65,19 @@ export function NotificationsBell() {
       >
         <Bell aria-hidden className="size-5" />
         {unread > 0 ? (
-          <span data-testid="unread-count" className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1 text-[11px] font-semibold text-white">
+          <span
+            data-testid="unread-count"
+            className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1 text-[11px] font-semibold text-white"
+          >
             {unread > 99 ? '99+' : unread}
           </span>
         ) : null}
       </button>
       {open ? (
-        <div id={panelId} className="absolute right-0 z-40 mt-2 w-[min(92vw,380px)] rounded-[16px] border border-line bg-surface p-2">
+        <div
+          id={panelId}
+          className="absolute right-0 z-40 mt-2 w-[min(92vw,380px)] rounded-[16px] border border-line bg-surface p-2"
+        >
           <div className="flex items-center justify-between px-2 py-1.5">
             <h2 className="text-[15px] font-semibold">{t('title')}</h2>
             {unread > 0 ? (
@@ -89,18 +98,30 @@ export function NotificationsBell() {
               {data.items.map((n) => {
                 const body = (
                   <>
-                    <span aria-hidden className={cn('mt-1.5 size-2 shrink-0 rounded-full', n.readAt ? 'bg-transparent' : 'bg-accent')} />
+                    <span
+                      aria-hidden
+                      className={cn(
+                        'mt-1.5 size-2 shrink-0 rounded-full',
+                        n.readAt ? 'bg-transparent' : 'bg-accent',
+                      )}
+                    />
                     <span className="min-w-0 flex-1">
                       <span className="block text-[14px] font-medium text-ink">{n.title}</span>
                       {n.body ? <span className="block text-[13px] text-muted">{n.body}</span> : null}
-                      <span className="block text-[12px] text-muted">{format.relativeTime(new Date(n.createdAt))}</span>
+                      <span className="block text-[12px] text-muted">
+                        {format.relativeTime(new Date(n.createdAt))}
+                      </span>
                     </span>
                   </>
                 );
                 return (
                   <li key={n.id}>
                     {n.link ? (
-                      <Link href={n.link} className="flex gap-3 rounded-[10px] p-2 hover:bg-line-soft" onClick={() => setOpen(false)}>
+                      <Link
+                        href={n.link}
+                        className="flex gap-3 rounded-[10px] p-2 hover:bg-line-soft"
+                        onClick={() => setOpen(false)}
+                      >
                         {body}
                       </Link>
                     ) : (

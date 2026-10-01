@@ -30,7 +30,9 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               className={cn(
                 'flex h-[38px] items-center gap-2.5 rounded-[10px] px-3 text-[14px] transition-colors duration-[120ms]',
                 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7D93FF]',
-                active ? 'bg-white font-semibold text-[#111111]' : 'text-[#CFCFCF] hover:bg-white/10 hover:text-white',
+                active
+                  ? 'bg-white font-semibold text-[#111111]'
+                  : 'text-[#CFCFCF] hover:bg-white/10 hover:text-white',
               )}
             >
               <Icon aria-hidden className="size-4" />

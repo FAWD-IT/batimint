@@ -3,6 +3,6 @@ import { loadDotEnv } from '../src/lib/env';
 
 export default async function setup(): Promise<void> {
   loadDotEnv();
-  const urls = await prepareTestDatabase();
+  const urls = await prepareTestDatabase('api');
   await truncateAll(urls.ownerUrl);
 }

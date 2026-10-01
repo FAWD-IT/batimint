@@ -62,7 +62,10 @@ export function UserMenu() {
         onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center gap-3 rounded-[12px] p-2 text-left hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-[#7D93FF]"
       >
-        <span aria-hidden className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white/15 text-[13px] font-semibold">
+        <span
+          aria-hidden
+          className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white/15 text-[13px] font-semibold"
+        >
           {initials}
         </span>
         <span className="min-w-0 flex-1">
@@ -74,10 +77,15 @@ export function UserMenu() {
         <ChevronsUpDown aria-hidden className="size-4 text-[#B8B8B8]" />
       </button>
       {open ? (
-        <div id={menuId} className="absolute bottom-full left-0 mb-2 w-full rounded-[12px] border border-[#333333] bg-[#1C1C1C] p-1.5 shadow-none">
+        <div
+          id={menuId}
+          className="absolute bottom-full left-0 mb-2 w-full rounded-[12px] border border-[#333333] bg-[#1C1C1C] p-1.5 shadow-none"
+        >
           {me.tenants.length > 1 ? (
             <div className="border-b border-[#333333] pb-1.5 mb-1.5">
-              <p className="px-2.5 py-1.5 text-[11px] tracking-[0.08em] text-[#9A9A9A] uppercase">{t('nav.switchTenant')}</p>
+              <p className="px-2.5 py-1.5 text-[11px] tracking-[0.08em] text-[#9A9A9A] uppercase">
+                {t('nav.switchTenant')}
+              </p>
               {me.tenants.map((tenant) => (
                 <button
                   key={tenant.id}

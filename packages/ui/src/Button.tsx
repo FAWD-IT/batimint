@@ -21,7 +21,11 @@ const SIZES: Record<ButtonSize, string> = {
   xl: 'h-[88px] px-6 text-[20px] rounded-[20px] gap-3',
 };
 
-export function buttonClasses(variant: ButtonVariant = 'primary', size: ButtonSize = 'md', className?: string): string {
+export function buttonClasses(
+  variant: ButtonVariant = 'primary',
+  size: ButtonSize = 'md',
+  className?: string,
+): string {
   return cn(
     'inline-flex select-none items-center justify-center font-semibold whitespace-nowrap',
     'transition-[background-color,border-color,opacity] duration-[120ms] ease-out',
@@ -44,7 +48,19 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-  { variant = 'primary', size = 'md', loading = false, loadingLabel, icon, fullWidth, className, children, disabled, type = 'button', ...rest },
+  {
+    variant = 'primary',
+    size = 'md',
+    loading = false,
+    loadingLabel,
+    icon,
+    fullWidth,
+    className,
+    children,
+    disabled,
+    type = 'button',
+    ...rest
+  },
   ref,
 ) {
   return (

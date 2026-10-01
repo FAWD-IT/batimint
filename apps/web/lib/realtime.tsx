@@ -6,7 +6,16 @@
  */
 import type { RealtimeMessage } from '@batimint/contracts';
 import { useQueryClient } from '@tanstack/react-query';
-import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  createContext,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 type Listener = (message: RealtimeMessage) => void;
 
@@ -28,7 +37,11 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   const listeners = useRef(new Set<Listener>());
 
   const channels = useMemo(
-    () => Object.keys(channelCounts).filter((c) => (channelCounts[c] ?? 0) > 0).sort().join(','),
+    () =>
+      Object.keys(channelCounts)
+        .filter((c) => (channelCounts[c] ?? 0) > 0)
+        .sort()
+        .join(','),
     [channelCounts],
   );
 

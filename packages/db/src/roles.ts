@@ -26,7 +26,10 @@ function quoteLiteral(value: string): string {
  * Crée ou met à jour le rôle applicatif, accorde les droits DML sur le schéma public,
  * révoque UPDATE/DELETE sur le journal d'audit et prépare le schéma pg-boss.
  */
-export async function provisionAppRole(ownerUrl: string, appUrl: string): Promise<{ appUser: string; sameAsOwner: boolean }> {
+export async function provisionAppRole(
+  ownerUrl: string,
+  appUrl: string,
+): Promise<{ appUser: string; sameAsOwner: boolean }> {
   const owner = credentialsFromUrl(ownerUrl);
   const app = credentialsFromUrl(appUrl);
   const client = new pg.Client({ connectionString: ownerUrl });
@@ -44,7 +47,9 @@ export async function provisionAppRole(ownerUrl: string, appUrl: string): Promis
       await client.query(`GRANT CONNECT ON DATABASE ${quoteIdent(db)} TO ${role}`);
       await client.query(`GRANT USAGE ON SCHEMA public, rls TO ${role}`);
       await client.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ${role}`);
-      await client.query(`REVOKE ALL ON TABLE public."_prisma_migrations" FROM ${role}`).catch(() => undefined);
+      await client
+        .query(`REVOKE ALL ON TABLE public."_prisma_migrations" FROM ${role}`)
+        .catch(() => undefined);
       await client.query(`REVOKE UPDATE, DELETE ON TABLE public."audit_logs" FROM ${role}`);
       await client.query(`GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO ${role}`);
       await client.query(`GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA rls TO ${role}`);

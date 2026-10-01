@@ -15,7 +15,7 @@ import { testDatabaseUrls, truncateAll } from './testing';
 import { checkSequenceContinuity } from '@batimint/domain';
 
 loadEnv();
-const urls = testDatabaseUrls();
+const urls = testDatabaseUrls('db');
 let db: PrismaClient;
 const A = { tenant: uuidv7(), user: uuidv7() };
 const B = { tenant: uuidv7(), user: uuidv7() };
@@ -25,10 +25,16 @@ beforeAll(async () => {
   db = createPrismaClient({ url: urls.appUrl, max: 20 });
   await withSystem(db, async (tx) => {
     for (const [i, t] of [A, B].entries()) {
-      await tx.tenant.create({ data: { id: t.tenant, name: `Tenant ${i}`, slug: `tenant-${i}-${t.tenant.slice(-6)}` } });
-      await tx.user.create({ data: { id: t.user, email: `user${i}-${t.user.slice(-6)}@example.test`, name: `User ${i}` } });
+      await tx.tenant.create({
+        data: { id: t.tenant, name: `Tenant ${i}`, slug: `tenant-${i}-${t.tenant.slice(-6)}` },
+      });
+      await tx.user.create({
+        data: { id: t.user, email: `user${i}-${t.user.slice(-6)}@example.test`, name: `User ${i}` },
+      });
       await tx.membership.create({ data: { tenantId: t.tenant, userId: t.user, role: 'owner' } });
-      await tx.notification.create({ data: { tenantId: t.tenant, userId: t.user, type: 'test', title: `N${i}` } });
+      await tx.notification.create({
+        data: { tenantId: t.tenant, userId: t.user, type: 'test', title: `N${i}` },
+      });
     }
   });
 });
@@ -77,7 +83,9 @@ describe('isolation multi-tenant par RLS', () => {
       expect(await tx.tenant.findUnique({ where: { id: B.tenant } })).toBeNull();
       expect(await tx.user.findUnique({ where: { id: B.user } })).toBeNull();
     });
-    const still = await withTenant(db, B.tenant, B.user, (tx) => tx.notification.findUniqueOrThrow({ where: { id: bNotif.id } }));
+    const still = await withTenant(db, B.tenant, B.user, (tx) =>
+      tx.notification.findUniqueOrThrow({ where: { id: bNotif.id } }),
+    );
     expect(still.title).toBe('N1');
   });
 
@@ -89,13 +97,21 @@ describe('isolation multi-tenant par RLS', () => {
     ).rejects.toThrow();
     await expect(
       withTenant(db, A.tenant, A.user, (tx) =>
-        emitEvent(tx, { tenantId: B.tenant, type: 'test.injected.v1', aggregateType: 'test', aggregateId: '1', payload: {} }),
+        emitEvent(tx, {
+          tenantId: B.tenant,
+          type: 'test.injected.v1',
+          aggregateType: 'test',
+          aggregateId: '1',
+          payload: {},
+        }),
       ),
     ).rejects.toThrow();
   });
 
   it('un utilisateur voit ses propres appartenances, sans voir le contenu des autres tenants', async () => {
-    const memberships = await withContext(db, { userId: A.user }, (tx) => tx.membership.findMany({ include: { tenant: true } }));
+    const memberships = await withContext(db, { userId: A.user }, (tx) =>
+      tx.membership.findMany({ include: { tenant: true } }),
+    );
     expect(memberships.map((m) => m.tenantId)).toEqual([A.tenant]);
     expect(await withContext(db, { userId: A.user }, (tx) => tx.notification.count())).toBe(0);
   });
@@ -108,9 +124,13 @@ describe('isolation multi-tenant par RLS', () => {
       return row.id;
     });
     await expect(
-      withTenant(db, A.tenant, A.user, (tx) => tx.auditLog.update({ where: { id }, data: { action: 'falsifié' } })),
+      withTenant(db, A.tenant, A.user, (tx) =>
+        tx.auditLog.update({ where: { id }, data: { action: 'falsifié' } }),
+      ),
     ).rejects.toThrow();
-    await expect(withTenant(db, A.tenant, A.user, (tx) => tx.auditLog.delete({ where: { id } }))).rejects.toThrow();
+    await expect(
+      withTenant(db, A.tenant, A.user, (tx) => tx.auditLog.delete({ where: { id } })),
+    ).rejects.toThrow();
   });
 });
 
@@ -118,7 +138,9 @@ describe('numérotation légale (05 §2)', () => {
   it('100 émissions concurrentes : aucune lacune, aucun doublon', async () => {
     const values = await Promise.all(
       Array.from({ length: 100 }, () =>
-        withTenant(db, A.tenant, A.user, (tx) => nextSequenceValue(tx, A.tenant, 'invoice', 2026), { timeoutMs: 60_000 }),
+        withTenant(db, A.tenant, A.user, (tx) => nextSequenceValue(tx, A.tenant, 'invoice', 2026), {
+          timeoutMs: 60_000,
+        }),
       ),
     );
     expect(checkSequenceContinuity(values)).toEqual({ ok: true, gaps: [], duplicates: [] });
@@ -131,12 +153,18 @@ describe('numérotation légale (05 §2)', () => {
         throw new Error('rollback');
       }),
     ).rejects.toThrow('rollback');
-    const v = await withTenant(db, A.tenant, A.user, (tx) => nextSequenceValue(tx, A.tenant, 'credit_note', 2026));
+    const v = await withTenant(db, A.tenant, A.user, (tx) =>
+      nextSequenceValue(tx, A.tenant, 'credit_note', 2026),
+    );
     expect(v).toBe(1);
   });
 
   it('les séquences sont indépendantes par tenant et par année', async () => {
-    expect(await withTenant(db, B.tenant, B.user, (tx) => nextSequenceValue(tx, B.tenant, 'invoice', 2026))).toBe(1);
-    expect(await withTenant(db, A.tenant, A.user, (tx) => nextSequenceValue(tx, A.tenant, 'invoice', 2027))).toBe(1);
+    expect(
+      await withTenant(db, B.tenant, B.user, (tx) => nextSequenceValue(tx, B.tenant, 'invoice', 2026)),
+    ).toBe(1);
+    expect(
+      await withTenant(db, A.tenant, A.user, (tx) => nextSequenceValue(tx, A.tenant, 'invoice', 2027)),
+    ).toBe(1);
   });
 });

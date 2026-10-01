@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22'
+  TURBO_TELEMETRY_DISABLED: '1'
+  NEXT_TELEMETRY_DISABLED: '1'
+
+jobs:
+  checks:
+    name: Lint, typecheck, tests, build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: batimint_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      # Rôle applicatif (provisionné par les tests) et base propriétaire des tests d'intégration.
+      DATABASE_URL: postgresql://batimint_app:batimint_app@localhost:5432/batimint_test
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/batimint_test
+      SESSION_SECRET: ci-session-secret-0123456789abcdef
+      PORTAL_TOKEN_SECRET: ci-portal-secret-0123456789abcdef
+      FIELD_ENCRYPTION_KEY: ZGV2LWZpZWxkLWVuY3J5cHRpb24ta2V5LTMyYnl0ZXM=
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Tokens du design system synchronisés
+        run: node scripts/sync-tokens.mjs --check
+      - run: pnpm format:check
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+      - name: Couverture du domaine
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-domain
+          path: packages/domain/coverage
+          if-no-files-found: ignore
+
+  e2e:
+    name: Images Docker + E2E Playwright
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Fichier .env de la stack
+        run: cp .env.example .env
+      - name: Construire et démarrer la stack de production
+        run: docker compose -f docker-compose.coolify.yml -f docker/docker-compose.e2e.yml up -d --build --wait --wait-timeout 600
+      - name: Navigateur Playwright
+        run: pnpm --filter @batimint/e2e exec playwright install --with-deps chromium
+      - name: Parcours E2E
+        env:
+          E2E_BASE_URL: http://localhost:3000
+          MAILPIT_URL: http://localhost:8025
+          CI: 'true'
+        run: pnpm test:e2e
+      - name: Journaux de la stack
+        if: failure()
+        run: docker compose -f docker-compose.coolify.yml -f docker/docker-compose.e2e.yml logs --no-color --tail=300
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: e2e/playwright-report
+          if-no-files-found: ignore

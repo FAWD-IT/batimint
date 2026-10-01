@@ -55,7 +55,12 @@ export class S3Storage implements ObjectStorage {
       return { key: input.key, versionId: res.VersionId };
     } catch (err) {
       if (err instanceof IntegrationError) throw err;
-      throw new IntegrationError('s3', "Le fichier n'a pas pu être enregistré (stockage indisponible).", true, err);
+      throw new IntegrationError(
+        's3',
+        "Le fichier n'a pas pu être enregistré (stockage indisponible).",
+        true,
+        err,
+      );
     }
   }
 

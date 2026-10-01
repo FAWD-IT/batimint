@@ -41,7 +41,10 @@ export class OutboxRelay {
 
   private async listen(): Promise<void> {
     if (this.stopped) return;
-    const client = new pg.Client({ connectionString: this.connectionString, application_name: 'batimint-relay' });
+    const client = new pg.Client({
+      connectionString: this.connectionString,
+      application_name: 'batimint-relay',
+    });
     client.on('notification', () => void this.drain());
     client.on('error', (err) => {
       this.logger.warn({ err }, 'LISTEN outbox perdu, reconnexion');

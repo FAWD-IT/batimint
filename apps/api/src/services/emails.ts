@@ -4,7 +4,8 @@
  */
 import type { MailMessage } from '@batimint/integrations';
 
-const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+const esc = (s: string) =>
+  s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 
 export function layout(title: string, bodyHtml: string, cta?: { label: string; href: string }): string {
   return `<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${esc(title)}</title></head>
@@ -14,8 +15,12 @@ export function layout(title: string, bodyHtml: string, cta?: { label: string; h
 <tr><td style="font-weight:700;font-size:18px;letter-spacing:-0.02em;padding-bottom:24px">Batimint</td></tr>
 <tr><td style="font-size:22px;font-weight:700;letter-spacing:-0.02em;padding-bottom:12px">${esc(title)}</td></tr>
 <tr><td style="font-size:15px;line-height:1.55;color:#111111">${bodyHtml}</td></tr>
-${cta ? `<tr><td style="padding-top:24px"><a href="${esc(cta.href)}" style="display:inline-block;background:#111111;color:#FFFFFF;text-decoration:none;font-weight:600;font-size:15px;padding:14px 22px;border-radius:12px">${esc(cta.label)}</a></td></tr>
-<tr><td style="padding-top:16px;font-size:12px;color:#5E5E5A;word-break:break-all">Si le bouton ne fonctionne pas, copiez ce lien : ${esc(cta.href)}</td></tr>` : ''}
+${
+  cta
+    ? `<tr><td style="padding-top:24px"><a href="${esc(cta.href)}" style="display:inline-block;background:#111111;color:#FFFFFF;text-decoration:none;font-weight:600;font-size:15px;padding:14px 22px;border-radius:12px">${esc(cta.label)}</a></td></tr>
+<tr><td style="padding-top:16px;font-size:12px;color:#5E5E5A;word-break:break-all">Si le bouton ne fonctionne pas, copiez ce lien : ${esc(cta.href)}</td></tr>`
+    : ''
+}
 </table>
 <p style="font-size:12px;color:#5E5E5A;margin-top:16px">Vous recevez cet e-mail car une action a été demandée sur Batimint.</p>
 </td></tr></table></body></html>`;

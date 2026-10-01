@@ -12,9 +12,19 @@ export interface TestDatabase {
   appUrl: string;
 }
 
-export function testDatabaseUrls(): TestDatabase {
-  const ownerUrl = process.env['TEST_DATABASE_URL'] ?? 'postgresql://postgres:postgres@localhost:5432/batimint_test';
-  const app = new URL(process.env['DATABASE_URL'] ?? 'postgresql://batimint_app:batimint_app@localhost:5432/batimint');
+/**
+ * URLs de la base de test. Chaque package de tests a sa propre base (suffixe) pour que
+ * turbo puisse lancer les suites en parallèle sans interférence.
+ */
+export function testDatabaseUrls(suffix?: string): TestDatabase {
+  const base = new URL(
+    process.env['TEST_DATABASE_URL'] ?? 'postgresql://postgres:postgres@localhost:5432/batimint_test',
+  );
+  if (suffix) base.pathname = `${base.pathname}_${suffix}`;
+  const ownerUrl = base.toString();
+  const app = new URL(
+    process.env['DATABASE_URL'] ?? 'postgresql://batimint_app:batimint_app@localhost:5432/batimint',
+  );
   const appUrl = new URL(ownerUrl);
   appUrl.username = app.username;
   appUrl.password = app.password;
@@ -37,8 +47,8 @@ async function ensureDatabaseExists(ownerUrl: string): Promise<void> {
 }
 
 /** Applique les migrations sur la base de test (idempotent). */
-export async function prepareTestDatabase(): Promise<TestDatabase> {
-  const urls = testDatabaseUrls();
+export async function prepareTestDatabase(suffix?: string): Promise<TestDatabase> {
+  const urls = testDatabaseUrls(suffix);
   await ensureDatabaseExists(urls.ownerUrl);
   const cwd = fileURLToPath(new URL('..', import.meta.url));
   const res = spawnSync('pnpm', ['exec', 'prisma', 'migrate', 'deploy'], {
@@ -46,7 +56,8 @@ export async function prepareTestDatabase(): Promise<TestDatabase> {
     env: { ...process.env, MIGRATION_DATABASE_URL: urls.ownerUrl },
     encoding: 'utf8',
   });
-  if (res.status !== 0) throw new Error(`Migration de la base de test impossible :\n${res.stdout}\n${res.stderr}`);
+  if (res.status !== 0)
+    throw new Error(`Migration de la base de test impossible :\n${res.stdout}\n${res.stderr}`);
   await provisionAppRole(urls.ownerUrl, urls.appUrl);
   return urls;
 }

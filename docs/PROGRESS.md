@@ -3,33 +3,69 @@
 Ce fichier est le point de reprise entre sessions cloud. Une nouvelle session doit pouvoir reprendre le travail en ne lisant que lui et `CLAUDE.md`.
 
 ## Jalon en cours
-M0 — Fondations
+**M1 — Entreprise et onboarding** (M0 terminé, étiquette `m0-done`).
 
 ## Prochaine action
-Lire les docs, proposer le découpage de M0, initialiser le monorepo.
+M1 : paramètres entreprise (BCE/TVA via VIES mock, adresse, IBAN, logo, couleur, CGV, taux horaires, coefficients, pauses, délais, relances, retenue de garantie, séries de numérotation), utilisateurs et invitations (consommateur `user.invited` qui envoie l'e-mail), équipes, employés (INSS chiffré), checklist d'onboarding, page Sécurité (sessions, TOTP — l'API existe déjà), super-admin (tenants, flags, impersonation auditée, files en échec). Puis E2E P1 complet.
 
 ## Relancer l'environnement
-_(commandes exactes à jour : services à démarrer, migrations, seed, lancement dev, tests)_
+```bash
+# Session cloud : le démon Docker n'est pas lancé par défaut (le hook de session le démarre).
+docker info >/dev/null 2>&1 || (nohup dockerd >/tmp/dockerd.log 2>&1 &)
+pnpm install
+cp -n .env.example .env
+pnpm services:up          # Postgres :5432, MinIO :9000/:9001, Mailpit :1025/:8025
+pnpm db:migrate           # migrations + rôle batimint_app + vérification RLS
+pnpm db:seed              # tenant de démo
+pnpm dev:apps > /tmp/dev.log 2>&1 &   # web :3000, api :4000, worker (ou `pnpm dev` qui fait tout)
+pnpm test                 # unitaires + intégration (bases batimint_test_<package> créées à la volée)
+pnpm --filter @batimint/e2e e2e       # E2E (app démarrée ; E2E_DEMO=1 pour les tests sur le seed)
+```
+Stack de production (images) dans la session cloud — l'AC TLS du bac à sable doit être passée au build :
+```bash
+docker compose -f docker-compose.coolify.yml -f docker/docker-compose.sandbox.yml -f docker/docker-compose.e2e.yml up -d --build --wait
+```
+(arrêter d'abord `pnpm dev:apps` et le Mailpit de dev : mêmes ports 3000/4000/8025.)
 
 ## Fait
-_(rien pour l'instant)_
+### M0 — Fondations ✅
+- Monorepo pnpm + Turborepo, TypeScript strict, ESLint 10, Prettier, Vitest 4 (ADR 0001).
+- `packages/domain` (pur, 100 % des lignes couvertes) : centimes `bigint`, arrondis EN 16931, TVA par catégorie/taux, détermination du régime (AE / 6 % / 21 % / intracom), justification de forçage, communication structurée mod 97, numérotation, identifiants belges (BCE, TVA, IBAN, Peppol 0208), matrice de permissions, machines d'état (devis, avenant, chantier, état d'avancement, facture, facture fournisseur, pointage), budget et marge (ADR 0004).
+- `packages/db` : Prisma 7, RLS forcée sur toutes les tables métier, rôle applicatif provisionné et vérifié à chaque migration, outbox (+ NOTIFY), audit en ajout seul, numérotation sans trou (100 émissions concurrentes testées), seed des personas, `admin:create` (ADR 0005).
+- `apps/api` : Fastify 5, OpenAPI 3.1 (`/docs`), auth maison (inscription, connexion, lien magique, reset, TOTP, sessions révocables, Bearer mobile, CSRF Origin) (ADR 0002), contexte tenant par transaction, Idempotency-Key, erreurs françaises, `/health` `/ready`, SSE par canal, notifications, diagnostic temps réel.
+- `apps/worker` : relais outbox → pg-boss 12 (même transaction), consommateurs idempotents, file morte, `pg_notify` transactionnel, battement de santé (ADR 0008).
+- `apps/web` : Next.js 16, Tailwind 4 + tokens, Geist auto-hébergée (ADR 0009), i18n FR (next-intl), proxy same-origin `/api/v1` (ADR 0003), coquille back-office (barre latérale sombre, menu mobile, indicateur « En direct », cloche + toasts temps réel), pages auth, Aujourd'hui (état vide), Paramètres → Diagnostic.
+- `packages/ui` : boutons, champs, cartes, pastilles, jauges, barre d'étapes, toasts « Annuler », états vides/erreur, squelettes.
+- `packages/integrations` : interfaces + mocks (mail SMTP/mock, S3/mémoire, VIES/mock).
+- Dockerfiles multi-étapes non-root, `docker-compose.coolify.yml` (ADR 0006, 0007), `docker-compose.dev.yml`, CI GitHub Actions (checks + images + E2E), hook de session.
+- Critères de sortie vérifiés : `pnpm test` vert (100 tests), RLS vert, E2E M0 verts en dev **et** sur les images de production (événement outbox → worker → SSE → navigateur, deux navigateurs synchronisés, axe sans violation critique/sérieuse, mobile 390×844), stack Coolify démarrée en local avec base migrée et tenant de démo, redéploiement idempotent.
 
 ## Reste à faire
-Voir `11-plan-de-livraison.md`.
+M1 → M13 selon `docs/11-plan-de-livraison.md`.
 
 ## Écarts avec la spécification
-_(décision, raison, ADR associé)_
+- Formule du coût projeté corrigée (ADR 0004).
+- `exclude_from_hc` remplacé par des services ponctuels « au repos et sains » (ADR 0007).
+- Image MinIO communautaire `pgsty/minio` (ADR 0006).
+- Auth maison au lieu de Better Auth (ADR 0002) ; même origine via proxy Next (ADR 0003).
+- Navigation : seuls les modules livrés apparaissent (pas de lien vers un écran vide). ⌘K arrive avec M4.
 
 ## Limites rencontrées dans l'environnement cloud
-_(réseau bloqué, outils manquants, contournements)_
+- Docker est installé mais le démon n'est pas lancé : `dockerd &` (le hook le fait).
+- Le TLS sortant est intercepté par le proxy de session : les conteneurs de build ont besoin de l'AC (`docker/docker-compose.sandbox.yml` la passe en secret de build). Sans effet sur Coolify.
+- `minio/minio` et `quay.io` indisponibles : fork `pgsty/minio`.
+- Playwright épinglé en 1.56.1 pour utiliser le Chromium préinstallé (`/opt/pw-browsers`).
+- `pkill -f` avec un motif présent dans la commande courante tue le shell de l'outil : utiliser `ps | grep | kill`.
 
 ## À valider métier (comptable / juriste)
 - Taux de retenue 30bis et seuils de la déclaration de travaux (`05` §7)
 - Forme de l'attestation 6 % et éligibilité ligne par ligne (`05` §3)
 - Mention légale d'autoliquidation (`05` §3)
-- Délai d'émission des factures et durée de conservation (`05` §2)
+- Délai d'émission des factures et durée de conservation (`05` §2) — bucket légal paramétré à 10 ans
 - Règles de relance B2B / B2C à jour (`05` §6)
 - Accès logiciel aux services web ONSS (Check In and Out, 30bis) (`07`)
+- Régime intracommunautaire pour un client assujetti étranger (proposé automatiquement, `domain/vat.ts`)
 
 ## Améliorations repérées en jouant les parcours
-_(persona, écran, problème, correction)_
+- M0 · Luca (Ouvrier) · Paramètres : le lien menait à une page sans rien d'utilisable → lien et page conditionnés aux sections autorisées.
+- M0 · tous · police : l'import Google Fonts cassait le CSS et posait un problème RGPD → Geist embarquée.

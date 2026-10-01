@@ -9,5 +9,7 @@ export default defineConfig({
   sourcemap: true,
   clean: true,
   noExternal: [/^@batimint\//],
-  banner: { js: "import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);" },
+  banner: {
+    js: "import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);",
+  },
 });

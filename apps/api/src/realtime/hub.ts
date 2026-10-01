@@ -47,7 +47,10 @@ export class RealtimeHub {
 
   private async connect(): Promise<void> {
     if (this.stopped || !this.connectionString) return;
-    const client = new pg.Client({ connectionString: this.connectionString, application_name: 'batimint-realtime' });
+    const client = new pg.Client({
+      connectionString: this.connectionString,
+      application_name: 'batimint-realtime',
+    });
     client.on('notification', (n) => {
       if (n.channel !== REALTIME_PG_CHANNEL || !n.payload) return;
       try {

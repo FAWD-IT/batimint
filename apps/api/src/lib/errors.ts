@@ -12,12 +12,19 @@ export class AppError extends Error {
 }
 
 export const notFound = (what = 'Cet élément') =>
-  new AppError(404, 'not_found', `${what} est introuvable. Il a peut-être été supprimé, ou vous n'y avez pas accès.`);
-export const forbidden = (message = "Votre rôle ne permet pas cette action. Demandez à l'administrateur de votre entreprise.") =>
-  new AppError(403, 'forbidden', message);
+  new AppError(
+    404,
+    'not_found',
+    `${what} est introuvable. Il a peut-être été supprimé, ou vous n'y avez pas accès.`,
+  );
+export const forbidden = (
+  message = "Votre rôle ne permet pas cette action. Demandez à l'administrateur de votre entreprise.",
+) => new AppError(403, 'forbidden', message);
 export const unauthorized = (message = 'Votre session a expiré. Reconnectez-vous pour continuer.') =>
   new AppError(401, 'unauthorized', message);
-export const conflict = (code: string, message: string, details?: unknown) => new AppError(409, code, message, details);
-export const badRequest = (code: string, message: string, details?: unknown) => new AppError(400, code, message, details);
+export const conflict = (code: string, message: string, details?: unknown) =>
+  new AppError(409, code, message, details);
+export const badRequest = (code: string, message: string, details?: unknown) =>
+  new AppError(400, code, message, details);
 export const unprocessable = (code: string, message: string, details?: unknown) =>
   new AppError(422, code, message, details);

@@ -5,7 +5,8 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 
 const source = readFileSync('design/tokens.css', 'utf8');
-const header = '/* GÉNÉRÉ depuis design/tokens.css par scripts/sync-tokens.mjs — ne pas modifier à la main. */\n';
+const header =
+  '/* GÉNÉRÉ depuis design/tokens.css par scripts/sync-tokens.mjs — ne pas modifier à la main. */\n';
 const output = header + source.replace(/^@import url\([^)]*\);\s*\n/m, '');
 const target = 'packages/ui/src/tokens.css';
 if (process.argv.includes('--check')) {
@@ -14,7 +15,9 @@ if (process.argv.includes('--check')) {
     current = readFileSync(target, 'utf8');
   } catch {}
   if (current !== output) {
-    console.error(`${target} n'est pas synchronisé avec design/tokens.css : lancer node scripts/sync-tokens.mjs`);
+    console.error(
+      `${target} n'est pas synchronisé avec design/tokens.css : lancer node scripts/sync-tokens.mjs`,
+    );
     process.exit(1);
   }
   console.info('tokens synchronisés');

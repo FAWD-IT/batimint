@@ -4,7 +4,20 @@ import { type NextRequest, NextResponse } from 'next/server';
  * Vérification optimiste : sans cookie de session, on renvoie directement vers la connexion
  * (la vraie vérification est faite par l'API dans le layout de l'application).
  */
-const PUBLIC_PREFIXES = ['/connexion', '/inscription', '/mot-de-passe', '/p/', '/s/', '/api/', '/_next/', '/favicon', '/icons/', '/manifest', '/sw.js', '/invitation'];
+const PUBLIC_PREFIXES = [
+  '/connexion',
+  '/inscription',
+  '/mot-de-passe',
+  '/p/',
+  '/s/',
+  '/api/',
+  '/_next/',
+  '/favicon',
+  '/icons/',
+  '/manifest',
+  '/sw.js',
+  '/invitation',
+];
 
 export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;

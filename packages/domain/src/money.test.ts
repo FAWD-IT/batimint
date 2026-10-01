@@ -48,9 +48,7 @@ describe('money — centimes entiers (CLAUDE.md règle n°2)', () => {
   it('formate les montants exactement, même très grands', () => {
     expect(formatEuros(123456n)).toBe('1 234,56 €');
     expect(formatEuros(-5n)).toBe('−0,05 €');
-    expect(formatEuros(123456789012345678n, { withSymbol: false })).toBe(
-      '1 234 567 890 123 456,78',
-    );
+    expect(formatEuros(123456789012345678n, { withSymbol: false })).toBe('1 234 567 890 123 456,78');
     expect(formatEuros(4_812_350n, { decimals: false })).toBe('48 124 €');
     expect(centsToDecimalString(-123456n)).toBe('-1234.56');
     expect(centsToDecimalString(5n)).toBe('0.05');

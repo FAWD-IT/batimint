@@ -1,7 +1,19 @@
-import { createCipheriv, createDecipheriv, createHash, randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  randomBytes,
+  scrypt,
+  timingSafeEqual,
+} from 'node:crypto';
 import { promisify } from 'node:util';
 
-const scryptAsync = promisify(scrypt) as (pw: string, salt: Buffer, keylen: number, opts: object) => Promise<Buffer>;
+const scryptAsync = promisify(scrypt) as (
+  pw: string,
+  salt: Buffer,
+  keylen: number,
+  opts: object,
+) => Promise<Buffer>;
 
 const SCRYPT = { N: 16384, r: 8, p: 1, maxmem: 64 * 1024 * 1024 };
 
@@ -21,12 +33,17 @@ export async function verifyPassword(password: string, stored: string | null | u
   const [algo, n, r, p, saltB64, hashB64] = stored.split('$');
   if (algo !== 'scrypt' || !saltB64 || !hashB64) return false;
   const expected = Buffer.from(hashB64, 'base64');
-  const actual = await scryptAsync(password.normalize('NFKC'), Buffer.from(saltB64, 'base64'), expected.length, {
-    N: Number(n),
-    r: Number(r),
-    p: Number(p),
-    maxmem: SCRYPT.maxmem,
-  });
+  const actual = await scryptAsync(
+    password.normalize('NFKC'),
+    Buffer.from(saltB64, 'base64'),
+    expected.length,
+    {
+      N: Number(n),
+      r: Number(r),
+      p: Number(p),
+      maxmem: SCRYPT.maxmem,
+    },
+  );
   return actual.length === expected.length && timingSafeEqual(actual, expected);
 }
 
@@ -61,6 +78,8 @@ export class FieldCipher {
     if (v !== 'v1' || !ivB || !tagB || !encB) throw new Error('Format chiffré inconnu');
     const decipher = createDecipheriv('aes-256-gcm', this.key, Buffer.from(ivB, 'base64url'));
     decipher.setAuthTag(Buffer.from(tagB, 'base64url'));
-    return Buffer.concat([decipher.update(Buffer.from(encB, 'base64url')), decipher.final()]).toString('utf8');
+    return Buffer.concat([decipher.update(Buffer.from(encB, 'base64url')), decipher.final()]).toString(
+      'utf8',
+    );
   }
 }

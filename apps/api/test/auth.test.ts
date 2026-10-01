@@ -24,7 +24,9 @@ describe('santé', () => {
     expect(res.statusCode).toBe(200);
     const doc = res.json();
     expect(doc.openapi).toBe('3.1.0');
-    expect(Object.keys(doc.paths)).toEqual(expect.arrayContaining(['/v1/auth/signup', '/v1/me', '/v1/diagnostics/ping']));
+    expect(Object.keys(doc.paths)).toEqual(
+      expect.arrayContaining(['/v1/auth/signup', '/v1/me', '/v1/diagnostics/ping']),
+    );
   });
 });
 
@@ -39,9 +41,13 @@ describe('P1.1 — inscription et connexion', () => {
     expect(body.tenant.slug).toMatch(/^renovhabitat-test/);
     expect(body.permissions).toContain('subscription.manage');
     // L'événement tenant.created est écrit dans l'outbox, dans la même transaction.
-    const events = await withSystem(t.prisma, (tx) => tx.outboxEvent.findMany({ where: { tenantId: body.tenant.id } }));
+    const events = await withSystem(t.prisma, (tx) =>
+      tx.outboxEvent.findMany({ where: { tenantId: body.tenant.id } }),
+    );
     expect(events.map((e) => e.type)).toContain('tenant.created.v1');
-    const audit = await withSystem(t.prisma, (tx) => tx.auditLog.findMany({ where: { tenantId: body.tenant.id } }));
+    const audit = await withSystem(t.prisma, (tx) =>
+      tx.auditLog.findMany({ where: { tenantId: body.tenant.id } }),
+    );
     expect(audit.map((a) => a.action)).toContain('tenant.created');
   });
 
@@ -65,14 +71,25 @@ describe('P1.1 — inscription et connexion', () => {
 
   it('connexion : mauvais mot de passe puis bon', async () => {
     const s = await signupCompany(t.app);
-    const bad = await t.app.inject({ method: 'POST', url: '/v1/auth/login', payload: { email: s.email, password: 'faux' } });
+    const bad = await t.app.inject({
+      method: 'POST',
+      url: '/v1/auth/login',
+      payload: { email: s.email, password: 'faux' },
+    });
     expect(bad.statusCode).toBe(401);
     expect(bad.json().error.code).toBe('invalid_credentials');
-    const ok = await t.app.inject({ method: 'POST', url: '/v1/auth/login', payload: { email: s.email.toUpperCase(), password: s.password } });
+    const ok = await t.app.inject({
+      method: 'POST',
+      url: '/v1/auth/login',
+      payload: { email: s.email.toUpperCase(), password: s.password },
+    });
     expect(ok.statusCode).toBe(200);
     expect(ok.json().status).toBe('ok');
     // Le jeton fonctionne aussi en Bearer (app mobile).
-    const me = await t.app.inject({ url: '/v1/me', headers: { authorization: `Bearer ${ok.json().sessionToken}` } });
+    const me = await t.app.inject({
+      url: '/v1/me',
+      headers: { authorization: `Bearer ${ok.json().sessionToken}` },
+    });
     expect(me.json().user.email).toBe(s.email);
   });
 
@@ -88,17 +105,29 @@ describe('P1.1 — inscription et connexion', () => {
     const mail = t.mailer.lastTo(s.email);
     expect(mail?.subject).toMatch(/lien de connexion/);
     const token = decodeURIComponent(/token=([^"&\s]+)/.exec(mail!.text)![1]!);
-    const first = await t.app.inject({ method: 'POST', url: '/v1/auth/magic-link/verify', payload: { token } });
+    const first = await t.app.inject({
+      method: 'POST',
+      url: '/v1/auth/magic-link/verify',
+      payload: { token },
+    });
     expect(first.statusCode).toBe(200);
     sessionCookie(first);
-    const again = await t.app.inject({ method: 'POST', url: '/v1/auth/magic-link/verify', payload: { token } });
+    const again = await t.app.inject({
+      method: 'POST',
+      url: '/v1/auth/magic-link/verify',
+      payload: { token },
+    });
     expect(again.statusCode).toBe(400);
     expect(again.json().error.code).toBe('invalid_token');
   });
 
   it('lien magique pour une adresse inconnue : même réponse, aucun e-mail', async () => {
     const before = t.mailer.sent.length;
-    const res = await t.app.inject({ method: 'POST', url: '/v1/auth/magic-link', payload: { email: 'inconnu@example.test' } });
+    const res = await t.app.inject({
+      method: 'POST',
+      url: '/v1/auth/magic-link',
+      payload: { email: 'inconnu@example.test' },
+    });
     expect(res.statusCode).toBe(200);
     expect(t.mailer.sent.length).toBe(before);
   });
@@ -107,24 +136,44 @@ describe('P1.1 — inscription et connexion', () => {
     const s = await signupCompany(t.app);
     await t.app.inject({ method: 'POST', url: '/v1/auth/password/forgot', payload: { email: s.email } });
     const token = decodeURIComponent(/token=([^"&\s]+)/.exec(t.mailer.lastTo(s.email)!.text)![1]!);
-    const res = await t.app.inject({ method: 'POST', url: '/v1/auth/password/reset', payload: { token, password: 'nouveau-mot-de-passe-99' } });
+    const res = await t.app.inject({
+      method: 'POST',
+      url: '/v1/auth/password/reset',
+      payload: { token, password: 'nouveau-mot-de-passe-99' },
+    });
     expect(res.statusCode).toBe(200);
     expect((await t.app.inject({ url: '/v1/me', headers: { cookie: s.cookie } })).statusCode).toBe(401);
-    const login = await t.app.inject({ method: 'POST', url: '/v1/auth/login', payload: { email: s.email, password: 'nouveau-mot-de-passe-99' } });
+    const login = await t.app.inject({
+      method: 'POST',
+      url: '/v1/auth/login',
+      payload: { email: s.email, password: 'nouveau-mot-de-passe-99' },
+    });
     expect(login.statusCode).toBe(200);
   });
 
   it('sessions : liste et révocation', async () => {
     const s = await signupCompany(t.app);
-    const login = await t.app.inject({ method: 'POST', url: '/v1/auth/login', payload: { email: s.email, password: s.password } });
+    const login = await t.app.inject({
+      method: 'POST',
+      url: '/v1/auth/login',
+      payload: { email: s.email, password: s.password },
+    });
     const other = sessionCookie(login);
     const list = await t.app.inject({ url: '/v1/auth/sessions', headers: { cookie: s.cookie } });
     expect(list.json().items).toHaveLength(2);
     const target = list.json().items.find((i: { current: boolean }) => !i.current);
-    const del = await t.app.inject({ method: 'DELETE', url: `/v1/auth/sessions/${target.id}`, headers: { cookie: s.cookie } });
+    const del = await t.app.inject({
+      method: 'DELETE',
+      url: `/v1/auth/sessions/${target.id}`,
+      headers: { cookie: s.cookie },
+    });
     expect(del.statusCode).toBe(200);
     expect((await t.app.inject({ url: '/v1/me', headers: { cookie: other } })).statusCode).toBe(401);
-    const logout = await t.app.inject({ method: 'POST', url: '/v1/auth/logout', headers: { cookie: s.cookie } });
+    const logout = await t.app.inject({
+      method: 'POST',
+      url: '/v1/auth/logout',
+      headers: { cookie: s.cookie },
+    });
     expect(logout.statusCode).toBe(200);
     expect((await t.app.inject({ url: '/v1/me', headers: { cookie: s.cookie } })).statusCode).toBe(401);
   });
@@ -143,16 +192,38 @@ describe('P1.1 — inscription et connexion', () => {
   it('double authentification TOTP', async () => {
     const OTPAuth = await import('otpauth');
     const s = await signupCompany(t.app);
-    const setup = await t.app.inject({ method: 'POST', url: '/v1/auth/totp/setup', headers: { cookie: s.cookie } });
+    const setup = await t.app.inject({
+      method: 'POST',
+      url: '/v1/auth/totp/setup',
+      headers: { cookie: s.cookie },
+    });
     const secret: string = setup.json().secret;
     const totp = new OTPAuth.TOTP({ secret: OTPAuth.Secret.fromBase32(secret), digits: 6, period: 30 });
-    const wrong = await t.app.inject({ method: 'POST', url: '/v1/auth/totp/enable', headers: { cookie: s.cookie }, payload: { code: '000000' } });
+    const wrong = await t.app.inject({
+      method: 'POST',
+      url: '/v1/auth/totp/enable',
+      headers: { cookie: s.cookie },
+      payload: { code: '000000' },
+    });
     expect(wrong.statusCode).toBe(400);
-    const en = await t.app.inject({ method: 'POST', url: '/v1/auth/totp/enable', headers: { cookie: s.cookie }, payload: { code: totp.generate() } });
+    const en = await t.app.inject({
+      method: 'POST',
+      url: '/v1/auth/totp/enable',
+      headers: { cookie: s.cookie },
+      payload: { code: totp.generate() },
+    });
     expect(en.statusCode).toBe(200);
-    const step1 = await t.app.inject({ method: 'POST', url: '/v1/auth/login', payload: { email: s.email, password: s.password } });
+    const step1 = await t.app.inject({
+      method: 'POST',
+      url: '/v1/auth/login',
+      payload: { email: s.email, password: s.password },
+    });
     expect(step1.json().status).toBe('mfa_required');
-    const step2 = await t.app.inject({ method: 'POST', url: '/v1/auth/login', payload: { email: s.email, password: s.password, totp: totp.generate() } });
+    const step2 = await t.app.inject({
+      method: 'POST',
+      url: '/v1/auth/login',
+      payload: { email: s.email, password: s.password, totp: totp.generate() },
+    });
     expect(step2.json().status).toBe('ok');
   });
 });

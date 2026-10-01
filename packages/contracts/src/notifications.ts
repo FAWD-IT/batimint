@@ -19,5 +19,7 @@ export const NotificationListSchema = z.object({
   unreadCount: z.number().int(),
 });
 
-export const DiagnosticPingRequestSchema = z.object({ message: z.string().trim().min(1).max(200).optional() });
+export const DiagnosticPingRequestSchema = z.object({
+  message: z.string().trim().min(1).max(200).optional(),
+});
 export const DiagnosticPingResponseSchema = z.object({ eventId: Uuid, emittedAt: z.string() });

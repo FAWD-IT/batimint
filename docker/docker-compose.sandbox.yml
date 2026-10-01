@@ -1,0 +1,19 @@
+# Surcouche pour construire les images dans une session Claude Code cloud (AC TLS interceptée).
+# docker compose -f docker-compose.coolify.yml -f docker/docker-compose.sandbox.yml up --build
+# Inutile sur Coolify ou sur un poste de développement classique.
+services:
+  web:
+    build:
+      secrets: [ca]
+  api:
+    build:
+      secrets: [ca]
+  worker:
+    build:
+      secrets: [ca]
+  migrate:
+    build:
+      secrets: [ca]
+secrets:
+  ca:
+    file: ${SANDBOX_CA_FILE:-/root/.ccr/ca-bundle.crt}

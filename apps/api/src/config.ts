@@ -13,7 +13,10 @@ const EnvSchema = z.object({
   DATABASE_URL: z.string().min(1),
   APP_URL: z.string().url().default('http://localhost:3000'),
   API_URL: z.string().url().default('http://localhost:4000'),
-  COOKIE_DOMAIN: z.string().optional().transform((v) => v || undefined),
+  COOKIE_DOMAIN: z
+    .string()
+    .optional()
+    .transform((v) => v || undefined),
   SESSION_SECRET: z.string().min(16),
   PORTAL_TOKEN_SECRET: z.string().min(16),
   FIELD_ENCRYPTION_KEY: z.string().min(16),
@@ -34,6 +37,11 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     throw new Error(`Configuration invalide :\n${issues}`);
   }
   const c = parsed.data;
-  const allowedOrigins = [c.APP_URL, ...(c.CORS_ORIGINS?.split(',').map((s) => s.trim()).filter(Boolean) ?? [])];
+  const allowedOrigins = [
+    c.APP_URL,
+    ...(c.CORS_ORIGINS?.split(',')
+      .map((s) => s.trim())
+      .filter(Boolean) ?? []),
+  ];
   return { ...c, isProduction: c.NODE_ENV === 'production', allowedOrigins };
 }

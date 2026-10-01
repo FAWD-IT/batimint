@@ -14,7 +14,7 @@
     "build": "turbo run build",
     "test": "turbo run test",
     "test:unit": "turbo run test --filter=@batimint/domain --filter=@batimint/contracts --filter=@batimint/integrations",
-    "test:e2e": "pnpm --filter @batimint/e2e test",
+    "test:e2e": "pnpm --filter @batimint/e2e e2e",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "format": "prettier --write .",
