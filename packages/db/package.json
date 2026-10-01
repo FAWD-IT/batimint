@@ -1,0 +1,36 @@
+{
+  "name": "@batimint/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./testing": "./src/testing.ts"
+  },
+  "scripts": {
+    "generate": "prisma generate",
+    "migrate": "tsx scripts/migrate.ts dev",
+    "migrate:deploy": "tsx scripts/migrate.ts deploy",
+    "migrate:create": "prisma migrate dev --create-only",
+    "seed": "tsx scripts/seed.ts",
+    "admin:create": "tsx scripts/admin-create.ts",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint src scripts"
+  },
+  "dependencies": {
+    "@batimint/domain": "workspace:*",
+    "@prisma/adapter-pg": "7.10.0",
+    "@prisma/client": "7.10.0",
+    "pg": "^8.16.0",
+    "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.0",
+    "@types/pg": "^8.15.0",
+    "dotenv": "^17.2.0",
+    "prisma": "7.10.0",
+    "tsx": "^4.20.0",
+    "vitest": "^4.0.0"
+  }
+}
