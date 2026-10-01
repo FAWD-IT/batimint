@@ -37,9 +37,9 @@ jobs:
       PORTAL_TOKEN_SECRET: ci-portal-secret-0123456789abcdef
       FIELD_ENCRYPTION_KEY: ZGV2LWZpZWxkLWVuY3J5cHRpb24ta2V5LTMyYnl0ZXM=
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
@@ -64,9 +64,9 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm

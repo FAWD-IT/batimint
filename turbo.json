@@ -35,5 +35,6 @@
       "cache": false,
       "persistent": true
     }
-  }
+  },
+  "envMode": "loose"
 }

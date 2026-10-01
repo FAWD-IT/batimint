@@ -77,7 +77,7 @@ export const integrationRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async
             "Renseignez d'abord votre numéro d'entreprise (Paramètres → Entreprise).",
           );
         }
-        let status: 'pending' | 'active' | 'error' = 'pending';
+        let status: 'pending' | 'active' | 'error';
         let externalId: string | null = null;
         let lastError: string | null = null;
         let config: Record<string, unknown> = {};
