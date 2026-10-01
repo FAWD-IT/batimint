@@ -21,7 +21,7 @@ pnpm db:migrate           # migrations + rôle batimint_app + vérification RLS
 pnpm db:seed              # tenant de démo
 pnpm dev:apps > /tmp/dev.log 2>&1 &   # web :3000, api :4000, worker (ou `pnpm dev` qui fait tout)
 pnpm test                 # unitaires + intégration (bases batimint_test_<package> créées à la volée)
-pnpm --filter @batimint/e2e e2e       # E2E (app démarrée ; E2E_DEMO=1 pour les tests sur le seed)
+pnpm --filter @batimint/e2e e2e       # E2E (app démarrée avec RATE_LIMIT_DISABLED=true dans .env ; E2E_DEMO=1 pour les tests sur le seed)
 ```
 Stack de production (images) dans la session cloud — l'AC TLS du bac à sable doit être passée au build :
 ```bash

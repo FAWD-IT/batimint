@@ -179,6 +179,8 @@ describe('02 P2.1 — demandes entrantes', () => {
       subject: 'Toiture qui fuit',
       text: 'Pouvez-vous passer ?',
     });
+    // Le secret vient de l'environnement (absent en CI) : le test fixe le sien.
+    process.env['INBOUND_EMAIL_WEBHOOK_SECRET'] = 'test-inbound-secret';
     const unsigned = await t.app.inject({
       method: 'POST',
       url: '/v1/webhooks/inbound-email',
@@ -186,9 +188,7 @@ describe('02 P2.1 — demandes entrantes', () => {
       payload,
     });
     expect(unsigned.statusCode).toBe(401);
-    const sig = createHmac('sha256', process.env['INBOUND_EMAIL_WEBHOOK_SECRET'] ?? '')
-      .update(payload)
-      .digest('hex');
+    const sig = createHmac('sha256', 'test-inbound-secret').update(payload).digest('hex');
     const signed = await t.app.inject({
       method: 'POST',
       url: '/v1/webhooks/inbound-email',
