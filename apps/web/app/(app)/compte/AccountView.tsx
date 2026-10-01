@@ -4,11 +4,12 @@ import { Button, Chip, FormSection, Notice, PageHeader, Skeleton, TextField } fr
 import { Laptop, Smartphone } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import QRCode from 'qrcode';
-import { useFormatter, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import { type FormEvent, useEffect, useState } from 'react';
 import { PasswordField } from '@/components/PasswordField';
 import { useApi, useApiMutation } from '@/lib/hooks';
 import { useSession } from '@/lib/session';
+import { useRelativeTime } from '@/lib/use-relative-time';
 
 interface SessionInfo {
   id: string;
@@ -46,7 +47,7 @@ function deviceLabel(ua: string | null, fallback: string): string {
 export function AccountView() {
   const t = useTranslations('account');
   const tc = useTranslations('common');
-  const format = useFormatter();
+  const relativeTime = useRelativeTime();
   const me = useSession();
   const router = useRouter();
   const [name, setName] = useState(me.user.name);
@@ -261,7 +262,7 @@ export function AccountView() {
                         {s.current ? <Chip tone="accent">{t('thisDevice')}</Chip> : null}
                       </div>
                       <div className="text-[13px] text-muted">
-                        {t('lastSeen', { date: format.relativeTime(new Date(s.lastSeenAt)) })}
+                        {t('lastSeen', { date: relativeTime(s.lastSeenAt) })}
                         {s.ip ? ` · ${s.ip}` : ''}
                       </div>
                     </div>

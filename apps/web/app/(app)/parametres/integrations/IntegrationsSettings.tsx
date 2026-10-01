@@ -3,9 +3,10 @@
 import { Button, Card, Chip, ErrorState, Notice, PageHeader, Skeleton, type Tone } from '@batimint/ui';
 import { useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
-import { useFormatter, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import { useApi, useApiMutation } from '@/lib/hooks';
 import { useCan } from '@/lib/session';
+import { useRelativeTime } from '@/lib/use-relative-time';
 
 type Kind = 'peppol' | 'accounting' | 'payments' | 'attendance' | 'ai' | 'inbound_email';
 interface Integration {
@@ -34,7 +35,7 @@ export function IntegrationsSettings() {
   const t = useTranslations('settings.integrations');
   const ts = useTranslations('settings');
   const tc = useTranslations('common');
-  const format = useFormatter();
+  const relativeTime = useRelativeTime();
   const can = useCan();
   const queryClient = useQueryClient();
   const { data, isLoading } = useApi<{ items: Integration[] }>(['integrations'], '/integrations');
@@ -105,7 +106,7 @@ export function IntegrationsSettings() {
                 )}
                 {i.lastCheckedAt ? (
                   <span className="text-[12px] text-muted">
-                    {t('lastChecked', { date: format.relativeTime(new Date(i.lastCheckedAt)) })}
+                    {t('lastChecked', { date: relativeTime(i.lastCheckedAt) })}
                   </span>
                 ) : null}
               </div>

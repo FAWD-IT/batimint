@@ -5,10 +5,11 @@ import { Button, cn, EmptyState, Skeleton, useToast } from '@batimint/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bell } from 'lucide-react';
 import Link from 'next/link';
-import { useFormatter, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import { useEffect, useId, useRef, useState } from 'react';
 import { api } from '@/lib/api';
 import { useRealtimeListener } from '@/lib/realtime';
+import { useRelativeTime } from '@/lib/use-relative-time';
 
 interface NotificationList {
   items: NotificationDto[];
@@ -17,7 +18,7 @@ interface NotificationList {
 
 export function NotificationsBell() {
   const t = useTranslations('notifications');
-  const format = useFormatter();
+  const relativeTime = useRelativeTime();
   const toast = useToast();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -108,9 +109,7 @@ export function NotificationsBell() {
                     <span className="min-w-0 flex-1">
                       <span className="block text-[14px] font-medium text-ink">{n.title}</span>
                       {n.body ? <span className="block text-[13px] text-muted">{n.body}</span> : null}
-                      <span className="block text-[12px] text-muted">
-                        {format.relativeTime(new Date(n.createdAt))}
-                      </span>
+                      <span className="block text-[12px] text-muted">{relativeTime(n.createdAt)}</span>
                     </span>
                   </>
                 );

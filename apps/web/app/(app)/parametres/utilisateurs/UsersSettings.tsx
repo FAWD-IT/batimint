@@ -25,6 +25,7 @@ import { useRealtimeListener } from '@/lib/realtime';
 import { useCan, useSession } from '@/lib/session';
 import { useErrorMessage } from '@/lib/use-error-message';
 import { useQueryClient } from '@tanstack/react-query';
+import { useRelativeTime } from '@/lib/use-relative-time';
 
 interface Member {
   id: string;
@@ -51,6 +52,7 @@ export function UsersSettings() {
   const tr = useTranslations('roles');
   const tc = useTranslations('common');
   const format = useFormatter();
+  const relativeTime = useRelativeTime();
   const can = useCan();
   const me = useSession();
   const errorMessage = useErrorMessage();
@@ -113,7 +115,7 @@ export function UsersSettings() {
             <thead>
               <tr>
                 <Th>{tc('name')}</Th>
-                <Th>{tc('role')}</Th>
+                <Th className="hidden md:table-cell">{tc('role')}</Th>
                 <Th className="hidden md:table-cell">{t('lastLogin')}</Th>
                 <Th align="right">
                   <span className="sr-only">{tc('actions')}</span>
@@ -137,27 +139,25 @@ export function UsersSettings() {
                         </div>
                         {m.status === 'disabled' ? <Chip tone="neutral">{t('disabled')}</Chip> : null}
                       </div>
+                      <div className="mt-2 md:hidden">
+                        <RoleControl
+                          member={m}
+                          editable={editable}
+                          roles={roles}
+                          onChange={(role) => update.mutate({ id: m.id, role })}
+                        />
+                      </div>
                     </Td>
-                    <Td>
-                      {editable ? (
-                        <select
-                          aria-label={`${tc('role')} — ${m.name}`}
-                          value={m.role}
-                          onChange={(e) => update.mutate({ id: m.id, role: e.target.value as Role })}
-                          className="h-10 rounded-[10px] border border-line bg-surface px-2 text-[14px] focus-visible:outline-2 focus-visible:outline-accent"
-                        >
-                          {roles.map((r) => (
-                            <option key={r} value={r}>
-                              {tr(r)}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        tr(m.role)
-                      )}
+                    <Td className="hidden md:table-cell">
+                      <RoleControl
+                        member={m}
+                        editable={editable}
+                        roles={roles}
+                        onChange={(role) => update.mutate({ id: m.id, role })}
+                      />
                     </Td>
                     <Td className="hidden text-muted md:table-cell">
-                      {m.lastLoginAt ? format.relativeTime(new Date(m.lastLoginAt)) : t('never')}
+                      {m.lastLoginAt ? relativeTime(m.lastLoginAt) : t('never')}
                     </Td>
                     <Td align="right">
                       {editable ? (
@@ -253,6 +253,36 @@ export function UsersSettings() {
         loading={update.isPending}
       />
     </div>
+  );
+}
+
+function RoleControl({
+  member,
+  editable,
+  roles,
+  onChange,
+}: {
+  member: Member;
+  editable: boolean;
+  roles: Role[];
+  onChange: (role: Role) => void;
+}) {
+  const tr = useTranslations('roles');
+  const tc = useTranslations('common');
+  if (!editable) return <span>{tr(member.role)}</span>;
+  return (
+    <select
+      aria-label={`${tc('role')} — ${member.name}`}
+      value={member.role}
+      onChange={(e) => onChange(e.target.value as Role)}
+      className="h-10 rounded-[10px] border border-line bg-surface px-2 text-[14px] focus-visible:outline-2 focus-visible:outline-accent"
+    >
+      {roles.map((r) => (
+        <option key={r} value={r}>
+          {tr(r)}
+        </option>
+      ))}
+    </select>
   );
 }
 
