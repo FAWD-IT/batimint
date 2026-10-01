@@ -1,4 +1,4 @@
-import { type EventActor, type Tx, withTenant, writeAudit } from '@batimint/db';
+import { type EventActor, type Tx, type TxOptions, withTenant, writeAudit } from '@batimint/db';
 import type { Action } from '@batimint/domain';
 import type { FastifyRequest } from 'fastify';
 import type { AppDeps, TenantAuthContext } from '../context';
@@ -18,29 +18,35 @@ export function inTenant<T>(
   req: FastifyRequest,
   action: Action | null,
   fn: (scope: TenantScope) => Promise<T>,
+  options?: TxOptions,
 ): Promise<T> {
   const auth = requireTenant(req, action ?? undefined);
   const actor: EventActor = auth.impersonatorId
     ? { type: 'platform_admin', id: auth.impersonatorId, label: auth.name }
     : { type: 'user', id: auth.userId, label: auth.name };
-  return withTenant(deps.prisma, auth.tenantId, auth.userId, (tx) =>
-    fn({
-      tx,
-      auth,
-      actor,
-      audit: (actionName, entityType, entityId, changes) =>
-        writeAudit(tx, {
-          tenantId: auth.tenantId,
-          actor,
-          action: actionName,
-          entityType,
-          entityId,
-          changes,
-          ip: req.ip,
-          userAgent: req.headers['user-agent'] ?? null,
-          requestId: req.id,
-        }),
-    }),
+  return withTenant(
+    deps.prisma,
+    auth.tenantId,
+    auth.userId,
+    (tx) =>
+      fn({
+        tx,
+        auth,
+        actor,
+        audit: (actionName, entityType, entityId, changes) =>
+          writeAudit(tx, {
+            tenantId: auth.tenantId,
+            actor,
+            action: actionName,
+            entityType,
+            entityId,
+            changes,
+            ip: req.ip,
+            userAgent: req.headers['user-agent'] ?? null,
+            requestId: req.id,
+          }),
+      }),
+    options,
   );
 }
 

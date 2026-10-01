@@ -19,10 +19,15 @@ import { errorsPlugin } from './plugins/errors';
 import { idempotencyPlugin } from './plugins/idempotency';
 import { adminRoutes } from './routes/admin';
 import { authRoutes } from './routes/auth';
+import { attachmentRoutes } from './routes/attachments';
 import { companyRoutes } from './routes/company';
+import { crmRoutes } from './routes/crm';
 import { healthRoutes } from './routes/health';
 import { integrationRoutes } from './routes/integrations';
+import { leadRoutes } from './routes/leads';
+import { libraryRoutes } from './routes/library';
 import { memberRoutes } from './routes/members';
+import { opportunityRoutes } from './routes/opportunities';
 import { notificationRoutes } from './routes/notifications';
 import { peopleRoutes } from './routes/people';
 import { profileRoutes } from './routes/profile';
@@ -110,6 +115,11 @@ export async function buildServer(deps: AppDeps, options: BuildOptions = {}): Pr
       await v1.register(peopleRoutes, { deps });
       await v1.register(integrationRoutes, { deps });
       await v1.register(adminRoutes, { deps });
+      await v1.register(crmRoutes, { deps });
+      await v1.register(leadRoutes, { deps });
+      await v1.register(opportunityRoutes, { deps });
+      await v1.register(attachmentRoutes, { deps });
+      await v1.register(libraryRoutes, { deps });
       v1.get('/openapi.json', { schema: { hide: true }, config: { rateLimit: false } }, async () =>
         app.swagger(),
       );

@@ -1,6 +1,8 @@
 /**
  * Sélection des implémentations par variables d'environnement (mock par défaut, règle n°5).
  */
+import { MockAiAssistant } from './ai/mock';
+import type { AiAssistant } from './ai/types';
 import { MockMailer } from './mail/mock';
 import { SmtpMailer } from './mail/smtp';
 import type { Mailer } from './mail/types';
@@ -20,6 +22,14 @@ export interface Integrations {
   storage: ObjectStorage;
   vat: VatValidator;
   peppol: PeppolProvider;
+  ai: AiAssistant;
+}
+
+export function createAiAssistant(env: Env = process.env): AiAssistant {
+  const provider = env['AI_PROVIDER'] ?? 'mock';
+  if (provider !== 'mock')
+    throw new Error(`AI_PROVIDER=${provider} n'est pas encore disponible : utilisez « mock ».`);
+  return new MockAiAssistant();
 }
 
 export function createPeppolProvider(env: Env = process.env): PeppolProvider {
@@ -69,5 +79,18 @@ export function createIntegrations(env: Env = process.env): Integrations {
     storage: createStorage(env),
     vat: createVatValidator(env),
     peppol: createPeppolProvider(env),
+    ai: createAiAssistant(env),
+  };
+}
+
+/** Toutes les intégrations en mode simulé (tests). */
+export function createMockIntegrations(overrides: Partial<Integrations> = {}): Integrations {
+  return {
+    mailer: new MockMailer(),
+    storage: new MemoryStorage(),
+    vat: new MockVatValidator(),
+    peppol: new MockPeppolProvider(),
+    ai: new MockAiAssistant(),
+    ...overrides,
   };
 }

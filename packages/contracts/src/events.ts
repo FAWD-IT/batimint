@@ -17,6 +17,17 @@ export const EventPayloads = {
   'tenant.updated.v1': z.object({ fields: z.array(z.string()) }),
   'member.joined.v1': z.object({ userId: Uuid, role: z.string(), invitationId: Uuid.nullable() }),
   'member.updated.v1': z.object({ membershipId: Uuid, role: z.string(), status: z.string() }),
+  'lead.received.v1': z.object({ leadId: Uuid, source: z.string() }),
+  'customer.created.v1': z.object({ customerId: Uuid, kind: z.string() }),
+  'opportunity.created.v1': z.object({ opportunityId: Uuid, customerId: Uuid }),
+  'opportunity.stage_changed.v1': z.object({ opportunityId: Uuid, from: z.string(), to: z.string() }),
+  'attachment.added.v1': z.object({
+    attachmentId: Uuid,
+    ownerType: z.string(),
+    ownerId: Uuid,
+    kind: z.string(),
+  }),
+  'library.imported.v1': z.object({ created: z.number().int(), updated: z.number().int() }),
   'integration.updated.v1': z.object({ kind: z.string(), status: z.string(), provider: z.string() }),
 } as const;
 

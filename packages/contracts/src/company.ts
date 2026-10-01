@@ -61,8 +61,7 @@ export const CompanyUpdateSchema = z
     legalMentions: optionalText(2_000),
     documentLocale: z.enum(['fr', 'nl']),
   })
-  .partial()
-  .meta({ id: 'CompanyUpdate' });
+  .partial();
 export type CompanyUpdate = z.infer<typeof CompanyUpdateSchema>;
 
 export const VatLookupRequestSchema = z.object({ number: z.string().trim().min(9).max(20) });
@@ -198,17 +197,15 @@ export const MembersResponseSchema = z.object({
   invitations: z.array(InvitationSchema),
 });
 
-export const InvitationCreateSchema = z
-  .object({
-    email: z
-      .string()
-      .trim()
-      .toLowerCase()
-      .pipe(z.email({ error: 'Adresse e-mail invalide' })),
-    name: z.string().trim().max(120).optional(),
-    role: RoleSchema,
-  })
-  .meta({ id: 'InvitationCreate' });
+export const InvitationCreateSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .pipe(z.email({ error: 'Adresse e-mail invalide' })),
+  name: z.string().trim().max(120).optional(),
+  role: RoleSchema,
+});
 
 export const MemberUpdateSchema = z.object({
   role: RoleSchema.optional(),

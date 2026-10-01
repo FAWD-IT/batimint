@@ -5,7 +5,7 @@
 import { REALTIME_PG_CHANNEL } from '@batimint/contracts';
 import { createPrismaClient, emitEvent, type PrismaClient, withSystem, withTenant } from '@batimint/db';
 import { testDatabaseUrls } from '@batimint/db/testing';
-import { MemoryStorage, MockMailer, MockPeppolProvider, MockVatValidator } from '@batimint/integrations';
+import { createMockIntegrations, MockMailer } from '@batimint/integrations';
 import pg from 'pg';
 import type { PgBoss } from 'pg-boss';
 import { v7 as uuidv7 } from 'uuid';
@@ -41,12 +41,7 @@ beforeAll(async () => {
   });
   const deps = {
     prisma,
-    integrations: {
-      mailer: new MockMailer(),
-      storage: new MemoryStorage(),
-      vat: new MockVatValidator(),
-      peppol: new MockPeppolProvider(),
-    },
+    integrations: createMockIntegrations(),
     appUrl: 'http://localhost:3000',
   };
   listener = new pg.Client({ connectionString: urls.appUrl });
@@ -127,12 +122,7 @@ describe('outbox → worker → temps réel', () => {
     );
     const deps = {
       prisma,
-      integrations: {
-        mailer: new MockMailer(),
-        storage: new MemoryStorage(),
-        vat: new MockVatValidator(),
-        peppol: new MockPeppolProvider(),
-      },
+      integrations: createMockIntegrations(),
       appUrl: '',
     };
     expect(await runConsumer(deps, diagnosticNotification, event.id)).toBe('skipped');
@@ -156,12 +146,7 @@ describe('outbox → worker → temps réel', () => {
     );
     const deps = {
       prisma,
-      integrations: {
-        mailer: new MockMailer(),
-        storage: new MemoryStorage(),
-        vat: new MockVatValidator(),
-        peppol: new MockPeppolProvider(),
-      },
+      integrations: createMockIntegrations(),
       appUrl: '',
     };
     const failing = {
@@ -186,12 +171,7 @@ describe('invitations', () => {
     const mailer = new MockMailer();
     const deps = {
       prisma,
-      integrations: {
-        mailer,
-        storage: new MemoryStorage(),
-        vat: new MockVatValidator(),
-        peppol: new MockPeppolProvider(),
-      },
+      integrations: createMockIntegrations({ mailer }),
       appUrl: 'https://app.test',
     };
     const inv = await withTenant(prisma, tenantId, userId, (tx) =>
@@ -228,5 +208,63 @@ describe('invitations', () => {
     // Rejeu : aucun second e-mail.
     expect(await runConsumer(deps, sendInvitation, event.id)).toBe('skipped');
     expect(mailer.sent).toHaveLength(1);
+  });
+});
+
+describe('demandes entrantes', () => {
+  it('lead.received crée le prospect, l’adresse, l’opportunité et notifie le bureau ; un client connu est retrouvé', async () => {
+    const { leadIntake } = await import('../src/consumers/leads');
+    const deps = { prisma, integrations: createMockIntegrations(), appUrl: '' };
+    const emit = async (email: string) => {
+      const lead = await withTenant(prisma, tenantId, userId, (tx) =>
+        tx.lead.create({
+          data: {
+            tenantId,
+            source: 'web_form',
+            name: 'Jean Dupont',
+            email,
+            street: 'Rue de la Station 42',
+            postalCode: '6040',
+            city: 'Jumet',
+            message: 'Rénovation salle de bain\nMerci',
+          },
+        }),
+      );
+      const event = await withTenant(prisma, tenantId, userId, (tx) =>
+        emitEvent(tx, {
+          tenantId,
+          type: 'lead.received.v1',
+          aggregateType: 'lead',
+          aggregateId: lead.id,
+          payload: { leadId: lead.id, source: 'web_form' },
+        }),
+      );
+      expect(await runConsumer(deps, leadIntake, event.id)).toBe('done');
+      return withTenant(prisma, tenantId, userId, (tx) =>
+        tx.lead.findUniqueOrThrow({ where: { id: lead.id } }),
+      );
+    };
+    const first = await emit(`jean-${uuidv7().slice(-6)}@example.be`);
+    expect(first.status).toBe('converted');
+    const opp = await withTenant(prisma, tenantId, userId, (tx) =>
+      tx.opportunity.findUniqueOrThrow({
+        where: { id: first.opportunityId! },
+        include: { customer: true, site: true },
+      }),
+    );
+    expect(opp).toMatchObject({ title: 'Rénovation salle de bain', stage: 'new' });
+    expect(opp.customer).toMatchObject({
+      displayName: 'Jean Dupont',
+      status: 'prospect',
+      firstName: 'Jean',
+      lastName: 'Dupont',
+    });
+    expect(opp.site?.city).toBe('Jumet');
+    const notif = await withTenant(prisma, tenantId, userId, (tx) =>
+      tx.notification.findFirst({ where: { type: 'lead.received', userId } }),
+    );
+    expect(notif?.title).toBe('Nouvelle demande : Jean Dupont');
+    const second = await emit(first.email!);
+    expect(second.customerId).toBe(first.customerId);
   });
 });

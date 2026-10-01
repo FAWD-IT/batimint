@@ -94,3 +94,59 @@ describe('Peppol simulé', () => {
     expect(m.text).toContain('Ouvrir : https://x.be/?a=1&b=2');
   });
 });
+
+describe('assistant IA simulé', () => {
+  it('propose des lignes de devis depuis la bibliothèque (P2.3)', async () => {
+    const { MockAiAssistant } = await import('./index');
+    const ai = new MockAiAssistant();
+    const lib = [
+      {
+        id: 'faience',
+        code: 'OUV-FAI-3060',
+        name: 'Faïence murale 30×60 posée, colle et joints compris',
+        unit: 'm²',
+      },
+      { id: 'wc', code: 'OUV-SAN-WC', name: 'WC suspendu posé, raccordements compris', unit: 'u' },
+    ];
+    const r = await ai.draftQuoteLines('12 m² de faïence murale 30x60 pose comprise et 1 u WC suspendu', lib);
+    expect(r.lines).toHaveLength(2);
+    expect(r.lines[0]).toMatchObject({ itemId: 'faience', quantity: '12', unit: 'm²' });
+    expect(r.lines[1]).toMatchObject({ itemId: 'wc', quantity: '1' });
+    const unknown = await ai.draftQuoteLines('3 h de nettoyage du jardin', lib);
+    expect(unknown.lines[0]).toMatchObject({ itemId: null, unit: 'h', quantity: '3' });
+  });
+
+  it('transcrit une note vocale (simulation honnête)', async () => {
+    const { MockAiAssistant } = await import('./index');
+    const r = await new MockAiAssistant().transcribe(new Uint8Array(48_000), 'audio/webm');
+    expect(r.text).toMatch(/transcription simulée/);
+    expect(r.durationSeconds).toBe(3);
+  });
+
+  it('extrait numéro de facture et bon de commande d’un texte', async () => {
+    const { MockAiAssistant } = await import('./index');
+    const r = await new MockAiAssistant().extractInvoice(new Uint8Array(), 'application/pdf', {
+      text: 'Facture n° F2026-881 réf. BC2026-014 Total TVAC : 1.234,50',
+    });
+    expect(r.invoice).toMatchObject({
+      invoiceNumber: 'F2026-881',
+      purchaseOrderRef: 'BC2026-014',
+      totalGross: 1234.5,
+    });
+    const s = await new MockAiAssistant().suggestAllocation(
+      { supplierName: 'Brico', lines: ['Carrelage grès 60x60'], reference: 'Dupont' },
+      [
+        {
+          id: 'p1',
+          name: 'Rénovation Dupont',
+          address: 'Jumet',
+          budgetLines: [
+            { id: 'b1', name: 'Carrelage' },
+            { id: 'b2', name: 'Plomberie' },
+          ],
+        },
+      ],
+    );
+    expect(s.suggestions[0]).toMatchObject({ projectId: 'p1', budgetLineId: 'b1' });
+  });
+});

@@ -71,16 +71,28 @@ model Tenant {
   createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  memberships     Membership[]
-  invitations     Invitation[]
-  auditLogs       AuditLog[]
-  outboxEvents    OutboxEvent[]
-  notifications   Notification[]
-  numberSequences NumberSequence[]
-  teams           Team[]
-  employees       Employee[]
-  absences        Absence[]
-  integrations    IntegrationConnection[]
+  memberships        Membership[]
+  invitations        Invitation[]
+  auditLogs          AuditLog[]
+  outboxEvents       OutboxEvent[]
+  notifications      Notification[]
+  numberSequences    NumberSequence[]
+  teams              Team[]
+  employees          Employee[]
+  absences           Absence[]
+  integrations       IntegrationConnection[]
+  customers          Customer[]
+  contacts           Contact[]
+  sites              Site[]
+  leads              Lead[]
+  opportunities      Opportunity[]
+  siteVisits         SiteVisit[]
+  attachments        Attachment[]
+  suppliers          Supplier[]
+  items              Item[]
+  assemblyComponents AssemblyComponent[]
+  priceHistory       PriceHistory[]
+  supplierPrices     SupplierPrice[]
 
   @@map("tenants")
 }
@@ -419,4 +431,382 @@ model IntegrationConnection {
 
   @@unique([tenantId, kind])
   @@map("integration_connections")
+}
+
+// ---------------------------------------------------------------------------
+// CRM (03 §2)
+// ---------------------------------------------------------------------------
+
+enum CustomerKind {
+  individual
+  company
+}
+
+enum CustomerStatus {
+  prospect
+  customer
+}
+
+model Customer {
+  id               String         @id @default(uuid(7)) @db.Uuid
+  tenantId         String         @map("tenant_id") @db.Uuid
+  kind             CustomerKind
+  status           CustomerStatus @default(prospect)
+  displayName      String         @map("display_name")
+  firstName        String?        @map("first_name")
+  lastName         String?        @map("last_name")
+  companyName      String?        @map("company_name")
+  legalForm        String?        @map("legal_form")
+  enterpriseNumber String?        @map("enterprise_number")
+  vatNumber        String?        @map("vat_number")
+  /// Assujetti belge déposant des déclarations périodiques (autoliquidation, 05 §3).
+  vatLiable        Boolean        @default(false) @map("vat_liable")
+  peppolId         String?        @map("peppol_id")
+  peppolReachable  Boolean?       @map("peppol_reachable")
+  peppolCheckedAt  DateTime?      @map("peppol_checked_at") @db.Timestamptz(3)
+  email            String?
+  phone            String?
+  street           String?
+  postalCode       String?        @map("postal_code")
+  city             String?
+  country          String         @default("BE")
+  notes            String?
+  tags             String[]       @default([])
+  source           String?
+  paymentTermsDays Int?           @map("payment_terms_days")
+  mergedIntoId     String?        @map("merged_into_id") @db.Uuid
+  archivedAt       DateTime?      @map("archived_at") @db.Timestamptz(3)
+  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdBy        String?        @map("created_by") @db.Uuid
+
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contacts      Contact[]
+  sites         Site[]
+  opportunities Opportunity[]
+  leads         Lead[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, email])
+  @@index([tenantId, vatNumber])
+  @@map("customers")
+}
+
+model Contact {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  customerId String   @map("customer_id") @db.Uuid
+  firstName  String?  @map("first_name")
+  lastName   String   @map("last_name")
+  jobTitle   String?  @map("job_title")
+  email      String?
+  phone      String?
+  isPrimary  Boolean  @default(false) @map("is_primary")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdBy  String?  @map("created_by") @db.Uuid
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, customerId])
+  @@map("contacts")
+}
+
+/// Adresse de chantier (porte les critères du taux réduit de 6 %, 05 §3).
+model Site {
+  id                 String    @id @default(uuid(7)) @db.Uuid
+  tenantId           String    @map("tenant_id") @db.Uuid
+  customerId         String    @map("customer_id") @db.Uuid
+  label              String?
+  street             String
+  postalCode         String    @map("postal_code")
+  city               String
+  country            String    @default("BE")
+  latitude           Decimal?  @db.Decimal(9, 6)
+  longitude          Decimal?  @db.Decimal(9, 6)
+  isPrivateDwelling  Boolean   @default(true) @map("is_private_dwelling")
+  firstOccupancyYear Int?      @map("first_occupancy_year")
+  accessNotes        String?   @map("access_notes")
+  archivedAt         DateTime? @map("archived_at") @db.Timestamptz(3)
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdBy          String?   @map("created_by") @db.Uuid
+
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer      Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  opportunities Opportunity[]
+
+  @@index([tenantId, customerId])
+  @@map("sites")
+}
+
+enum LeadSource {
+  web_form
+  email
+  manual
+  phone
+}
+
+enum LeadStatus {
+  new
+  converted
+  discarded
+}
+
+model Lead {
+  id            String     @id @default(uuid(7)) @db.Uuid
+  tenantId      String     @map("tenant_id") @db.Uuid
+  source        LeadSource
+  status        LeadStatus @default(new)
+  name          String
+  email         String?
+  phone         String?
+  companyName   String?    @map("company_name")
+  street        String?
+  postalCode    String?    @map("postal_code")
+  city          String?
+  message       String?
+  payload       Json?
+  customerId    String?    @map("customer_id") @db.Uuid
+  opportunityId String?    @map("opportunity_id") @db.Uuid
+  receivedAt    DateTime   @default(now()) @map("received_at") @db.Timestamptz(3)
+  createdAt     DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdBy     String?    @map("created_by") @db.Uuid
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, status, receivedAt])
+  @@map("leads")
+}
+
+enum OpportunityStage {
+  new
+  visit_planned
+  quoting
+  sent
+  won
+  lost
+}
+
+model Opportunity {
+  id              String           @id @default(uuid(7)) @db.Uuid
+  tenantId        String           @map("tenant_id") @db.Uuid
+  customerId      String           @map("customer_id") @db.Uuid
+  siteId          String?          @map("site_id") @db.Uuid
+  title           String
+  description     String?
+  stage           OpportunityStage @default(new)
+  position        Int              @default(0)
+  estimatedAmount BigInt?          @map("estimated_amount")
+  trade           String?
+  ownerUserId     String?          @map("owner_user_id") @db.Uuid
+  lostReason      String?          @map("lost_reason")
+  wonAt           DateTime?        @map("won_at") @db.Timestamptz(3)
+  lostAt          DateTime?        @map("lost_at") @db.Timestamptz(3)
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdBy       String?          @map("created_by") @db.Uuid
+
+  tenant   Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  site     Site?       @relation(fields: [siteId], references: [id], onDelete: SetNull)
+  visits   SiteVisit[]
+
+  @@index([tenantId, stage, position])
+  @@index([tenantId, customerId])
+  @@map("opportunities")
+}
+
+model SiteVisit {
+  id                String    @id @default(uuid(7)) @db.Uuid
+  tenantId          String    @map("tenant_id") @db.Uuid
+  opportunityId     String    @map("opportunity_id") @db.Uuid
+  scheduledAt       DateTime? @map("scheduled_at") @db.Timestamptz(3)
+  visitedAt         DateTime? @map("visited_at") @db.Timestamptz(3)
+  visitorEmployeeId String?   @map("visitor_employee_id") @db.Uuid
+  trade             String?
+  /// [{ label, value, unit }]
+  measurements      Json      @default("[]")
+  /// [{ label, done }]
+  checklist         Json      @default("[]")
+  notes             String?
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdBy         String?   @map("created_by") @db.Uuid
+
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  opportunity Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, opportunityId])
+  @@map("site_visits")
+}
+
+enum AttachmentKind {
+  photo
+  document
+  voice_note
+}
+
+/// Pièce jointe générique (photo, document, note vocale) rattachée à un objet.
+model Attachment {
+  id               String         @id @default(uuid(7)) @db.Uuid
+  tenantId         String         @map("tenant_id") @db.Uuid
+  ownerType        String         @map("owner_type")
+  ownerId          String         @map("owner_id") @db.Uuid
+  kind             AttachmentKind
+  storageKey       String         @map("storage_key")
+  fileName         String         @map("file_name")
+  contentType      String         @map("content_type")
+  sizeBytes        Int            @map("size_bytes")
+  sha256           String?
+  takenAt          DateTime?      @map("taken_at") @db.Timestamptz(3)
+  latitude         Decimal?       @db.Decimal(9, 6)
+  longitude        Decimal?       @db.Decimal(9, 6)
+  caption          String?
+  transcript       String?
+  transcriptStatus String?        @map("transcript_status")
+  visibleToClient  Boolean        @default(false) @map("visible_to_client")
+  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  createdBy        String?        @map("created_by") @db.Uuid
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, ownerType, ownerId])
+  @@map("attachments")
+}
+
+// ---------------------------------------------------------------------------
+// Fournisseurs et bibliothèque (03 §3, §8)
+// ---------------------------------------------------------------------------
+
+model Supplier {
+  id               String    @id @default(uuid(7)) @db.Uuid
+  tenantId         String    @map("tenant_id") @db.Uuid
+  name             String
+  enterpriseNumber String?   @map("enterprise_number")
+  vatNumber        String?   @map("vat_number")
+  peppolId         String?   @map("peppol_id")
+  email            String?
+  orderEmail       String?   @map("order_email")
+  phone            String?
+  street           String?
+  postalCode       String?   @map("postal_code")
+  city             String?
+  country          String    @default("BE")
+  iban             String?
+  paymentTermsDays Int       @default(30) @map("payment_terms_days")
+  isSubcontractor  Boolean   @default(false) @map("is_subcontractor")
+  notes            String?
+  archivedAt       DateTime? @map("archived_at") @db.Timestamptz(3)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdBy        String?   @map("created_by") @db.Uuid
+
+  tenant Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  items  Item[]
+  prices SupplierPrice[]
+
+  @@index([tenantId, name])
+  @@map("suppliers")
+}
+
+enum ItemKind {
+  material
+  labour
+  subcontracting
+  equipment
+  lump_sum
+  assembly
+}
+
+model Item {
+  id              String    @id @default(uuid(7)) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  code            String
+  kind            ItemKind
+  name            String
+  description     String?
+  unit            String
+  /// Prix d'achat / de revient unitaire HTVA (centimes). Pour un ouvrage : calculé.
+  purchasePrice   BigInt    @default(0) @map("purchase_price")
+  /// Prix de vente forcé (centimes) ; sinon calculé par coefficient.
+  salePrice       BigInt?   @map("sale_price")
+  /// Coefficient propre à l'article (sinon celui du tenant).
+  saleCoefficient Decimal?  @map("sale_coefficient") @db.Decimal(6, 4)
+  vatRate         String    @default("auto") @map("vat_rate")
+  /// Temps de pose par unité, en heures (main-d'œuvre).
+  laborHours      Decimal   @default(0) @map("labor_hours") @db.Decimal(10, 4)
+  trade           String?
+  category        String?
+  supplierId      String?   @map("supplier_id") @db.Uuid
+  supplierCode    String?   @map("supplier_code")
+  archivedAt      DateTime? @map("archived_at") @db.Timestamptz(3)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdBy       String?   @map("created_by") @db.Uuid
+
+  tenant     Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  supplier   Supplier?           @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  components AssemblyComponent[] @relation("AssemblyParent")
+  usedIn     AssemblyComponent[] @relation("AssemblyChild")
+  history    PriceHistory[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId, kind])
+  @@map("items")
+}
+
+model AssemblyComponent {
+  id         String  @id @default(uuid(7)) @db.Uuid
+  tenantId   String  @map("tenant_id") @db.Uuid
+  assemblyId String  @map("assembly_id") @db.Uuid
+  itemId     String  @map("item_id") @db.Uuid
+  quantity   Decimal @db.Decimal(14, 4)
+  position   Int     @default(0)
+
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  assembly Item   @relation("AssemblyParent", fields: [assemblyId], references: [id], onDelete: Cascade)
+  item     Item   @relation("AssemblyChild", fields: [itemId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, assemblyId])
+  @@map("assembly_components")
+}
+
+model PriceHistory {
+  id            String   @id @default(uuid(7)) @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  itemId        String   @map("item_id") @db.Uuid
+  purchasePrice BigInt   @map("purchase_price")
+  salePrice     BigInt?  @map("sale_price")
+  source        String
+  changedAt     DateTime @default(now()) @map("changed_at") @db.Timestamptz(3)
+  changedBy     String?  @map("changed_by") @db.Uuid
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  item   Item   @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, itemId, changedAt])
+  @@map("price_history")
+}
+
+model SupplierPrice {
+  id           String   @id @default(uuid(7)) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  supplierId   String   @map("supplier_id") @db.Uuid
+  supplierCode String   @map("supplier_code")
+  label        String
+  unit         String?
+  price        BigInt
+  itemId       String?  @map("item_id") @db.Uuid
+  validFrom    DateTime @default(now()) @map("valid_from") @db.Timestamptz(3)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, supplierId, supplierCode])
+  @@map("supplier_prices")
 }

@@ -12,3 +12,5 @@ export { ViesVatValidator } from './vat/vies';
 export type * from './peppol/types';
 export { MockPeppolProvider } from './peppol/mock';
 export * from './mail/templates';
+export type * from './ai/types';
+export { MockAiAssistant, normalizeText, similarity } from './ai/mock';

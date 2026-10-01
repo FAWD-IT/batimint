@@ -147,7 +147,7 @@ export const adminRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (app,
         body: z.object({
           plan: z.enum(PLANS).optional(),
           featureFlags: z
-            .record(z.enum([...FEATURES, 'all'] as [string, ...string[]]), z.boolean())
+            .partialRecord(z.enum([...FEATURES, 'all'] as [string, ...string[]]), z.boolean())
             .optional(),
           trialEndsAt: z.iso.datetime().nullable().optional(),
         }),

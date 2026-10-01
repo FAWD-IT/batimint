@@ -22,6 +22,7 @@ export const ACTIONS = [
   'customers.write',
   'leads.read',
   'leads.write',
+  'site_visits.write',
   'library.read',
   'library.write',
   'pricing.read',
@@ -77,9 +78,11 @@ const OFFICE_EXCLUDED: ReadonlySet<Action> = new Set<Action>([
 
 const SITE_MANAGER: readonly Action[] = [
   'company.read',
+  'customers.read',
+  'leads.read',
+  'site_visits.write',
   'members.read',
   'employees.read',
-  'customers.read',
   'library.read',
   'pricing.read',
   'projects.read',
