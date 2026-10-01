@@ -1,0 +1,23 @@
+{
+  "name": "@batimint/domain",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run --coverage",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "decimal.js": "^10.6.0"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^4.0.0",
+    "fast-check": "^4.3.0",
+    "vitest": "^4.0.0"
+  }
+}

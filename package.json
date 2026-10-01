@@ -1,0 +1,38 @@
+{
+  "name": "batimint",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:apps": "turbo run dev --filter=@batimint/api --filter=@batimint/worker --filter=@batimint/web",
+    "services:up": "docker compose -f docker-compose.dev.yml up -d --wait",
+    "services:down": "docker compose -f docker-compose.dev.yml down",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "test:unit": "turbo run test --filter=@batimint/domain --filter=@batimint/contracts --filter=@batimint/integrations",
+    "test:e2e": "pnpm --filter @batimint/e2e test",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:generate": "pnpm --filter @batimint/db generate",
+    "db:migrate": "pnpm --filter @batimint/db migrate",
+    "db:migrate:deploy": "pnpm --filter @batimint/db migrate:deploy",
+    "db:seed": "pnpm --filter @batimint/db seed",
+    "db:reset": "pnpm --filter @batimint/db seed --reset",
+    "admin:create": "pnpm --filter @batimint/db admin:create"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.11.0",
+    "globals": "^17.0.0",
+    "prettier": "^3.6.2",
+    "turbo": "^2.6.0",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.46.0"
+  }
+}
