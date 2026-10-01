@@ -2,7 +2,18 @@
 
 import type { Action } from '@batimint/domain';
 import { Card, ErrorState, PageHeader } from '@batimint/ui';
-import { ChevronRight, type LucideIcon, Radio } from 'lucide-react';
+import {
+  Building2,
+  ChevronRight,
+  CreditCard,
+  History,
+  type LucideIcon,
+  Plug,
+  Radio,
+  SlidersHorizontal,
+  UserRound,
+  Users,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useCan } from '@/lib/session';
@@ -10,26 +21,33 @@ import { useCan } from '@/lib/session';
 interface Section {
   href: string;
   icon: LucideIcon;
-  titleKey: 'diagnostic.title';
-  descriptionKey: 'diagnostic.description';
-  permission: Action;
+  key:
+    'company' | 'business' | 'users' | 'integrations' | 'subscription' | 'audit' | 'diagnostic' | 'account';
+  permission?: Action;
 }
 
 const SECTIONS: Section[] = [
+  { href: '/parametres/entreprise', icon: Building2, key: 'company', permission: 'company.update' },
+  { href: '/parametres/metier', icon: SlidersHorizontal, key: 'business', permission: 'settings.update' },
+  { href: '/parametres/utilisateurs', icon: Users, key: 'users', permission: 'members.read' },
+  { href: '/parametres/integrations', icon: Plug, key: 'integrations', permission: 'integrations.manage' },
   {
-    href: '/parametres/diagnostic',
-    icon: Radio,
-    titleKey: 'diagnostic.title',
-    descriptionKey: 'diagnostic.description',
-    permission: 'diagnostics.run',
+    href: '/parametres/abonnement',
+    icon: CreditCard,
+    key: 'subscription',
+    permission: 'subscription.manage',
   },
+  { href: '/parametres/journal', icon: History, key: 'audit', permission: 'audit.read' },
+  { href: '/parametres/diagnostic', icon: Radio, key: 'diagnostic', permission: 'diagnostics.run' },
+  { href: '/compte', icon: UserRound, key: 'account' },
 ];
 
 export function SettingsIndex() {
   const t = useTranslations('settings');
   const tc = useTranslations('common');
   const can = useCan();
-  const sections = SECTIONS.filter((s) => can(s.permission));
+  const ta = useTranslations('account');
+  const sections = SECTIONS.filter((s) => !s.permission || can(s.permission));
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
       <PageHeader title={t('title')} />
@@ -48,8 +66,20 @@ export function SettingsIndex() {
                     <s.icon aria-hidden className="size-5" />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[15px] font-semibold">{t(s.titleKey)}</span>
-                    <span className="block text-[13px] text-muted">{t(s.descriptionKey)}</span>
+                    <span className="block text-[15px] font-semibold">
+                      {s.key === 'account'
+                        ? ta('title')
+                        : s.key === 'diagnostic'
+                          ? t('diagnostic.title')
+                          : t(`sections.${s.key}.title`)}
+                    </span>
+                    <span className="block text-[13px] text-muted">
+                      {s.key === 'account'
+                        ? ta('profile')
+                        : s.key === 'diagnostic'
+                          ? t('diagnostic.description')
+                          : t(`sections.${s.key}.description`)}
+                    </span>
                   </span>
                   <ChevronRight aria-hidden className="size-4 text-muted" />
                 </Link>

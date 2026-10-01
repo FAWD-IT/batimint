@@ -9,7 +9,10 @@ export function uniqueEmail(prefix: string): string {
 
 export const PASSWORD = 'motdepasse-solide-42';
 
-export async function signup(page: Page, opts: { name?: string; company?: string; email?: string } = {}) {
+export async function signup(
+  page: Page,
+  opts: { name?: string; company?: string; email?: string; stayOnWelcome?: boolean } = {},
+) {
   const email = opts.email ?? uniqueEmail('marc');
   await page.goto('/inscription');
   await page.getByLabel('Votre nom').fill(opts.name ?? 'Marc Lefèvre');
@@ -17,7 +20,12 @@ export async function signup(page: Page, opts: { name?: string; company?: string
   await page.getByLabel('Adresse e-mail').fill(email);
   await page.getByLabel('Mot de passe', { exact: true }).fill(PASSWORD);
   await page.getByRole('button', { name: 'Créer mon espace' }).click();
-  await expect(page).toHaveURL(/\/aujourdhui/);
+  // P1 : après l'inscription, l'écran de bienvenue demande le numéro d'entreprise.
+  await expect(page).toHaveURL(/\/bienvenue/);
+  if (!opts.stayOnWelcome) {
+    await page.getByRole('link', { name: 'Je compléterai plus tard' }).click();
+    await expect(page).toHaveURL(/\/aujourdhui/);
+  }
   return { email };
 }
 

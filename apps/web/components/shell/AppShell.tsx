@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import { type ReactNode, useEffect, useState } from 'react';
 import { useRealtime } from '@/lib/realtime';
 import { useSession } from '@/lib/session';
+import { ImpersonationBanner } from './ImpersonationBanner';
 import { NotificationsBell } from './NotificationsBell';
 import { Sidebar, SidebarContent } from './Sidebar';
 
@@ -63,11 +64,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <span className="lg:hidden">
             <Logo />
           </span>
-          {me.impersonating ? (
-            <span className="rounded-full bg-warn px-3 py-1 text-[12px] font-semibold text-white">
-              {t('nav.impersonating')}
-            </span>
-          ) : null}
+          {me.impersonating ? <ImpersonationBanner /> : null}
           <div className="ml-auto flex items-center gap-3">
             <span className="hidden sm:inline-flex">
               <LiveIndicator

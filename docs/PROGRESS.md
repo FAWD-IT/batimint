@@ -3,9 +3,14 @@
 Ce fichier est le point de reprise entre sessions cloud. Une nouvelle session doit pouvoir reprendre le travail en ne lisant que lui et `CLAUDE.md`.
 
 ## Jalon en cours
-**M1 — Entreprise et onboarding** (M0 terminé, étiquette `m0-done`).
+**M1 — Entreprise et onboarding** — écrans et API livrés, E2E P1 vert (hors import de bibliothèque, livré en M2). Reste : relire les écrans mobiles M1, puis passer à M2.
+
+(L'étiquette `m0-done` existe localement mais le push de tags est refusé par la politique de la session : seule la branche est poussée.)
 
 ## Prochaine action
+Finir M1 : passe mobile (390×844) sur Paramètres, Équipes, Compte ; puis démarrer M2 (CRM et bibliothèque, ajouter l'étape « bibliothèque » à `ONBOARDING_AVAILABLE` dans `apps/api/src/routes/company.ts`).
+
+### Plan initial de M1 (pour mémoire)
 M1 : paramètres entreprise (BCE/TVA via VIES mock, adresse, IBAN, logo, couleur, CGV, taux horaires, coefficients, pauses, délais, relances, retenue de garantie, séries de numérotation), utilisateurs et invitations (consommateur `user.invited` qui envoie l'e-mail), équipes, employés (INSS chiffré), checklist d'onboarding, page Sécurité (sessions, TOTP — l'API existe déjà), super-admin (tenants, flags, impersonation auditée, files en échec). Puis E2E P1 complet.
 
 ## Relancer l'environnement
@@ -39,6 +44,15 @@ docker compose -f docker-compose.coolify.yml -f docker/docker-compose.sandbox.ym
 - `packages/integrations` : interfaces + mocks (mail SMTP/mock, S3/mémoire, VIES/mock).
 - Dockerfiles multi-étapes non-root, `docker-compose.coolify.yml` (ADR 0006, 0007), `docker-compose.dev.yml`, CI GitHub Actions (checks + images + E2E), hook de session.
 - Critères de sortie vérifiés : `pnpm test` vert (100 tests), RLS vert, E2E M0 verts en dev **et** sur les images de production (événement outbox → worker → SSE → navigateur, deux navigateurs synchronisés, axe sans violation critique/sérieuse, mobile 390×844), stack Coolify démarrée en local avec base migrée et tenant de démo, redéploiement idempotent.
+
+### M1 — Entreprise et onboarding ✅ (hors bibliothèque, M2)
+- Écran de bienvenue (BCE → VIES → fiche pré-remplie), checklist d'onboarding sur Aujourd'hui (ADR 0010).
+- Paramètres → Entreprise (identité, VIES, adresse, banque avec contrôle IBAN/BIC, logo, couleur de marque avec contrôle AA, CGV, mentions, adresse e-mail entrante), Paramètres métier (profils horaires, coefficients avec exemple, pauses, tolérance de pointage, paiements, relances, retenue, seuil de dérive, approbation des états d'avancement, numérotation avec aperçu), Utilisateurs (rôles, désactivation, dernier patron protégé, invitations), Intégrations (Peppol : entité légale mock → actif ; test de connexion), Abonnement (plans, essai, sièges bureau, modules), Journal d'audit, Mon compte (profil, mot de passe, 2FA TOTP avec QR, sessions), Diagnostic.
+- Équipes : employés (INSS chiffré, consultation journalisée, coûts masqués sans `pricing.read`), équipes (couleur, chef, membres), absences.
+- Super-admin `/admin` : tenants (plan, modules), impersonation lecture seule auditée avec bandeau « Quitter », santé des intégrations, traitements en échec avec rejeu.
+- Worker : envoi des invitations (jeton généré à l'envoi), notification « X a rejoint l'entreprise » en direct.
+- Seed : CGV, couleur, profils horaires, Peppol actif, 8 employés en 2 équipes, congés.
+- Tests : 35 intégration API, 66 domaine, 5 worker ; E2E P1 (Marc paramètre et invite ; Luca accepte sur mobile), équipes/INSS, compte.
 
 ## Reste à faire
 M1 → M13 selon `docs/11-plan-de-livraison.md`.

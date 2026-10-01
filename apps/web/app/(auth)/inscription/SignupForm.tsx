@@ -37,7 +37,7 @@ export function SignupForm() {
     setPending(true);
     try {
       await api('/auth/signup', { body: values, idempotencyKey: false });
-      router.replace('/aujourdhui');
+      router.replace('/bienvenue');
       router.refresh();
     } catch (err) {
       setFormError(errorMessage(err));

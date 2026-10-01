@@ -4,6 +4,7 @@ import { buttonClasses, EmptyState, PageHeader } from '@batimint/ui';
 import { Sun } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
+import { OnboardingChecklist } from '@/components/onboarding/OnboardingChecklist';
 import { useCan, useSession } from '@/lib/session';
 
 export function TodayView() {
@@ -14,6 +15,7 @@ export function TodayView() {
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6">
       <PageHeader title={t('greeting', { name: firstName })} description={t('date', { date: new Date() })} />
+      {can('company.update') ? <OnboardingChecklist /> : null}
       <EmptyState
         icon={<Sun aria-hidden className="size-5" />}
         title={t('emptyTitle')}

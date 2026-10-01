@@ -4,7 +4,7 @@ import { cn, Logo } from '@batimint/ui';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useCan } from '@/lib/session';
+import { useCan, useSession } from '@/lib/session';
 import { NAV_ITEMS } from './nav';
 import { UserMenu } from './UserMenu';
 
@@ -12,13 +12,16 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const t = useTranslations('nav');
   const pathname = usePathname();
   const can = useCan();
+  const me = useSession();
   return (
     <div className="flex h-full flex-col gap-6 px-4 py-6">
       <div className="px-2">
         <Logo inverted />
       </div>
       <nav aria-label={t('main')} className="flex flex-col gap-0.5">
-        {NAV_ITEMS.filter((i) => !i.permission || can(i.permission)).map((item) => {
+        {NAV_ITEMS.filter(
+          (i) => (!i.permission || can(i.permission)) && (!i.platformAdmin || me.user.isPlatformAdmin),
+        ).map((item) => {
           const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
           const Icon = item.icon;
           return (

@@ -8,3 +8,5 @@ export * from './Feedback';
 export * from './Toast';
 export * from './Logo';
 export * from './Spinner';
+export * from './Dialog';
+export * from './Controls';
