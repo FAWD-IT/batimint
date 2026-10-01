@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Cockpit chantier</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F4F3EF}
+a{color:#111111}a:hover{color:#2F4BFF}
+.shell{display:grid;grid-template-columns:248px minmax(0,1fr);min-height:1000px}
+.cols{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:24px}
+@media (max-width:960px){.shell{grid-template-columns:minmax(0,1fr)}.side{display:none}.cols{grid-template-columns:minmax(0,1fr)}}
+</style>
+</helmet>
+<div class="shell" style="font-family: 'Geist', system-ui, sans-serif; color: #111111; font-variant-numeric: tabular-nums;">
+
+<aside class="side" style="background: #111111; color: #FFFFFF; padding: 24px 16px; display: flex; flex-direction: column; gap: 24px;">
+<div style="display: flex; align-items: center; gap: 10px; padding: 0 8px;">
+<div style="width: 28px; height: 28px; border-radius: 8px; background: #FFFFFF; color: #111111; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px;">B</div>
+<div style="font-weight: 700; font-size: 18px; letter-spacing: -0.02em;">Batimint</div>
+</div>
+<button style="display: flex; align-items: center; gap: 10px; width: 100%; height: 40px; padding: 0 12px; border-radius: 10px; border: 1px solid #333333; background: #1C1C1C; color: #B8B8B8; font-family: inherit; font-size: 13px; cursor: pointer;" aria-label="Rechercher ou lancer une action">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+<span style="flex-grow: 1; text-align: left;">Rechercher ou agir…</span>
+<span style="font-size: 11px; border: 1px solid #444444; border-radius: 6px; padding: 2px 6px; color: #B8B8B8;">⌘K</span>
+</button>
+<nav style="display: flex; flex-direction: column; gap: 2px;">
+<a href="#" style="display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 12px; border-radius: 10px; color: #CFCFCF; text-decoration: none; font-size: 14px;">Aujourd'hui</a>
+<a href="#" style="display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 12px; border-radius: 10px; color: #111111; background: #FFFFFF; text-decoration: none; font-size: 14px; font-weight: 600;">Chantiers</a>
+<a href="#" style="display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 12px; border-radius: 10px; color: #CFCFCF; text-decoration: none; font-size: 14px;">Devis</a>
+<a href="#" style="display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 12px; border-radius: 10px; color: #CFCFCF; text-decoration: none; font-size: 14px;">Factures</a>
+<a href="#" style="display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 12px; border-radius: 10px; color: #CFCFCF; text-decoration: none; font-size: 14px;">Achats</a>
+<a href="#" style="display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 12px; border-radius: 10px; color: #CFCFCF; text-decoration: none; font-size: 14px;">Planning</a>
+<a href="#" style="display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 12px; border-radius: 10px; color: #CFCFCF; text-decoration: none; font-size: 14px;">Équipes</a>
+</nav>
+<div style="display: flex; flex-direction: column; gap: 4px;">
+<div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #9A9A9A; padding: 0 12px 6px;">Chantiers actifs</div>
+<a href="#" style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 10px; background: #262626; color: #FFFFFF; text-decoration: none; font-size: 13px;"><span style="width: 8px; height: 8px; border-radius: 4px; background: #3DBE73;"></span><span style="flex-grow: 1;">Dupont · Jumet</span><span style="color: #9A9A9A;">62 %</span></a>
+<a href="#" style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 10px; color: #CFCFCF; text-decoration: none; font-size: 13px;"><span style="width: 8px; height: 8px; border-radius: 4px; background: #F0A045;"></span><span style="flex-grow: 1;">Toiture · Marcinelle</span><span style="color: #9A9A9A;">35 %</span></a>
+<a href="#" style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 10px; color: #CFCFCF; text-decoration: none; font-size: 13px;"><span style="width: 8px; height: 8px; border-radius: 4px; background: #3DBE73;"></span><span style="flex-grow: 1;">Extension · Gosselies</span><span style="color: #9A9A9A;">18 %</span></a>
+<a href="#" style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 10px; color: #CFCFCF; text-decoration: none; font-size: 13px;"><span style="width: 8px; height: 8px; border-radius: 4px; background: #EF6B5E;"></span><span style="flex-grow: 1;">Façade · Fleurus</span><span style="color: #9A9A9A;">81 %</span></a>
+</div>
+</aside>
+
+<main style="padding: 28px 32px 40px; display: flex; flex-direction: column; gap: 24px; min-width: 0;">
+
+<div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; flex-wrap: wrap;">
+<div style="display: flex; flex-direction: column; gap: 6px;">
+<div style="font-size: 13px; color: #5E5E5A;">Chantiers / Dupont</div>
+<h1 style="margin: 0; font-size: 30px; font-weight: 700; letter-spacing: -0.025em;">Rénovation salle de bain Dupont</h1>
+<div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; color: #5E5E5A;">
+<span>Rue de la Station 42, 6040 Jumet</span>
+<span style="padding: 3px 8px; border-radius: 999px; background: #FFFFFF; border: 1px solid #E4E2DC; color: #111111;">B2C</span>
+<span style="padding: 3px 8px; border-radius: 999px; background: #FFFFFF; border: 1px solid #E4E2DC; color: #111111;">TVA 6 % · attestation signée</span>
+</div>
+</div>
+<div style="display: flex; gap: 10px;">
+<a href="#" style="display: inline-flex; align-items: center; height: 44px; padding: 0 18px; border-radius: 12px; border: 1px solid #D6D3CB; background: #FFFFFF; color: #111111; text-decoration: none; font-size: 14px; font-weight: 600;">Portail client</a>
+<a href="#" style="display: inline-flex; align-items: center; height: 44px; padding: 0 18px; border-radius: 12px; background: #111111; color: #FFFFFF; text-decoration: none; font-size: 14px; font-weight: 600;">Facturer l'avancement</a>
+</div>
+</div>
+
+<section style="background: #FFFFFF; border: 1px solid #E4E2DC; border-radius: 16px; padding: 20px 24px; display: flex; flex-direction: column; gap: 16px;">
+<div style="display: flex; justify-content: space-between; align-items: baseline;">
+<div style="font-size: 15px; font-weight: 600;">En cours · jour 9 sur 15</div>
+<div style="font-size: 13px; color: #5E5E5A;">Réception prévue le 9 octobre</div>
+</div>
+<div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px;">
+<div style="display: flex; flex-direction: column; gap: 8px;"><div style="height: 6px; border-radius: 3px; background: #111111;"></div><div style="font-size: 12px; color: #5E5E5A;">Devis signé</div></div>
+<div style="display: flex; flex-direction: column; gap: 8px;"><div style="height: 6px; border-radius: 3px; background: linear-gradient(90deg, {{accent}} 62%, #E4E2DC 62%);"></div><div style="font-size: 12px; font-weight: 600;">Travaux · 62 %</div></div>
+<div style="display: flex; flex-direction: column; gap: 8px;"><div style="height: 6px; border-radius: 3px; background: #E4E2DC;"></div><div style="font-size: 12px; color: #5E5E5A;">Réception</div></div>
+<div style="display: flex; flex-direction: column; gap: 8px;"><div style="height: 6px; border-radius: 3px; background: #E4E2DC;"></div><div style="font-size: 12px; color: #5E5E5A;">Facture finale</div></div>
+<div style="display: flex; flex-direction: column; gap: 8px;"><div style="height: 6px; border-radius: 3px; background: #E4E2DC;"></div><div style="font-size: 12px; color: #5E5E5A;">Payé</div></div>
+</div>
+</section>
+
+<div class="cols">
+
+<section style="background: #FFFFFF; border: 1px solid #E4E2DC; border-radius: 16px; padding: 20px 24px; display: flex; flex-direction: column; gap: 4px;">
+<div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px;">
+<h2 style="margin: 0; font-size: 17px; font-weight: 600;">Fil du chantier</h2>
+<span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: {{accent}}; font-weight: 600;"><span style="width: 8px; height: 8px; border-radius: 4px; background: {{accent}};"></span>En direct</span>
+</div>
+<div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: #5E5E5A; padding: 8px 0;">Aujourd'hui</div>
+
+<div style="display: grid; grid-template-columns: 56px 28px minmax(0, 1fr) auto; gap: 12px; padding: 12px 0; border-bottom: 1px solid #EFEDE8; align-items: start;">
+<div style="font-size: 13px; color: #5E5E5A; padding-top: 4px;">13:30</div>
+<div style="width: 28px; height: 28px; border-radius: 14px; background: #E8F4ED; color: #1E7B45; display: flex; align-items: center; justify-content: center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"></path></svg></div>
+<div style="display: flex; flex-direction: column; gap: 2px;"><div style="font-size: 14px; font-weight: 600;">Avenant n°2 signé par M. Dupont</div><div style="font-size: 13px; color: #5E5E5A;">Ajout d'une niche murale · budget et planning mis à jour</div></div>
+<div style="font-size: 14px; font-weight: 600; color: #1E7B45;">+1 250,00 €</div>
+</div>
+
+<div style="display: grid; grid-template-columns: 56px 28px minmax(0, 1fr) auto; gap: 12px; padding: 12px 0; border-bottom: 1px solid #EFEDE8; align-items: start;">
+<div style="font-size: 13px; color: #5E5E5A; padding-top: 4px;">11:15</div>
+<div style="width: 28px; height: 28px; border-radius: 14px; background: #F0F0EC; color: #111111; display: flex; align-items: center; justify-content: center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="14" rx="3"></rect><circle cx="12" cy="13" r="3.5"></circle><path d="M8 6l1.5-2h5L16 6"></path></svg></div>
+<div style="display: flex; flex-direction: column; gap: 10px;"><div style="display: flex; flex-direction: column; gap: 2px;"><div style="font-size: 14px; font-weight: 600;">Karim a ajouté 4 photos</div><div style="font-size: 13px; color: #5E5E5A;">Pose faïence murale · visibles par le client</div></div>
+<div style="display: grid; grid-template-columns: repeat(4, 72px); gap: 8px;">
+<div style="height: 56px; border-radius: 8px; background: #DAD6CC; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #5E5E5A;">Photo</div>
+<div style="height: 56px; border-radius: 8px; background: #CFCAC0; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #5E5E5A;">Photo</div>
+<div style="height: 56px; border-radius: 8px; background: #DAD6CC; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #5E5E5A;">Photo</div>
+<div style="height: 56px; border-radius: 8px; background: #CFCAC0; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #5E5E5A;">Photo</div>
+</div></div>
+<div></div>
+</div>
+
+<div style="display: grid; grid-template-columns: 56px 28px minmax(0, 1fr) auto; gap: 12px; padding: 12px 0; border-bottom: 1px solid #EFEDE8; align-items: start; background: #F5F7FF; margin: 0 -12px; padding-left: 12px; padding-right: 12px; border-radius: 10px;">
+<div style="font-size: 13px; color: #5E5E5A; padding-top: 4px;">09:40</div>
+<div style="width: 28px; height: 28px; border-radius: 14px; background: {{accent}}; color: #FFFFFF; display: flex; align-items: center; justify-content: center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l3 3v15H6z"></path><path d="M9 12h6M9 16h6"></path></svg></div>
+<div style="display: flex; flex-direction: column; gap: 2px;"><div style="font-size: 14px; font-weight: 600;">Facture Brico Pro reçue via Peppol</div><div style="font-size: 13px; color: #5E5E5A;">Rapprochée du bon de commande BC-0417 · imputée au poste Carrelage, sans saisie</div></div>
+<div style="font-size: 14px; font-weight: 600;">−840,00 €</div>
+</div>
+
+<div style="display: grid; grid-template-columns: 56px 28px minmax(0, 1fr) auto; gap: 12px; padding: 12px 0; border-bottom: 1px solid #EFEDE8; align-items: start;">
+<div style="font-size: 13px; color: #5E5E5A; padding-top: 4px;">08:02</div>
+<div style="width: 28px; height: 28px; border-radius: 14px; background: #F0F0EC; color: #111111; display: flex; align-items: center; justify-content: center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"></path><circle cx="12" cy="9.5" r="2.5"></circle></svg></div>
+<div style="display: flex; flex-direction: column; gap: 2px;"><div style="font-size: 14px; font-weight: 600;">Équipe de Karim arrivée sur chantier</div><div style="font-size: 13px; color: #5E5E5A;">3 ouvriers pointés · client prévenu automatiquement</div></div>
+<div></div>
+</div>
+
+<div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: #5E5E5A; padding: 16px 0 8px;">Hier</div>
+<div style="display: grid; grid-template-columns: 56px 28px minmax(0, 1fr) auto; gap: 12px; padding: 12px 0; align-items: start;">
+<div style="font-size: 13px; color: #5E5E5A; padding-top: 4px;">16:48</div>
+<div style="width: 28px; height: 28px; border-radius: 14px; background: #E8F4ED; color: #1E7B45; display: flex; align-items: center; justify-content: center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"></path></svg></div>
+<div style="display: flex; flex-direction: column; gap: 2px;"><div style="font-size: 14px; font-weight: 600;">État d'avancement n°3 approuvé (40 %)</div><div style="font-size: 13px; color: #5E5E5A;">Facture 2026-118 générée et envoyée</div></div>
+<div style="font-size: 14px; font-weight: 600;">15 360,00 €</div>
+</div>
+</section>
+
+<div style="display: flex; flex-direction: column; gap: 24px;">
+
+<section style="background: #111111; color: #FFFFFF; border-radius: 16px; padding: 20px 24px; display: flex; flex-direction: column; gap: 18px;">
+<div style="display: flex; justify-content: space-between; align-items: baseline;">
+<h2 style="margin: 0; font-size: 17px; font-weight: 600;">Marge en direct</h2>
+<span style="font-size: 12px; color: #B8B8B8;">Prévue 24,0 %</span>
+</div>
+<div style="display: flex; align-items: baseline; gap: 10px;">
+<div style="font-size: 44px; font-weight: 700; letter-spacing: -0.03em;">21,8 %</div>
+<div style="font-size: 13px; color: #F0A045; font-weight: 600;">−2,2 pts</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 12px;">
+<div style="display: flex; flex-direction: column; gap: 6px;"><div style="display: flex; justify-content: space-between; font-size: 13px;"><span style="color: #B8B8B8;">Budgété</span><span>38 400 €</span></div><div style="height: 8px; border-radius: 4px; background: #FFFFFF;"></div></div>
+<div style="display: flex; flex-direction: column; gap: 6px;"><div style="display: flex; justify-content: space-between; font-size: 13px;"><span style="color: #B8B8B8;">Engagé</span><span>21 160 €</span></div><div style="height: 8px; border-radius: 4px; background: #333333;"><div style="width: 55%; height: 8px; border-radius: 4px; background: #F0A045;"></div></div></div>
+<div style="display: flex; flex-direction: column; gap: 6px;"><div style="display: flex; justify-content: space-between; font-size: 13px;"><span style="color: #B8B8B8;">Facturé</span><span>15 360 €</span></div><div style="height: 8px; border-radius: 4px; background: #333333;"><div style="width: 40%; height: 8px; border-radius: 4px; background: #7D93FF;"></div></div></div>
+</div>
+<div style="font-size: 13px; color: #CFCFCF; border-top: 1px solid #2E2E2E; padding-top: 14px;">Le poste Carrelage dépasse son budget de 12 %. Prévoir un avenant ?</div>
+</section>
+
+<section style="background: #FFFFFF; border: 1px solid #E4E2DC; border-radius: 16px; padding: 20px 24px; display: flex; flex-direction: column; gap: 12px;">
+<h2 style="margin: 0; font-size: 17px; font-weight: 600;">Avancement par poste</h2>
+<div style="display: grid; grid-template-columns: minmax(0, 1fr) 120px 44px; gap: 10px 12px; align-items: center; font-size: 13px;">
+<span>Démolition</span><div style="height: 6px; border-radius: 3px; background: #E4E2DC;"><div style="width: 100%; height: 6px; border-radius: 3px; background: #111111;"></div></div><span style="text-align: right;">100 %</span>
+<span>Plomberie</span><div style="height: 6px; border-radius: 3px; background: #E4E2DC;"><div style="width: 80%; height: 6px; border-radius: 3px; background: #111111;"></div></div><span style="text-align: right;">80 %</span>
+<span>Carrelage</span><div style="height: 6px; border-radius: 3px; background: #E4E2DC;"><div style="width: 45%; height: 6px; border-radius: 3px; background: #B4570B;"></div></div><span style="text-align: right; color: #B4570B; font-weight: 600;">45 %</span>
+<span>Électricité</span><div style="height: 6px; border-radius: 3px; background: #E4E2DC;"><div style="width: 30%; height: 6px; border-radius: 3px; background: #111111;"></div></div><span style="text-align: right;">30 %</span>
+<span>Finitions</span><div style="height: 6px; border-radius: 3px; background: #E4E2DC;"></div><span style="text-align: right; color: #5E5E5A;">0 %</span>
+</div>
+</section>
+
+<section style="background: #FFFFFF; border: 1px solid #E4E2DC; border-radius: 16px; padding: 20px 24px; display: flex; flex-direction: column; gap: 12px;">
+<h2 style="margin: 0; font-size: 17px; font-weight: 600;">À faire</h2>
+<div style="display: flex; align-items: center; gap: 12px; justify-content: space-between;"><div style="display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 14px; font-weight: 600;">Facture 2026-118 échue depuis 3 jours</span><span style="font-size: 13px; color: #5E5E5A;">15 360,00 € · rappel automatique demain</span></div><button style="height: 36px; padding: 0 14px; border-radius: 10px; border: 1px solid #D6D3CB; background: #FFFFFF; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer;">Relancer</button></div>
+<div style="display: flex; align-items: center; gap: 12px; justify-content: space-between;"><div style="display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 14px; font-weight: 600;">Commander le receveur de douche</span><span style="font-size: 13px; color: #5E5E5A;">Pose prévue lundi · 2 fournisseurs comparés</span></div><button style="height: 36px; padding: 0 14px; border-radius: 10px; border: 1px solid #D6D3CB; background: #FFFFFF; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer;">Commander</button></div>
+</section>
+
+</div>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#2F4BFF","options":["#2F4BFF","#111111","#0F7B6C","#C2410C"]},"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { accent: this.props.accent ?? '#2F4BFF' };
+  }
+}
+</script>
+</body>
+</html>
