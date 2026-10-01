@@ -1,0 +1,43 @@
+{
+  "name": "@batimint/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --clear-screen=false src/main.ts",
+    "build": "tsup",
+    "start": "node dist/main.js",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint src test",
+    "openapi": "tsx scripts/openapi.ts"
+  },
+  "dependencies": {
+    "@batimint/contracts": "workspace:*",
+    "@batimint/db": "workspace:*",
+    "@batimint/domain": "workspace:*",
+    "@batimint/integrations": "workspace:*",
+    "@fastify/cookie": "^11.0.0",
+    "@fastify/cors": "^11.0.0",
+    "@fastify/helmet": "^13.0.0",
+    "@fastify/rate-limit": "^11.0.0",
+    "@fastify/swagger": "^9.5.0",
+    "@fastify/swagger-ui": "^6.0.0",
+    "fastify": "^5.6.0",
+    "fastify-plugin": "^5.0.0",
+    "fastify-type-provider-zod": "^7.0.0",
+    "otpauth": "^9.4.0",
+    "pg": "^8.16.0",
+    "pino": "^10.0.0",
+    "uuid": "^13.0.0",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.0",
+    "@types/pg": "^8.15.0",
+    "pino-pretty": "^13.0.0",
+    "tsup": "^8.5.0",
+    "tsx": "^4.20.0",
+    "vitest": "^4.0.0"
+  }
+}

@@ -6,3 +6,4 @@ export * from './numbering';
 export * from './permissions';
 export * from './state-machine';
 export * from './budget';
+export * from './belgium';
