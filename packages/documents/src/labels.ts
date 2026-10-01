@@ -37,6 +37,10 @@ export interface DocumentLabels {
   terms: string;
   page: (n: number, total: number) => string;
   bank: string;
+  changeOrder: (ordinal: number) => string;
+  changeOrderTo: (ref: string) => string;
+  changeOrderNoDelay: string;
+  changeOrderDelay: (days: number, newEnd: string | null) => string;
 }
 
 export const LABELS: Record<'fr', DocumentLabels> = {
@@ -78,5 +82,12 @@ export const LABELS: Record<'fr', DocumentLabels> = {
     terms: 'Conditions générales',
     page: (n, total) => `Page ${n} / ${total}`,
     bank: 'IBAN',
+    changeOrder: (n) => `Avenant n°${n}`,
+    changeOrderTo: (ref) => `avenant au contrat ${ref}`,
+    changeOrderNoDelay: 'Cet avenant ne modifie pas la date de fin prévue des travaux.',
+    changeOrderDelay: (days, newEnd) =>
+      `Cet avenant prolonge les travaux de ${days} jour${days > 1 ? 's' : ''} ouvrable${days > 1 ? 's' : ''}${
+        newEnd ? ` : nouvelle date de fin prévue le ${newEnd}` : ''
+      }.`,
   },
 };

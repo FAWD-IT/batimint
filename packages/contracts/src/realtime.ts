@@ -32,3 +32,7 @@ export function inboxChannel(tenantId: string): string {
 export function portalChannel(portalTokenId: string): string {
   return `portal:${portalTokenId}`;
 }
+/** Portail chantier : tous les liens du client d'un chantier reçoivent les mêmes rafraîchissements. */
+export function projectPortalChannel(projectId: string): string {
+  return `portal:project:${projectId}`;
+}

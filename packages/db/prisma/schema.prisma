@@ -106,6 +106,10 @@ model Tenant {
   invoices           Invoice[]
   invoiceLines       InvoiceLine[]
   timelineEntries    TimelineEntry[]
+  changeOrders       ChangeOrder[]
+  changeOrderLines   ChangeOrderLine[]
+  projectCosts       ProjectCost[]
+  comments           Comment[]
 
   @@map("tenants")
 }
@@ -685,6 +689,8 @@ model Attachment {
   transcript       String?
   transcriptStatus String?        @map("transcript_status")
   visibleToClient  Boolean        @default(false) @map("visible_to_client")
+  /// Tâche du chantier concernée (galerie par tâche).
+  taskId           String?        @map("task_id") @db.Uuid
   createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
   createdBy        String?        @map("created_by") @db.Uuid
 
@@ -1051,6 +1057,7 @@ model PortalToken {
   quote  Quote? @relation(fields: [quoteId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, quoteId])
+  @@index([tenantId, projectId])
   @@map("portal_tokens")
 }
 
@@ -1065,29 +1072,35 @@ enum ProjectStatus {
 
 /// Le chantier, objet pivot (03 §5). Créé à la signature du devis.
 model Project {
-  id             String        @id @default(uuid(7)) @db.Uuid
-  tenantId       String        @map("tenant_id") @db.Uuid
-  number         String
-  name           String
-  customerId     String        @map("customer_id") @db.Uuid
-  siteId         String?       @map("site_id") @db.Uuid
-  quoteId        String?       @unique @map("quote_id") @db.Uuid
-  opportunityId  String?       @map("opportunity_id") @db.Uuid
-  status         ProjectStatus @default(preparation)
+  id              String        @id @default(uuid(7)) @db.Uuid
+  tenantId        String        @map("tenant_id") @db.Uuid
+  number          String
+  name            String
+  customerId      String        @map("customer_id") @db.Uuid
+  siteId          String?       @map("site_id") @db.Uuid
+  quoteId         String?       @unique @map("quote_id") @db.Uuid
+  opportunityId   String?       @map("opportunity_id") @db.Uuid
+  status          ProjectStatus @default(preparation)
   /// Montant du contrat HTVA (devis signé + avenants signés).
-  contractAmount BigInt        @default(0) @map("contract_amount")
-  managerUserId  String?       @map("manager_user_id") @db.Uuid
-  startDate      DateTime?     @map("start_date") @db.Date
-  endDate        DateTime?     @map("end_date") @db.Date
-  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
-  createdBy      String?       @map("created_by") @db.Uuid
+  contractAmount  BigInt        @default(0) @map("contract_amount")
+  managerUserId   String?       @map("manager_user_id") @db.Uuid
+  teamId          String?       @map("team_id") @db.Uuid
+  description     String?
+  startDate       DateTime?     @map("start_date") @db.Date
+  endDate         DateTime?     @map("end_date") @db.Date
+  /// Raison de la suspension (statut `suspended`).
+  suspendedReason String?       @map("suspended_reason")
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdBy       String?       @map("created_by") @db.Uuid
 
-  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  quote       Quote?       @relation(fields: [quoteId], references: [id], onDelete: SetNull)
-  budgetLines BudgetLine[]
-  tasks       Task[]
-  invoices    Invoice[]
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  quote        Quote?        @relation(fields: [quoteId], references: [id], onDelete: SetNull)
+  budgetLines  BudgetLine[]
+  tasks        Task[]
+  invoices     Invoice[]
+  changeOrders ChangeOrder[]
+  costs        ProjectCost[]
 
   @@unique([tenantId, number])
   @@index([tenantId, status])
@@ -1107,33 +1120,47 @@ model BudgetLine {
   /// Montant vendu HTVA.
   saleAmount      BigInt   @default(0) @map("sale_amount")
   laborHours      Decimal  @default(0) @map("labor_hours") @db.Decimal(12, 4)
+  /// Poste créé par un avenant (nouveau poste).
+  changeOrderId   String?  @map("change_order_id") @db.Uuid
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tenant  Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  project Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
   tasks   Task[]
+  costs   ProjectCost[]
 
   @@unique([projectId, quoteSectionKey])
   @@map("budget_lines")
 }
 
 model Task {
-  id           String    @id @default(uuid(7)) @db.Uuid
-  tenantId     String    @map("tenant_id") @db.Uuid
-  projectId    String    @map("project_id") @db.Uuid
-  budgetLineId String?   @map("budget_line_id") @db.Uuid
-  quoteLineKey String?   @map("quote_line_key") @db.Uuid
-  position     Int
-  title        String
+  id                 String    @id @default(uuid(7)) @db.Uuid
+  tenantId           String    @map("tenant_id") @db.Uuid
+  projectId          String    @map("project_id") @db.Uuid
+  budgetLineId       String?   @map("budget_line_id") @db.Uuid
+  quoteLineKey       String?   @map("quote_line_key") @db.Uuid
+  position           Int
+  title              String
   /// `todo`, `in_progress`, `done`.
-  status       String    @default("todo")
-  quantity     Decimal?  @db.Decimal(14, 4)
-  unit         String?
-  plannedHours Decimal   @default(0) @map("planned_hours") @db.Decimal(12, 4)
-  completedAt  DateTime? @map("completed_at") @db.Timestamptz(3)
-  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  status             String    @default("todo")
+  quantity           Decimal?  @db.Decimal(14, 4)
+  unit               String?
+  plannedHours       Decimal   @default(0) @map("planned_hours") @db.Decimal(12, 4)
+  /// Montant de vente HTVA de la tâche : pondère l'avancement du poste.
+  amount             BigInt    @default(0)
+  /// Avancement de 0 à 1 (1 quand la tâche est faite).
+  progress           Decimal   @default(0) @db.Decimal(5, 4)
+  description        String?
+  /// Checklist : [{ id, label, done }].
+  checklist          Json      @default("[]")
+  assigneeEmployeeId String?   @map("assignee_employee_id") @db.Uuid
+  dueDate            DateTime? @map("due_date") @db.Date
+  changeOrderLineId  String?   @unique @map("change_order_line_id") @db.Uuid
+  completedAt        DateTime? @map("completed_at") @db.Timestamptz(3)
+  completedBy        String?   @map("completed_by") @db.Uuid
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   project    Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
@@ -1224,6 +1251,11 @@ model TimelineEntry {
   opportunityId   String?  @map("opportunity_id") @db.Uuid
   quoteId         String?  @map("quote_id") @db.Uuid
   projectId       String?  @map("project_id") @db.Uuid
+  changeOrderId   String?  @map("change_order_id") @db.Uuid
+  /// Montant affiché à droite de l'entrée (positif ou négatif), en centimes.
+  amount          BigInt?
+  /// Données d'affichage (ids des photos, poste concerné…).
+  data            Json?
   /// Visible sur le portail client.
   visibleToClient Boolean  @default(false) @map("visible_to_client")
   actorLabel      String?  @map("actor_label")
@@ -1236,4 +1268,146 @@ model TimelineEntry {
   @@index([tenantId, quoteId])
   @@index([tenantId, customerId])
   @@map("timeline_entries")
+}
+
+enum ChangeOrderStatus {
+  draft
+  sent
+  signed
+  refused
+}
+
+/// Avenant (03 §5, 02 P5) : porte ses propres lignes ; une fois signé, il met à jour le budget
+/// et le contrat. Numéro légal attribué à l'envoi (séquence sans trou), ordinal par chantier.
+model ChangeOrder {
+  id            String            @id @default(uuid(7)) @db.Uuid
+  tenantId      String            @map("tenant_id") @db.Uuid
+  projectId     String            @map("project_id") @db.Uuid
+  /// « Avenant n°2 » : rang dans le chantier.
+  ordinal       Int
+  number        String?
+  title         String
+  description   String?
+  status        ChangeOrderStatus @default(draft)
+  /// Prolongation du chantier en jours ouvrés (0 = aucun impact sur la date de fin).
+  delayDays     Int               @default(0) @map("delay_days")
+  /// Origine : signalement terrain (M5) ou saisie manuelle.
+  issueId       String?           @map("issue_id") @db.Uuid
+  totalNet      BigInt            @default(0) @map("total_net")
+  totalVat      BigInt            @default(0) @map("total_vat")
+  totalGross    BigInt            @default(0) @map("total_gross")
+  totalCost     BigInt            @default(0) @map("total_cost")
+  laborHours    Decimal           @default(0) @map("labor_hours") @db.Decimal(12, 4)
+  /// Révision optimiste de l'éditeur.
+  revision      Int               @default(0)
+  sentAt        DateTime?         @map("sent_at") @db.Timestamptz(3)
+  sentTo        String?           @map("sent_to")
+  signedAt      DateTime?         @map("signed_at") @db.Timestamptz(3)
+  refusedAt     DateTime?         @map("refused_at") @db.Timestamptz(3)
+  refusalReason String?           @map("refusal_reason")
+  signatureId   String?           @map("signature_id") @db.Uuid
+  pdfKey        String?           @map("pdf_key")
+  pdfSha256     String?           @map("pdf_sha256")
+  createdAt     DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdBy     String?           @map("created_by") @db.Uuid
+
+  tenant  Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  project Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  lines   ChangeOrderLine[]
+
+  @@unique([projectId, ordinal])
+  @@unique([tenantId, number])
+  @@index([tenantId, status])
+  @@map("change_orders")
+}
+
+model ChangeOrderLine {
+  id              String   @id @default(uuid(7)) @db.Uuid
+  tenantId        String   @map("tenant_id") @db.Uuid
+  changeOrderId   String   @map("change_order_id") @db.Uuid
+  position        Int
+  /// Poste existant du chantier, ou null pour un nouveau poste (`newPostLabel`).
+  budgetLineId    String?  @map("budget_line_id") @db.Uuid
+  newPostLabel    String?  @map("new_post_label")
+  itemId          String?  @map("item_id") @db.Uuid
+  code            String?
+  description     String
+  unit            String   @default("u")
+  quantity        Decimal  @default(1) @db.Decimal(14, 4)
+  unitPrice       BigInt   @map("unit_price")
+  unitCost        BigInt   @default(0) @map("unit_cost")
+  laborHours      Decimal  @default(0) @map("labor_hours") @db.Decimal(12, 4)
+  discountPercent Decimal? @map("discount_percent") @db.Decimal(7, 4)
+  vatRegime       String   @map("vat_regime")
+
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  changeOrder ChangeOrder @relation(fields: [changeOrderId], references: [id], onDelete: Cascade)
+
+  @@index([changeOrderId, position])
+  @@map("change_order_lines")
+}
+
+enum CostCategory {
+  supplier_invoice
+  purchase_order
+  labour
+  stock
+  equipment
+  subcontract
+  other
+}
+
+/// Grand livre des coûts engagés du chantier (04 « Engagé ») : chaque source (facture
+/// fournisseur, BC ouvert, heures validées, sortie de stock…) y écrit sa ligne via un
+/// consommateur idempotent ; (catégorie, source) est unique, la ligne est mise à jour en place.
+model ProjectCost {
+  id           String       @id @default(uuid(7)) @db.Uuid
+  tenantId     String       @map("tenant_id") @db.Uuid
+  projectId    String       @map("project_id") @db.Uuid
+  budgetLineId String?      @map("budget_line_id") @db.Uuid
+  category     CostCategory
+  sourceType   String       @map("source_type")
+  sourceId     String       @map("source_id")
+  label        String
+  amount       BigInt
+  occurredAt   DateTime     @default(now()) @map("occurred_at") @db.Timestamptz(3)
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  project    Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  budgetLine BudgetLine? @relation(fields: [budgetLineId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, category, sourceType, sourceId])
+  @@index([tenantId, projectId])
+  @@map("project_costs")
+}
+
+/// Commentaire sur un objet (chantier, avenant, devis, facture) : fil interne, ou partagé avec
+/// le client quand `visibleToClient` (questions posées depuis le portail et réponses).
+model Comment {
+  id                String    @id @default(uuid(7)) @db.Uuid
+  tenantId          String    @map("tenant_id") @db.Uuid
+  /// `project`, `change_order`, `quote`, `invoice`, `task`.
+  subjectType       String    @map("subject_type")
+  subjectId         String    @map("subject_id") @db.Uuid
+  projectId         String?   @map("project_id") @db.Uuid
+  body              String
+  /// Utilisateurs mentionnés (@).
+  mentions          String[]  @default([]) @db.Uuid
+  authorUserId      String?   @map("author_user_id") @db.Uuid
+  authorPortalToken String?   @map("author_portal_token_id") @db.Uuid
+  authorLabel       String    @map("author_label")
+  visibleToClient   Boolean   @default(false) @map("visible_to_client")
+  /// Question du client traitée (réponse donnée ou marquée résolue).
+  resolvedAt        DateTime? @map("resolved_at") @db.Timestamptz(3)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  deletedAt         DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, subjectType, subjectId, createdAt])
+  @@index([tenantId, projectId, createdAt])
+  @@map("comments")
 }

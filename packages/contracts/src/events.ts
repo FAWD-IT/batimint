@@ -47,6 +47,55 @@ export const EventPayloads = {
   'quote.refused.v1': z.object({ quoteId: Uuid, reason: z.string().nullable() }),
   'quote.reminder_due.v1': z.object({ quoteId: Uuid }),
   'project.created.v1': z.object({ projectId: Uuid, quoteId: Uuid.nullable() }),
+  'project.updated.v1': z.object({ projectId: Uuid, fields: z.array(z.string()) }),
+  'project.status_changed.v1': z.object({
+    projectId: Uuid,
+    from: z.string(),
+    to: z.string(),
+    reason: z.string().nullable().optional(),
+  }),
+  /** Partage du portail par e-mail : le consommateur crée son propre jeton (jamais en clair dans l'outbox). */
+  'project.portal_shared.v1': z.object({
+    projectId: Uuid,
+    email: z.string(),
+    message: z.string().nullable(),
+  }),
+  'task.updated.v1': z.object({ projectId: Uuid, taskId: Uuid, fields: z.array(z.string()) }),
+  'task.completed.v1': z.object({ projectId: Uuid, taskId: Uuid, budgetLineId: Uuid.nullable() }),
+  'project.cost_recorded.v1': z.object({
+    projectId: Uuid,
+    costId: Uuid,
+    budgetLineId: Uuid.nullable(),
+    category: z.string(),
+    amount: z.string(),
+  }),
+  'budget.drift_detected.v1': z.object({
+    projectId: Uuid,
+    budgetLineId: Uuid,
+    committed: z.string(),
+    budgetedCost: z.string(),
+  }),
+  'change_order.created.v1': z.object({ projectId: Uuid, changeOrderId: Uuid }),
+  'change_order.sent.v1': z.object({
+    projectId: Uuid,
+    changeOrderId: Uuid,
+    email: z.string(),
+    message: z.string().nullable().optional(),
+  }),
+  'change_order.signed.v1': z.object({ projectId: Uuid, changeOrderId: Uuid, signatureId: Uuid }),
+  'change_order.refused.v1': z.object({
+    projectId: Uuid,
+    changeOrderId: Uuid,
+    reason: z.string().nullable(),
+  }),
+  'comment.added.v1': z.object({
+    commentId: Uuid,
+    subjectType: z.string(),
+    subjectId: Uuid,
+    projectId: Uuid.nullable(),
+    fromClient: z.boolean(),
+    mentions: z.array(Uuid),
+  }),
 } as const;
 
 export type EventType = keyof typeof EventPayloads;

@@ -14,3 +14,5 @@ export * from './library';
 export * from './library-import';
 export * from './crm';
 export * from './quote';
+export * from './calendar';
+export * from './project';

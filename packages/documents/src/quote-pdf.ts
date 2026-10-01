@@ -60,6 +60,8 @@ export interface QuotePdfInput {
   content: QuoteInput & { sections: (QuoteSectionInput & { description?: string | null })[] };
   signature?: { signerName: string; signedAt: Date; ip: string | null } | null;
   certificate?: { signedAt: Date } | null;
+  /** Titre et sous-titre imposés (avenant) ; par défaut « Devis D… » et « titre · version n ». */
+  heading?: { title: string; subtitle: string } | null;
 }
 
 const COLS = {
@@ -86,7 +88,7 @@ export async function renderQuotePdf(input: QuotePdfInput): Promise<Buffer> {
   const L: DocumentLabels = LABELS[input.locale ?? 'fr'];
   const accent = safeAccent(input.tenant.brandColor);
   const totals = computeQuote(input.content);
-  const title = `${L.quote} ${input.quote.number ?? ''}`.trim();
+  const title = input.heading?.title ?? `${L.quote} ${input.quote.number ?? ''}`.trim();
   const doc = createPdf({
     title: `${title} — ${input.quote.title}`,
     author: input.tenant.name,
@@ -127,9 +129,14 @@ export async function renderQuotePdf(input: QuotePdfInput): Promise<Buffer> {
     .font('regular')
     .fontSize(10)
     .fillColor(MUTED)
-    .text(`${input.quote.title} · ${L.version} ${input.quote.version}`, PAGE.margin + 14, doc.y + 2, {
-      width: CONTENT_WIDTH - 14,
-    });
+    .text(
+      input.heading?.subtitle ?? `${input.quote.title} · ${L.version} ${input.quote.version}`,
+      PAGE.margin + 14,
+      doc.y + 2,
+      {
+        width: CONTENT_WIDTH - 14,
+      },
+    );
   y = doc.y + 16;
 
   // --- Client, chantier, dates ---
@@ -414,4 +421,49 @@ function footer(doc: Pdf, L: DocumentLabels, input: QuotePdfInput): void {
     });
     doc.page.margins.bottom = bottom;
   }
+}
+
+export interface ChangeOrderPdfInput extends Omit<
+  QuotePdfInput,
+  'quote' | 'content' | 'heading' | 'certificate'
+> {
+  changeOrder: {
+    ordinal: number;
+    number: string | null;
+    title: string;
+    description: string | null;
+    date: Date;
+    delayDays: number;
+    newEndDate: Date | null;
+    projectRef: string;
+  };
+  /** Un poste par cible (poste existant ou nouveau poste). */
+  sections: QuotePdfInput['content']['sections'];
+}
+
+/** PDF d'avenant (02 P5) : mêmes calculs, mêmes mentions et même bloc de signature que le devis. */
+export function renderChangeOrderPdf(input: ChangeOrderPdfInput): Promise<Buffer> {
+  const L = LABELS[input.locale ?? 'fr'];
+  const co = input.changeOrder;
+  const delay =
+    co.delayDays > 0
+      ? L.changeOrderDelay(co.delayDays, co.newEndDate ? formatDateFr(co.newEndDate) : null)
+      : L.changeOrderNoDelay;
+  return renderQuotePdf({
+    ...input,
+    heading: {
+      title: `${L.changeOrder(co.ordinal)}${co.number ? ` · ${co.number}` : ''}`,
+      subtitle: `${co.title} · ${L.changeOrderTo(co.projectRef)}`,
+    },
+    quote: {
+      number: co.number,
+      title: co.title,
+      version: 1,
+      date: co.date,
+      validUntil: null,
+      intro: co.description,
+      notes: delay,
+    },
+    content: { sections: input.sections },
+  });
 }
