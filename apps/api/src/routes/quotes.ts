@@ -73,7 +73,7 @@ export const quoteRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (app,
           status: z.string().max(80).optional(),
           opportunityId: z.uuid().optional(),
           customerId: z.uuid().optional(),
-          templates: z.coerce.boolean().default(false),
+          templates: z.stringbool().default(false),
           q: z.string().max(100).optional(),
         }),
         response: { 200: z.object({ items: z.array(QuoteSummarySchema) }) },
@@ -586,7 +586,7 @@ export const quoteRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (app,
         summary: 'Lignes de devis prêtes à insérer pour un article (ou les composants d’un ouvrage)',
         params: z.object({ itemId: z.uuid() }),
         querystring: z.object({
-          explode: z.coerce.boolean().default(false),
+          explode: z.stringbool().default(false),
           quantity: z
             .string()
             .regex(/^\d+(\.\d+)?$/)

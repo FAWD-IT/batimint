@@ -183,7 +183,7 @@ export const peopleRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (app
       schema: {
         tags: ['équipes'],
         summary: 'Employés',
-        querystring: z.object({ includeInactive: z.coerce.boolean().default(false) }),
+        querystring: z.object({ includeInactive: z.stringbool().default(false) }),
         response: { 200: z.object({ items: z.array(EmployeeSchema) }) },
       },
     },

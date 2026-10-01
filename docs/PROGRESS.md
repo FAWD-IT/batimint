@@ -3,12 +3,12 @@
 Ce fichier est le point de reprise entre sessions cloud. Une nouvelle session doit pouvoir reprendre le travail en ne lisant que lui et `CLAUDE.md`.
 
 ## Jalon en cours
-**M2 — CRM et bibliothèque** — API, écrans, seed et E2E livrés. Reste : vérifier la CI sur la branche, puis démarrer M3.
+**M3 — Devis et signature** — livré (domaine, API, PDF, portail, worker, écrans, seed, E2E P2). Reste : vérifier la CI de la branche, puis démarrer M4.
 
 (L'étiquette `m0-done` existe localement mais le push de tags est refusé par la politique de la session : seule la branche est poussée.)
 
 ## Prochaine action
-Démarrer M3 (devis et signature) : modèle Quote/QuoteLine/versions dans `packages/db`, calculs dans `packages/domain` (déjà : TVA, arrondis), éditeur de devis depuis l'affaire (`/opportunites/[id]` → carte « Devis »), portail client `/p/[token]`.
+Démarrer M4 (chantier pivot, maquette `design/maquettes/cockpit-chantier.dc.html`) : page `/chantiers/[id]` à partir des `Project`, `BudgetLine`, `Task`, `TimelineEntry` créés à la signature ; budget et marge en direct (`packages/domain/budget.ts`), timeline, documents/photos, avenants (P5), ⌘K. Le seed doit alors créer le chantier Dupont à 62 % (`docs/09`).
 
 ## Relancer l'environnement
 ```bash
@@ -62,15 +62,28 @@ docker compose -f docker-compose.coolify.yml -f docker/docker-compose.sandbox.ym
 - Outillage : `apps/web/scripts/check-messages.mjs` (dans `pnpm lint`) vérifie que toute clé de traduction utilisée existe.
 - Tests : 11 intégration API M2, consommateur lead-intake ; E2E P2.1 (formulaire → pipeline en direct, deux navigateurs), clients/VIES/doublon, pipeline clavier/perte/annuler, bibliothèque (type, recherche, marge, ouvrage), P2.2 sur mobile (photo, note vocale transcrite, pas de débordement horizontal), P1 complet avec import CSV.
 
+### M3 — Devis et signature ✅
+- Domaine : `computeQuote` (postes, options, remise ligne × globale, revient, marge, heures, acompte), comparatif de versions, relance J+7 et échéance — tests de propriété (somme des postes = net du document).
+- `@batimint/documents` : PDF A4 déterministe (Geist embarquée, OFL), postes, options retenues ou non, TVA par taux, acompte, échéancier, mentions (autoliquidation, 6 %), bloc de signature, CGV en annexe (ADR 0012).
+- API : devis depuis l'affaire / un client / un modèle, enregistrement versionné (concurrence optimiste), TVA proposée par ligne avec justification obligatoire en cas d'écart (auditée), lignes de bibliothèque et ouvrages éclatables, dictée IA, comparatif, PDF, envoi, refus, archivage, modèles ; portail public (consultation, ouverture tracée une fois, PDF, signature + attestation 6 %, preuve SHA-256 en ajout seul).
+- Worker : lien de portail + e-mail avec PDF, fil chronologique et notifications (« Vu par M. Dupont »), à la signature : chantier, postes budgétaires, tâches, facture d'acompte en brouillon aux bons taux, prospect → client, affaire gagnée (idempotent) ; tâche planifiée relances J+7 et expirations.
+- Web : liste des devis, éditeur (calcul instantané, enregistrement automatique, bibliothèque, dictée vocale ou texte, TVA justifiée, options, acompte, validité, visite technique à côté, suivi), envoi, comparatif, duplication, modèles ; carte « Devis » sur l'affaire ; portail client mobile (options en direct, signature tracée ou nom saisi, attestation 6 %).
+- Seed : 4 devis (Dupont en préparation à 6 % avec option douche à l'italienne, devis vu, envoyés, B2B en autoliquidation).
+- Tests : 14 intégration API M3, 2 worker (chantier créé une seule fois, relances/expirations), 2 PDF, 7 domaine ; E2E P2 complet (devis → envoi → « Vu par » en direct → signature mobile avec attestation → chantier créé, affaire gagnée).
+
 ## Reste à faire
 M1 → M13 selon `docs/11-plan-de-livraison.md`.
 
 ## Écarts avec la spécification
+- Nouveau paquet `packages/documents` (PDF) en plus de la liste de `CLAUDE.md` (ADR 0012).
 - Formule du coût projeté corrigée (ADR 0004).
 - `exclude_from_hc` remplacé par des services ponctuels « au repos et sains » (ADR 0007).
 - Image MinIO communautaire `pgsty/minio` (ADR 0006).
 - Auth maison au lieu de Better Auth (ADR 0002) ; même origine via proxy Next (ADR 0003).
 - Navigation : seuls les modules livrés apparaissent (pas de lien vers un écran vide). ⌘K arrive avec M4.
+
+## Dette technique connue
+- Quelques routes M1/M2 lancent des requêtes en parallèle (`Promise.all`) dans une même transaction : accepté par `pg` 8 (avertissement de dépréciation), à rendre séquentiel avant une montée en `pg` 9.
 
 ## Limites rencontrées dans l'environnement cloud
 - Docker est installé mais le démon n'est pas lancé : `dockerd &` (le hook le fait).
@@ -89,6 +102,11 @@ M1 → M13 selon `docs/11-plan-de-livraison.md`.
 - Régime intracommunautaire pour un client assujetti étranger (proposé automatiquement, `domain/vat.ts`)
 
 ## Améliorations repérées en jouant les parcours
+- M3 · M. Dupont (mobile) · signature : un tracé qui finissait hors de la zone fermait le dialogue (clic sur le fond) → un dialogue ne se ferme que si l'appui commence sur le fond.
+- M3 · Sophie · éditeur : l'ouvrage était toujours éclaté (`z.coerce.boolean()` lit « false » comme vrai) → `z.stringbool()` dans toute l'API.
+- M3 · Sophie · seed/bibliothèques types : l'installation ignorait des articles quand un autre tenant les avait (requête sans filtre tenant en contexte système) → filtre explicite.
+- M3 · pastilles « attention » sous 4,5:1 → couleur de texte dédiée `--warn-ink`.
+- M3 · Sophie (mobile) · éditeur : total en bas de page → barre de total collante sur téléphone.
 - M2 · Karim (mobile) · visite : la barre « Modifications non enregistrées » débordait de l'écran à 390 px → libellé masqué et boutons pleine largeur sur téléphone.
 - M2 · Karim (mobile) · visite : photos et note vocale étaient tout en bas → affichées juste après l'adresse sur téléphone ; libellés de mesure sur leur propre ligne.
 - M2 · Sophie · bibliothèque : prestations au temps à 0,00 € dans les bibliothèques types → temps × taux de référence.

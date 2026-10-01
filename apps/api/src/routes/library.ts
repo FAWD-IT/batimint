@@ -152,7 +152,7 @@ export const libraryRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (ap
           q: z.string().max(120).optional(),
           kind: z.string().max(100).optional(),
           trade: z.string().max(40).optional(),
-          archived: z.coerce.boolean().default(false),
+          archived: z.stringbool().default(false),
           limit: z.coerce.number().int().min(1).max(500).default(100),
           offset: z.coerce.number().int().min(0).default(0),
         }),

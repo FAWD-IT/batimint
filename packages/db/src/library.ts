@@ -90,7 +90,10 @@ export async function installStarterLibraries(
   const wanted = new Set<StarterTrade>(trades);
   for (const t of trades) for (const dep of TRADE_DEPENDENCIES[t] ?? []) wanted.add(dep);
   const libs = STARTER_LIBRARIES.filter((l) => wanted.has(l.trade));
-  const existing = new Set((await tx.item.findMany({ select: { code: true } })).map((i) => i.code));
+  // Filtre explicite par tenant : le seed s'exécute en contexte système (RLS contournée).
+  const existing = new Set(
+    (await tx.item.findMany({ where: { tenantId }, select: { code: true } })).map((i) => i.code),
+  );
   let created = 0;
   let skipped = 0;
   const rows = libs.flatMap((lib) => lib.items.map((r) => ({ lib, r })));
@@ -124,7 +127,10 @@ export async function installStarterLibraries(
     created += toCreate.length;
   }
   const byCode = new Map(
-    (await tx.item.findMany({ select: { id: true, code: true } })).map((i) => [i.code, i.id]),
+    (await tx.item.findMany({ where: { tenantId }, select: { id: true, code: true } })).map((i) => [
+      i.code,
+      i.id,
+    ]),
   );
   for (const lib of libs) {
     for (const a of lib.assemblies) {

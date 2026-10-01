@@ -85,7 +85,7 @@ export const opportunityRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async
         summary: "Pipeline d'opportunités",
         querystring: z.object({
           customerId: z.uuid().optional(),
-          includeClosed: z.coerce.boolean().default(true),
+          includeClosed: z.stringbool().default(true),
         }),
         response: { 200: z.object({ items: z.array(OpportunitySchema) }) },
       },

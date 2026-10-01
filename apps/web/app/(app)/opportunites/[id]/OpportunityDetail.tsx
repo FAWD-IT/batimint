@@ -19,7 +19,7 @@ import {
   useToast,
 } from '@batimint/ui';
 import { useQueryClient } from '@tanstack/react-query';
-import { CalendarPlus, ClipboardCheck, FileText, MapPin, Navigation, Pencil } from 'lucide-react';
+import { CalendarPlus, ClipboardCheck, MapPin, Navigation, Pencil } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { type FormEvent, useState } from 'react';
@@ -28,6 +28,7 @@ import { MoneyInput } from '@/components/MoneyInput';
 import { TRADES } from '@/components/crm/OpportunityDialog';
 import { STAGE_TONES } from '@/components/crm/stages';
 import { MediaPanel } from '@/components/visit/MediaPanel';
+import { OpportunityQuotes } from '@/components/quotes/OpportunityQuotes';
 import { type Visit, VisitEditor } from '@/components/visit/VisitEditor';
 import { api, ApiError } from '@/lib/api';
 import { useApi, useApiMutation } from '@/lib/hooks';
@@ -232,15 +233,7 @@ export function OpportunityDetail({ id }: { id: string }) {
 
         <aside className="order-2 flex min-w-0 flex-col gap-6 lg:order-none">
           <MediaPanel ownerType="opportunity" ownerId={o.id} canWrite={canVisit} />
-          {can('quotes.read') ? (
-            <Card className="flex flex-col gap-2">
-              <CardTitle as="h3">{t('quote')}</CardTitle>
-              <p className="flex items-start gap-2 text-[14px] text-muted">
-                <FileText aria-hidden className="mt-0.5 size-4 shrink-0" />
-                {t('quoteSoon')}
-              </p>
-            </Card>
-          ) : null}
+          {can('quotes.read') ? <OpportunityQuotes opportunity={o} /> : null}
         </aside>
       </div>
 

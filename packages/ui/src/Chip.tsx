@@ -6,7 +6,7 @@ export type Tone = 'neutral' | 'good' | 'warn' | 'crit' | 'accent' | 'dark';
 const TONES: Record<Tone, string> = {
   neutral: 'bg-surface border-line text-ink',
   good: 'bg-good-soft border-transparent text-good',
-  warn: 'bg-[color-mix(in_srgb,var(--warn)_12%,var(--surface))] border-transparent text-warn',
+  warn: 'bg-[color-mix(in_srgb,var(--warn)_12%,var(--surface))] border-transparent text-[var(--warn-ink)]',
   crit: 'bg-[color-mix(in_srgb,var(--crit)_10%,var(--surface))] border-transparent text-crit',
   accent: 'bg-accent-soft border-transparent text-accent',
   dark: 'bg-ink border-ink text-ink-inverse',

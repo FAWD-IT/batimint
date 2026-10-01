@@ -38,20 +38,24 @@ for (const file of [
   ...walk(path.join(root, 'lib')),
 ]) {
   const src = readFileSync(file, 'utf8');
-  const bindings = new Map();
+  // Déclarations `const t = useTranslations('ns')` avec leur position : chaque appel utilise la
+  // déclaration la plus proche qui le précède (plusieurs composants par fichier).
+  const decls = [];
   for (const m of src.matchAll(
     /const\s+(\w+)\s*=\s*(?:await\s+)?\(?\s*(?:useTranslations|getTranslations)\(\s*'([^']*)'\s*\)/g,
   ))
-    bindings.set(m[1], m[2]);
+    decls.push({ name: m[1], ns: m[2], at: m.index });
   for (const m of src.matchAll(/\(await getTranslations\('([^']+)'\)\)\('([^']+)'\)/g)) {
     if (lookup(`${m[1]}.${m[2]}`) === undefined)
       problems.push(`${path.relative(root, file)}: ${m[1]}.${m[2]}`);
   }
-  for (const [name, ns] of bindings) {
+  for (const name of new Set(decls.map((d) => d.name))) {
     const re = new RegExp(`(?<![\\w.])${name}(?:\\.raw)?\\(\\s*(['\`])([^'\`]*)\\1`, 'g');
     for (const m of src.matchAll(re)) {
+      const decl = decls.filter((d) => d.name === name && d.at < m.index).at(-1);
+      if (!decl) continue;
       const raw = m[2];
-      const full = ns ? `${ns}.${raw}` : raw;
+      const full = decl.ns ? `${decl.ns}.${raw}` : raw;
       if (m[1] === '`' && raw.includes('${')) {
         const prefix = full.slice(0, full.indexOf('${')).replace(/\.$/, '');
         const node = lookup(prefix);

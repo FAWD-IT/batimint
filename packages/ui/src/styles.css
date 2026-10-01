@@ -17,3 +17,19 @@
     background-color: transparent;
   }
 }
+
+/*
+ * Texte des pastilles « attention » : la teinte --warn sur son fond clair passe sous 4,5:1
+ * (WCAG AA) ; on fonce le texte en mode clair, et on garde --warn en mode sombre.
+ */
+:root {
+  --warn-ink: #8a4208;
+}
+:root[data-theme='dark'] {
+  --warn-ink: var(--warn);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --warn-ink: var(--warn);
+  }
+}

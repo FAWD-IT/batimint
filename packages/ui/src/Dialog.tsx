@@ -1,6 +1,13 @@
 'use client';
 
-import { type ReactNode, useEffect, useId, useRef } from 'react';
+import {
+  type PointerEvent as ReactPointerEvent,
+  type MouseEvent as ReactMouseEvent,
+  type ReactNode,
+  useEffect,
+  useId,
+  useRef,
+} from 'react';
 import { Button } from './Button';
 import { cn } from './cn';
 
@@ -21,6 +28,8 @@ interface BaseProps {
  */
 function useNativeDialog(open: boolean, onClose: () => void) {
   const ref = useRef<HTMLDialogElement>(null);
+  /** Vrai si l'appui a commencé sur le fond : un geste commencé dans le contenu ne ferme jamais. */
+  const pressedOnBackdrop = useRef(false);
   useEffect(() => {
     const d = ref.current;
     if (!d) return;
@@ -37,7 +46,16 @@ function useNativeDialog(open: boolean, onClose: () => void) {
     d.addEventListener('cancel', handler);
     return () => d.removeEventListener('cancel', handler);
   }, [onClose]);
-  return ref;
+  const backdropProps = {
+    onPointerDown: (e: ReactPointerEvent<HTMLDialogElement>) => {
+      pressedOnBackdrop.current = e.target === ref.current;
+    },
+    onClick: (e: ReactMouseEvent<HTMLDialogElement>) => {
+      if (pressedOnBackdrop.current && e.target === ref.current) onClose();
+      pressedOnBackdrop.current = false;
+    },
+  };
+  return { ref, backdropProps };
 }
 
 function CloseButton({ onClick, label }: { onClick: () => void; label: string }) {
@@ -73,13 +91,13 @@ export function Dialog({
   closeLabel,
   className,
 }: BaseProps) {
-  const ref = useNativeDialog(open, onClose);
+  const { ref, backdropProps } = useNativeDialog(open, onClose);
   const titleId = useId();
   return (
     <dialog
       ref={ref}
       aria-labelledby={titleId}
-      onClick={(e) => e.target === ref.current && onClose()}
+      {...backdropProps}
       className={cn(
         'm-auto w-[min(94vw,520px)] rounded-[16px] border border-line bg-surface p-0 text-ink backdrop:bg-black/40',
         className,
@@ -119,13 +137,13 @@ export function Drawer({
   closeLabel,
   className,
 }: BaseProps) {
-  const ref = useNativeDialog(open, onClose);
+  const { ref, backdropProps } = useNativeDialog(open, onClose);
   const titleId = useId();
   return (
     <dialog
       ref={ref}
       aria-labelledby={titleId}
-      onClick={(e) => e.target === ref.current && onClose()}
+      {...backdropProps}
       className={cn(
         'mt-0 mr-0 mb-0 ml-auto h-dvh max-h-dvh w-[min(100vw,480px)] max-w-none rounded-none border-l border-line bg-surface p-0 text-ink backdrop:bg-black/30',
         className,
