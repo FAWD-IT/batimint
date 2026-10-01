@@ -29,6 +29,7 @@
     "fastify-plugin": "^5.0.0",
     "fastify-type-provider-zod": "^7.0.0",
     "otpauth": "^9.4.0",
+    "pdfkit": "^0.17.2",
     "pg": "^8.16.0",
     "pino": "^10.0.0",
     "uuid": "^13.0.0",
