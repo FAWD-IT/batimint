@@ -30,7 +30,9 @@ import { memberRoutes } from './routes/members';
 import { opportunityRoutes } from './routes/opportunities';
 import { notificationRoutes } from './routes/notifications';
 import { peopleRoutes } from './routes/people';
+import { portalRoutes } from './routes/portal';
 import { profileRoutes } from './routes/profile';
+import { quoteRoutes } from './routes/quotes';
 import { realtimeRoutes } from './routes/realtime';
 
 export interface BuildOptions {
@@ -120,6 +122,8 @@ export async function buildServer(deps: AppDeps, options: BuildOptions = {}): Pr
       await v1.register(opportunityRoutes, { deps });
       await v1.register(attachmentRoutes, { deps });
       await v1.register(libraryRoutes, { deps });
+      await v1.register(quoteRoutes, { deps });
+      await v1.register(portalRoutes, { deps });
       v1.get('/openapi.json', { schema: { hide: true }, config: { rateLimit: false } }, async () =>
         app.swagger(),
       );

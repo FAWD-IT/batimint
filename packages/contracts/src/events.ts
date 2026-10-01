@@ -29,6 +29,24 @@ export const EventPayloads = {
   }),
   'library.imported.v1': z.object({ created: z.number().int(), updated: z.number().int() }),
   'integration.updated.v1': z.object({ kind: z.string(), status: z.string(), provider: z.string() }),
+  'quote.sent.v1': z.object({
+    quoteId: Uuid,
+    versionId: Uuid,
+    version: z.number().int(),
+    email: z.string(),
+    message: z.string().nullable().optional(),
+  }),
+  'quote.expired.v1': z.object({ quoteId: Uuid }),
+  'quote.viewed.v1': z.object({ quoteId: Uuid, versionId: Uuid }),
+  'quote.signed.v1': z.object({
+    quoteId: Uuid,
+    versionId: Uuid,
+    signatureId: Uuid,
+    certificateSigned: z.boolean(),
+  }),
+  'quote.refused.v1': z.object({ quoteId: Uuid, reason: z.string().nullable() }),
+  'quote.reminder_due.v1': z.object({ quoteId: Uuid }),
+  'project.created.v1': z.object({ projectId: Uuid, quoteId: Uuid.nullable() }),
 } as const;
 
 export type EventType = keyof typeof EventPayloads;

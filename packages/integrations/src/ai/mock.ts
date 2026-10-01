@@ -21,14 +21,25 @@ export function normalizeText(s: string): string {
     .trim();
 }
 
-function tokens(s: string): string[] {
+function tokens(s: string, keepStopWords = false): string[] {
   return normalizeText(s)
     .split(' ')
     .filter(
       (t) =>
         t.length > 2 &&
-        !['pour', 'avec', 'dans', 'comprise', 'compris', 'pose', 'des', 'les', 'une'].includes(t),
+        (keepStopWords ||
+          !['pour', 'avec', 'dans', 'comprise', 'compris', 'pose', 'des', 'les', 'une'].includes(t)),
     );
+}
+
+/** Départage les ex-æquo en tenant compte de tous les mots (« pose de faïence » ≠ « faïence »). */
+function tieBreak(a: string, b: string): number {
+  const ta = new Set(tokens(a, true));
+  const tb = new Set(tokens(b, true));
+  if (!ta.size || !tb.size) return 0;
+  let inter = 0;
+  for (const t of ta) if (tb.has(t)) inter++;
+  return inter / Math.max(ta.size, tb.size);
 }
 
 /** Score de similarité grossier (Jaccard sur les mots). */
@@ -83,7 +94,10 @@ export class MockAiAssistant implements AiAssistant {
         : part;
       let best: { c: LibraryCandidate; s: number } | null = null;
       for (const c of library) {
-        const s = similarity(description, c.name) + (c.unit === unit ? 0.1 : 0);
+        const s =
+          similarity(description, c.name) +
+          (c.unit === unit ? 0.1 : 0) +
+          0.05 * tieBreak(description, c.name);
         if (!best || s > best.s) best = { c, s };
       }
       const confident = best && best.s >= 0.34;

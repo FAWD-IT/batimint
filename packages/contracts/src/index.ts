@@ -7,3 +7,4 @@ export * from './company';
 export * from './people';
 export * from './crm';
 export * from './library';
+export * from './quotes';

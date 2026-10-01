@@ -37,6 +37,9 @@ COPY --from=builder --chown=node:node /repo/packages/db/dist ./packages/db/dist
 COPY --from=builder --chown=node:node /repo/packages/db/prisma ./packages/db/prisma
 COPY --from=builder --chown=node:node /repo/packages/db/prisma.config.ts /repo/packages/db/package.json ./packages/db/
 COPY --from=builder --chown=node:node /repo/package.json ./package.json
+# Polices des documents PDF (Geist, licence OFL).
+COPY --from=builder --chown=node:node /repo/packages/documents/fonts ./packages/documents/fonts
+ENV DOCUMENT_FONTS_DIR=/app/packages/documents/fonts
 USER node
 EXPOSE 4000
 HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=5 \

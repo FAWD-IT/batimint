@@ -8,3 +8,4 @@ export type * from './generated/models';
 export * as Enums from './generated/enums';
 export * from './data/starter-libraries';
 export * from './library';
+export * from './quotes';

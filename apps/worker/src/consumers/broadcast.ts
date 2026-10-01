@@ -9,6 +9,7 @@ const TOPICS: Record<string, string> = {
   'library.imported.v1': 'items',
   'tenant.updated.v1': 'company',
   'integration.updated.v1': 'integrations',
+  'project.created.v1': 'projects',
 };
 
 /** Diffusion temps réel générique : les écrans ouverts du tenant rafraîchissent la liste concernée. */

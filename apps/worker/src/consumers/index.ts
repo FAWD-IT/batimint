@@ -5,6 +5,7 @@ import { sendInvitation } from './invitations';
 import { leadIntake } from './leads';
 import { memberJoined } from './members';
 import { diagnosticNotification } from './notifications';
+import { quoteReminder, quoteSignedProject, quoteTimeline, sendQuoteEmail } from './quotes';
 
 export const CONSUMERS: readonly Consumer[] = [
   diagnosticNotification,
@@ -12,6 +13,10 @@ export const CONSUMERS: readonly Consumer[] = [
   memberJoined,
   leadIntake,
   transcribeVoiceNote,
+  sendQuoteEmail,
+  quoteTimeline,
+  quoteSignedProject,
+  quoteReminder,
   realtimeBroadcast,
 ];
 

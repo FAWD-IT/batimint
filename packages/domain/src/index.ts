@@ -13,3 +13,4 @@ export * from './onboarding';
 export * from './library';
 export * from './library-import';
 export * from './crm';
+export * from './quote';

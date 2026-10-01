@@ -5,6 +5,7 @@ import pino from 'pino';
 import { createBoss, registerConsumers } from './boss';
 import { loadDotEnv } from './env';
 import { OutboxRelay } from './relay';
+import { registerSchedules } from './schedules';
 
 loadDotEnv();
 const isProduction = process.env['NODE_ENV'] === 'production';
@@ -36,6 +37,7 @@ const boss = createBoss(databaseUrl);
 boss.on('error', (err) => logger.error({ err }, 'pg-boss'));
 await boss.start();
 await registerConsumers(boss, deps, logger);
+await registerSchedules(boss, deps, logger);
 const relay = new OutboxRelay(deps, boss, databaseUrl, logger);
 await relay.start();
 

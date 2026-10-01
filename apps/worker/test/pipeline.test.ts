@@ -268,3 +268,184 @@ describe('demandes entrantes', () => {
     expect(second.customerId).toBe(first.customerId);
   });
 });
+
+describe('devis signé → chantier (03 §4 acceptation)', () => {
+  async function signedQuote() {
+    const { replaceVersionContent } = await import('@batimint/db');
+    return withTenant(prisma, tenantId, userId, async (tx) => {
+      const customer = await tx.customer.create({
+        data: {
+          tenantId,
+          kind: 'individual',
+          status: 'prospect',
+          displayName: 'Jean Dupont',
+          email: 'jd@example.be',
+        },
+      });
+      const opp = await tx.opportunity.create({
+        data: { tenantId, customerId: customer.id, title: 'Salle de bain', stage: 'sent' },
+      });
+      const q = await tx.quote.create({
+        data: {
+          tenantId,
+          number: `D-${uuidv7().slice(-6)}`,
+          title: 'Rénovation salle de bain',
+          customerId: customer.id,
+          opportunityId: opp.id,
+          status: 'signed',
+          signedAt: new Date(),
+        },
+      });
+      const v = await tx.quoteVersion.create({
+        data: {
+          tenantId,
+          quoteId: q.id,
+          version: 1,
+          status: 'signed',
+          depositKind: 'percent',
+          depositValue: '30',
+        },
+      });
+      await tx.quote.update({ where: { id: q.id }, data: { currentVersionId: v.id } });
+      const line = (
+        description: string,
+        quantity: string,
+        unitPrice: bigint,
+        unitCost: bigint,
+        vatRegime: string,
+        laborHours = '0',
+      ) => ({
+        key: uuidv7(),
+        kind: 'item',
+        description,
+        unit: 'm²',
+        quantity,
+        unitPrice,
+        unitCost,
+        laborHours,
+        vatRegime,
+        vatSuggested: vatRegime,
+        discountPercent: '0',
+      });
+      await replaceVersionContent(tx, tenantId, v.id, {
+        sections: [
+          {
+            key: uuidv7(),
+            title: 'Carrelage',
+            optional: false,
+            selected: false,
+            lines: [
+              line('Faïence murale 30x60', '18.5', 3986n, 2899n, 'reduced_6'),
+              line('Pose de faïence', '18.5', 4400n, 3200n, 'reduced_6', '1'),
+            ],
+          },
+          {
+            key: uuidv7(),
+            title: 'Douche',
+            optional: true,
+            selected: true,
+            lines: [line('Douche', '1', 140_000n, 100_000n, 'standard_21')],
+          },
+          {
+            key: uuidv7(),
+            title: 'Option refusée',
+            optional: true,
+            selected: false,
+            lines: [line('Sèche-serviettes', '1', 50_000n, 30_000n, 'reduced_6')],
+          },
+        ],
+      });
+      const event = await emitEvent(tx, {
+        tenantId,
+        type: 'quote.signed.v1',
+        aggregateType: 'quote',
+        aggregateId: q.id,
+        payload: { quoteId: q.id, versionId: v.id, signatureId: uuidv7(), certificateSigned: true },
+      });
+      return { q, v, customer, opp, event };
+    });
+  }
+
+  it('crée exactement un chantier, ses postes, ses tâches, l’acompte en brouillon ; rejouer ne double rien', async () => {
+    const { quoteSignedProject } = await import('../src/consumers/quotes');
+    const { q, customer, opp, event } = await signedQuote();
+    const deps = { prisma, integrations: createMockIntegrations(), appUrl: '' };
+    // Un rejeu direct (sans la garde ProcessedEvent) ne crée pas de second chantier non plus.
+    expect(await runConsumer(deps, quoteSignedProject, event.id)).toBe('done');
+    await withTenant(prisma, tenantId, userId, (tx) =>
+      tx.processedEvent.deleteMany({ where: { consumer: 'quote-signed-project', eventId: event.id } }),
+    ).catch(() => undefined);
+    await runConsumer(deps, quoteSignedProject, event.id).catch(() => 'skipped');
+    const state = await withTenant(prisma, tenantId, userId, async (tx) => ({
+      projects: await tx.project.findMany({
+        where: { quoteId: q.id },
+        include: { budgetLines: { orderBy: { position: 'asc' } }, tasks: true },
+      }),
+      invoices: await tx.invoice.findMany({ where: { quoteId: q.id }, include: { lines: true } }),
+      customer: await tx.customer.findUniqueOrThrow({ where: { id: customer.id } }),
+      opp: await tx.opportunity.findUniqueOrThrow({ where: { id: opp.id } }),
+    }));
+    expect(state.projects).toHaveLength(1);
+    const p = state.projects[0]!;
+    // 737,41 + 814,00 + 1 400,00 (option retenue) ; l'option refusée n'entre pas au contrat.
+    expect(p.contractAmount).toBe(295_141n);
+    expect(p.budgetLines.map((b) => [b.label, b.saleAmount, b.budgetedCost])).toEqual([
+      ['Carrelage', 155_141n, 112_832n],
+      ['Douche', 140_000n, 100_000n],
+    ]);
+    expect(p.tasks.map((t) => t.title).sort()).toEqual(['Douche', 'Faïence murale 30x60', 'Pose de faïence']);
+    expect(p.tasks.find((t) => t.title === 'Pose de faïence')!.plannedHours.toString()).toBe('18.5');
+    expect(state.invoices).toHaveLength(1);
+    const inv = state.invoices[0]!;
+    expect(inv).toMatchObject({ type: 'deposit', status: 'draft', number: null });
+    // Total TVAC du devis : 1 551,41 + 93,08 + 1 400 + 294 = 3 338,49 ; acompte 30 % = 1 001,55
+    expect(inv.totalGross).toBe(100_155n);
+    expect(inv.lines.map((l) => l.vatRegime).sort()).toEqual(['reduced_6', 'standard_21']);
+    expect(state.customer.status).toBe('customer');
+    expect(state.opp.stage).toBe('won');
+  });
+});
+
+describe('relances et échéances des devis', () => {
+  it('J+7 sans signature → une relance (une seule) ; validité dépassée → expiré', async () => {
+    const { runQuoteMaintenance } = await import('../src/schedules');
+    const { quoteReminder } = await import('../src/consumers/quotes');
+    const mailer = new MockMailer();
+    const deps = { prisma, integrations: createMockIntegrations({ mailer }), appUrl: 'https://app.test' };
+    const now = new Date();
+    const [due, old] = await withTenant(prisma, tenantId, userId, async (tx) => {
+      const c = await tx.customer.create({
+        data: { tenantId, kind: 'individual', displayName: 'Relance', email: 'relance@example.be' },
+      });
+      const mk = (sentDaysAgo: number, validDays: number) =>
+        tx.quote.create({
+          data: {
+            tenantId,
+            number: `D-${uuidv7().slice(-6)}`,
+            title: 'Toiture',
+            customerId: c.id,
+            status: 'sent',
+            sentAt: new Date(now.getTime() - sentDaysAgo * 86_400_000),
+            validUntil: new Date(now.getTime() + validDays * 86_400_000),
+          },
+        });
+      return [await mk(8, 22), await mk(40, -10)];
+    });
+    await runQuoteMaintenance(deps, now);
+    await runQuoteMaintenance(deps, now);
+    const state = await withSystem(prisma, async (tx) => ({
+      due: await tx.quote.findUniqueOrThrow({ where: { id: due.id } }),
+      old: await tx.quote.findUniqueOrThrow({ where: { id: old.id } }),
+      reminders: await tx.outboxEvent.findMany({
+        where: { aggregateId: due.id, type: 'quote.reminder_due.v1' },
+      }),
+    }));
+    expect(state.reminders).toHaveLength(1);
+    expect(state.due.reminderSentAt).not.toBeNull();
+    expect(state.old.status).toBe('expired');
+    expect(await runConsumer(deps, quoteReminder, state.reminders[0]!.id)).toBe('done');
+    const mail = mailer.lastTo('relance@example.be')!;
+    expect(mail.subject).toMatch(/Rappel : votre devis/);
+    expect(mail.text).toMatch(/https:\/\/app\.test\/p\//);
+  });
+});

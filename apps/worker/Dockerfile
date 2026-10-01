@@ -31,6 +31,9 @@ COPY --from=prod-deps --chown=node:node /repo/node_modules ./node_modules
 COPY --from=builder --chown=node:node /repo/apps/worker/dist ./apps/worker/dist
 COPY --from=builder --chown=node:node /repo/apps/worker/package.json ./apps/worker/package.json
 COPY --from=builder --chown=node:node /repo/package.json ./package.json
+# Polices des documents PDF (Geist, licence OFL).
+COPY --from=builder --chown=node:node /repo/packages/documents/fonts ./packages/documents/fonts
+ENV DOCUMENT_FONTS_DIR=/app/packages/documents/fonts
 USER node
 HEALTHCHECK --interval=20s --timeout=5s --start-period=30s --retries=3 CMD ["node", "apps/worker/dist/healthcheck.js"]
 ENTRYPOINT ["/usr/bin/tini", "--"]
