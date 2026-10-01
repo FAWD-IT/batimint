@@ -10,6 +10,8 @@ const PUBLIC_PREFIXES = [
   '/mot-de-passe',
   '/p/',
   '/s/',
+  '/f/',
+  '/embed.js',
   '/api/',
   '/_next/',
   '/favicon',

@@ -534,7 +534,7 @@ export const crmRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (app, {
             title: `Demande reçue (${l.source === 'web_form' ? 'formulaire web' : l.source === 'email' ? 'e-mail' : 'saisie'})`,
             detail: l.message?.slice(0, 200) ?? null,
             at: l.receivedAt.toISOString(),
-            href: '/demandes',
+            href: '/opportunites?vue=demandes',
           })),
           ...opps.map((o) => ({
             type: 'opportunity' as const,

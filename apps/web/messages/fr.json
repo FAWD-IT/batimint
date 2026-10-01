@@ -48,7 +48,23 @@
     "discard": "Annuler les modifications",
     "seeAll": "Tout voir",
     "more": "Plus",
-    "perHour": "/ h"
+    "perHour": "/ h",
+    "open": "Ouvrir",
+    "new": "Nouveau",
+    "filter": "Filtrer",
+    "all": "Tous",
+    "from": "De",
+    "source": "Source",
+    "createAnyway": "Créer quand même",
+    "notes": "Notes",
+    "address": "Adresse",
+    "noResults": "Aucun résultat pour « {q} ».",
+    "searchPlaceholder": "Rechercher…",
+    "loadMore": "Afficher plus",
+    "download": "Télécharger",
+    "upload": "Envoyer",
+    "takePhoto": "Prendre une photo",
+    "moveTo": "Déplacer vers…"
   },
   "roles": {
     "owner": "Patron",
@@ -74,7 +90,10 @@
     "impersonating": "Mode assistance (lecture seule)",
     "teams": "Équipes",
     "admin": "Administration",
-    "stopImpersonation": "Quitter l'assistance"
+    "stopImpersonation": "Quitter l'assistance",
+    "pipeline": "Affaires",
+    "customers": "Clients",
+    "library": "Bibliothèque"
   },
   "notifications": {
     "title": "Notifications",
@@ -148,7 +167,7 @@
       "branding": "Ajouter le logo",
       "terms": "Ajouter les conditions générales",
       "rates": "Définir les taux horaires",
-      "library": "Importer la bibliothèque de prix",
+      "library": "Créer ou importer la bibliothèque de prix",
       "peppol": "Activer Peppol",
       "team": "Inviter l'équipe"
     }
@@ -196,6 +215,10 @@
       "audit": {
         "title": "Journal d'audit",
         "description": "Qui a fait quoi, et quand."
+      },
+      "webform": {
+        "title": "Formulaire web",
+        "description": "Demandes de devis depuis votre site internet."
       }
     },
     "company": {
@@ -561,5 +584,513 @@
     "error": "Erreur",
     "noIntegrations": "Aucune intégration configurée.",
     "forbidden": "Réservé aux administrateurs Batimint."
+  },
+  "customers": {
+    "title": "Clients",
+    "new": "Nouveau client",
+    "edit": "Modifier le client",
+    "empty": "Aucun client pour l'instant. Ils arrivent tout seuls avec les demandes, ou ajoutez-les ici.",
+    "kind": {
+      "individual": "Particulier",
+      "company": "Entreprise"
+    },
+    "status": {
+      "prospect": "Prospect",
+      "customer": "Client"
+    },
+    "firstName": "Prénom",
+    "lastName": "Nom",
+    "companyName": "Nom de l'entreprise",
+    "legalForm": "Forme",
+    "enterpriseNumber": "Numéro d'entreprise (BCE)",
+    "vatLiable": "Assujetti à la TVA (déclarations périodiques)",
+    "vatLiableHint": "Détermine l'autoliquidation sur les travaux immobiliers.",
+    "lookup": "Rechercher dans VIES",
+    "paymentTerms": "Délai de paiement (jours)",
+    "tags": "Étiquettes",
+    "duplicateTitle": "Ce client existe peut-être déjà",
+    "duplicateReason": {
+      "vat": "même numéro de TVA",
+      "email": "même e-mail",
+      "phone": "même téléphone"
+    },
+    "contacts": "Contacts",
+    "addContact": "Ajouter un contact",
+    "primary": "Principal",
+    "jobTitle": "Fonction",
+    "noContacts": "Aucun contact secondaire.",
+    "sites": "Adresses de chantier",
+    "addSite": "Ajouter une adresse",
+    "siteLabel": "Libellé",
+    "privateDwelling": "Logement privé",
+    "firstOccupancy": "Année de première occupation",
+    "firstOccupancyHint": "Logement de plus de 10 ans : TVA à 6 % possible en rénovation (avec attestation).",
+    "access": "Accès (code, clés, stationnement)",
+    "noSites": "Aucune adresse de chantier.",
+    "sixPercent": "6 % possible",
+    "dwellingAge": "{years} ans",
+    "opportunities": "Affaires",
+    "history": "Historique",
+    "peppol": "Peppol",
+    "peppolCheck": "Vérifier l'annuaire Peppol",
+    "peppolReachable": "Joignable par Peppol",
+    "peppolUnreachable": "Non inscrit : factures par e-mail",
+    "peppolUnknown": "Non vérifié",
+    "b2b": "B2B",
+    "b2c": "B2C",
+    "saved": "Client enregistré.",
+    "merge": "Fusionner dans…",
+    "merged": "Clients fusionnés.",
+    "archive": "Archiver",
+    "newOpportunity": "Nouvelle affaire",
+    "count": "{count, plural, =0 {Aucun client} one {# client ou prospect} other {# clients et prospects}}",
+    "search": "Rechercher un client (nom, e-mail, téléphone, localité)…",
+    "statusPlural": {
+      "prospect": "Prospects",
+      "customer": "Clients"
+    },
+    "emptyFiltered": "Aucun client ne correspond à ce filtre.",
+    "clearFilters": "Effacer les filtres",
+    "type": "Type",
+    "contact": "Contact",
+    "peppolUnreachableShort": "Hors Peppol",
+    "archived": "Client archivé.",
+    "notFound": "Ce client n'existe pas ou a été archivé.",
+    "sourceLabel": "Origine : {source}",
+    "details": "Coordonnées",
+    "billingAddress": "Adresse de facturation",
+    "days": "{count, plural, =0 {Comptant} one {# jour} other {# jours}}",
+    "defaultTerms": "Délai par défaut de l'entreprise",
+    "peppolHint": "Les entreprises belges reçoivent leurs factures par Peppol (obligatoire depuis 2026).",
+    "noOpportunities": "Aucune affaire pour ce client.",
+    "noHistory": "Rien pour l'instant.",
+    "mergeTitle": "Fusionner « {name} »",
+    "mergeDescription": "Choisissez la fiche à conserver : contacts, adresses, affaires et demandes y seront rattachés.",
+    "mergeConfirm": "Fusionner dans « {name} »",
+    "mergeSummary": "« {from} » sera archivé et tout son historique rejoindra « {into} ». Cette action ne se défait pas.",
+    "mergeInto": "Fiche à conserver",
+    "archiveTitle": "Archiver « {name} » ?",
+    "archiveDescription": "Le client disparaît des listes. Ses affaires et documents restent consultables.",
+    "editContact": "Modifier le contact",
+    "lastNameRequired": "Indiquez le nom.",
+    "primaryContact": "Contact principal",
+    "streetRequired": "Indiquez la rue et le numéro.",
+    "postalCodeRequired": "Code postal invalide.",
+    "cityRequired": "Indiquez la localité.",
+    "yearInvalid": "Année invalide.",
+    "editSite": "Modifier l'adresse",
+    "siteLabelPlaceholder": "Ex. : Maison, Appartement 2e étage",
+    "street": "Rue et numéro",
+    "postalCode": "Code postal",
+    "city": "Localité",
+    "privateDwellingHint": "Habitation privée : la TVA réduite peut s'appliquer selon l'âge du logement.",
+    "lookupInvalid": "Numéro inconnu dans VIES : vérifiez-le, ou complétez la fiche à la main.",
+    "lookupFound": "Trouvé dans VIES : {name}. Fiche pré-remplie.",
+    "companyNameRequired": "Indiquez le nom de l'entreprise.",
+    "emailInvalid": "Adresse e-mail invalide.",
+    "kindLabel": "Type de client",
+    "lookupHint": "Nous récupérons le nom et l'adresse officiels (VIES).",
+    "paymentTermsHint": "Vide : délai par défaut de l'entreprise."
+  },
+  "leads": {
+    "title": "Demandes",
+    "new": "Saisir une demande",
+    "empty": "Aucune demande. Partagez votre formulaire web ou transférez les e-mails de vos clients à votre adresse de réception.",
+    "source": {
+      "web_form": "Formulaire web",
+      "email": "E-mail",
+      "manual": "Saisie",
+      "phone": "Téléphone"
+    },
+    "status": {
+      "new": "À traiter",
+      "converted": "Traitée",
+      "discarded": "Sans suite"
+    },
+    "name": "Nom du demandeur",
+    "message": "Demande",
+    "discard": "Classer sans suite",
+    "openOpportunity": "Voir l'affaire",
+    "saved": "Demande enregistrée : fiche prospect et affaire créées.",
+    "formSettings": "Formulaire web",
+    "nameRequired": "Indiquez le nom du demandeur.",
+    "contactRequired": "Indiquez au moins un téléphone ou un e-mail.",
+    "newDescription": "La fiche prospect et l'affaire sont créées automatiquement.",
+    "companyName": "Entreprise",
+    "discarded": "Demande classée sans suite.",
+    "openCustomer": "Voir la fiche",
+    "discardTitle": "Classer la demande de {name} sans suite ?",
+    "discardDescription": "Elle reste visible dans l'historique, mais ne crée pas d'affaire."
+  },
+  "pipeline": {
+    "title": "Affaires",
+    "tabs": {
+      "pipeline": "Pipeline",
+      "leads": "Demandes"
+    },
+    "new": "Nouvelle affaire",
+    "stages": {
+      "new": "Nouvelle",
+      "visit_planned": "Visite planifiée",
+      "quoting": "Devis en cours",
+      "sent": "Devis envoyé",
+      "won": "Gagnée",
+      "lost": "Perdue"
+    },
+    "emptyColumn": "Glissez une affaire ici",
+    "customer": "Client",
+    "site": "Adresse de chantier",
+    "noSite": "Pas encore d'adresse",
+    "title_": "Intitulé",
+    "estimated": "Montant estimé",
+    "trade": "Métier",
+    "description": "Description",
+    "lostTitle": "Pourquoi cette affaire est-elle perdue ?",
+    "lostReason": "Motif",
+    "lostReasons": {
+      "price": "Prix trop élevé",
+      "delay": "Délai",
+      "competitor": "Concurrent choisi",
+      "abandoned": "Projet abandonné",
+      "other": "Autre"
+    },
+    "moved": "Affaire déplacée vers « {stage} ».",
+    "created": "Affaire créée.",
+    "visits": "{count, plural, =0 {aucune visite} one {# visite} other {# visites}}",
+    "photos": "{count, plural, =0 {} one {# fichier} other {# fichiers}}",
+    "chooseCustomer": "Choisir un client",
+    "createCustomer": "Créer « {name} »",
+    "searchCustomer": "Rechercher un client…",
+    "dragHint": "Glissez les cartes, ou utilisez « Déplacer vers… » au clavier.",
+    "quoteSoon": "Le devis se crée depuis l'affaire (module Devis).",
+    "emptyTitle": "Aucune affaire en cours",
+    "empty": "Les demandes reçues (formulaire web, e-mail, saisie) deviennent des affaires ici. Créez-en une, ou partagez votre formulaire.",
+    "markLost": "Marquer comme perdue",
+    "lostDetail": "Précision",
+    "lostReasonRequired": "Choisissez un motif (et précisez-le pour « Autre »).",
+    "notFound": "Cette affaire n'existe pas ou a été supprimée.",
+    "stage": "Étape",
+    "lostLabel": "Affaire perdue",
+    "directions": "Itinéraire",
+    "quote": "Devis",
+    "edit": "Modifier l'affaire",
+    "titleRequired": "Indiquez un intitulé (2 caractères minimum).",
+    "customerRequired": "Choisissez un client.",
+    "changeCustomer": "Changer",
+    "noSiteHint": "Ajoutez une adresse de chantier depuis la fiche client.",
+    "titlePlaceholder": "Ex. : Rénovation salle de bain"
+  },
+  "visit": {
+    "title": "Visite technique",
+    "plan": "Planifier une visite",
+    "start": "Commencer la visite",
+    "scheduledAt": "Date prévue",
+    "visitedAt": "Visitée le",
+    "markDone": "Marquer comme visitée",
+    "done": "Visite réalisée",
+    "measurements": "Mesures",
+    "addMeasurement": "Ajouter une mesure",
+    "label": "Élément",
+    "value": "Valeur",
+    "unit": "Unité",
+    "checklist": "Points à vérifier",
+    "addCheck": "Ajouter un point",
+    "notes": "Notes",
+    "notesPlaceholder": "Ce que vous avez constaté, ce que le client souhaite…",
+    "photos": "Photos",
+    "addPhoto": "Ajouter des photos",
+    "voice": "Note vocale",
+    "record": "Enregistrer",
+    "stop": "Arrêter",
+    "recording": "Enregistrement… {seconds} s",
+    "transcribing": "Transcription en cours…",
+    "transcriptFailed": "Transcription indisponible : réécoutez l'enregistrement.",
+    "noMedia": "Aucune photo ni note vocale.",
+    "uploading": "Envoi…",
+    "uploaded": "Fichier ajouté.",
+    "micDenied": "Micro inaccessible : autorisez-le dans le navigateur, ou envoyez un fichier audio.",
+    "uploadAudio": "Envoyer un fichier audio",
+    "saved": "Visite enregistrée.",
+    "templates": {
+      "bathroom": "Salle de bain",
+      "roof": "Toiture",
+      "electrical": "Électricité",
+      "general": "Rénovation"
+    },
+    "none": "Aucune visite pour l'instant. Commencez-la sur place, ou planifiez-la.",
+    "dateRequired": "Choisissez une date.",
+    "media": "Photos et notes",
+    "addDocument": "Joindre un document",
+    "openPhoto": "Agrandir la photo {name}",
+    "documents": "Documents",
+    "deleteTitle": "Supprimer ce fichier ?",
+    "planned": "Planifiée",
+    "template": "Modèle :",
+    "noChecklist": "Choisissez un modèle de métier ou ajoutez vos propres points.",
+    "noMeasurements": "Aucune mesure.",
+    "templateItems": {
+      "bathroom": [
+        "État des murs et du support (humidité, fissures)",
+        "Arrivées et évacuations d'eau (emplacement, diamètre)",
+        "Ventilation existante",
+        "Accès et protection des sols",
+        "Tableau électrique et liaison équipotentielle",
+        "Choix des sanitaires et de la faïence avec le client"
+      ],
+      "roof": [
+        "Type et état de la couverture",
+        "État de la charpente et des voliges",
+        "Isolation existante (épaisseur, type)",
+        "Gouttières et descentes",
+        "Accès, échafaudage, voirie",
+        "Cheminée, fenêtres de toit, raccords"
+      ],
+      "electrical": [
+        "Tableau, différentiels et disjoncteurs",
+        "Mise à la terre (valeur mesurée)",
+        "Conformité RGIE / contrôle existant",
+        "Nombre de circuits et de points",
+        "Passage des gaines",
+        "Compteur et puissance disponible"
+      ],
+      "general": [
+        "Année de construction (TVA 6 %)",
+        "Stabilité et fissures",
+        "Humidité et infiltrations",
+        "Amiante possible (bâtiment d'avant 2001)",
+        "Accès, stationnement, évacuation des déchets",
+        "Attentes et budget du client"
+      ]
+    },
+    "templateMeasures": {
+      "bathroom": [
+        {
+          "label": "Surface au sol",
+          "unit": "m²"
+        },
+        {
+          "label": "Surface murale à carreler",
+          "unit": "m²"
+        },
+        {
+          "label": "Hauteur sous plafond",
+          "unit": "m"
+        }
+      ],
+      "roof": [
+        {
+          "label": "Surface de toiture",
+          "unit": "m²"
+        },
+        {
+          "label": "Longueur de gouttière",
+          "unit": "m"
+        },
+        {
+          "label": "Pente",
+          "unit": "°"
+        }
+      ],
+      "electrical": [
+        {
+          "label": "Points lumineux",
+          "unit": "pc"
+        },
+        {
+          "label": "Prises",
+          "unit": "pc"
+        },
+        {
+          "label": "Longueur de gaine",
+          "unit": "m"
+        }
+      ],
+      "general": [
+        {
+          "label": "Surface au sol",
+          "unit": "m²"
+        },
+        {
+          "label": "Surface des murs",
+          "unit": "m²"
+        },
+        {
+          "label": "Hauteur sous plafond",
+          "unit": "m"
+        }
+      ]
+    }
+  },
+  "library": {
+    "title": "Bibliothèque",
+    "new": "Nouvel article",
+    "newAssembly": "Nouvel ouvrage",
+    "import": "Importer",
+    "edit": "Modifier",
+    "search": "Rechercher un article ou un ouvrage (code, désignation)…",
+    "empty": "Votre bibliothèque est vide. Partez d'une bibliothèque type par métier, ou importez votre fichier Excel.",
+    "starterTitle": "Bibliothèques types",
+    "starterDescription": "Des articles et ouvrages aux prix du marché belge, à ajuster ensuite.",
+    "install": "Ajouter à ma bibliothèque",
+    "installed": "{created} articles et ouvrages ajoutés.",
+    "items": "{count} articles",
+    "kind": {
+      "material": "Matériau",
+      "labour": "Main-d'œuvre",
+      "subcontracting": "Sous-traitance",
+      "equipment": "Matériel",
+      "lump_sum": "Forfait",
+      "assembly": "Ouvrage"
+    },
+    "code": "Code",
+    "name": "Désignation",
+    "description": "Description",
+    "unit": "Unité",
+    "purchasePrice": "Prix de revient",
+    "salePrice": "Prix de vente",
+    "salePriceAuto": "Prix de vente calculé",
+    "forceSalePrice": "Forcer un prix de vente",
+    "coefficient": "Coefficient propre",
+    "margin": "Marge",
+    "laborHours": "Temps de pose (h / unité)",
+    "category": "Catégorie",
+    "trade": "Métier",
+    "vat": "TVA par défaut",
+    "vatAuto": "Selon le client et le chantier",
+    "components": "Composants",
+    "addComponent": "Ajouter un composant",
+    "quantity": "Quantité",
+    "componentSearch": "Ajouter un article…",
+    "noComponents": "Ajoutez les articles qui composent cet ouvrage.",
+    "costFromComponents": "Revient calculé à partir des composants",
+    "history": "Historique des prix",
+    "historyEmpty": "Aucune modification de prix.",
+    "sources": {
+      "creation": "Création",
+      "manual": "Modification",
+      "import": "Import",
+      "supplier": "Tarif fournisseur"
+    },
+    "saved": "Article enregistré.",
+    "archived": "Article archivé.",
+    "restore": "Restaurer",
+    "undo": "Annuler",
+    "usedIn": "Utilisé dans {count, plural, one {# ouvrage} other {# ouvrages}}",
+    "priceNote": "Changer un prix ne modifie aucun devis déjà créé.",
+    "results": "{count, plural, =0 {Aucun article} one {# article} other {# articles}}",
+    "trades": {
+      "general": "Rénovation générale",
+      "roofing": "Toiture",
+      "electrical": "Électricité",
+      "plumbing": "Sanitaire"
+    },
+    "restored": "Article restauré.",
+    "codeRequired": "Indiquez un code article.",
+    "nameRequired": "Indiquez une désignation (2 caractères minimum).",
+    "decimalInvalid": "Nombre invalide (ex. : 1,5).",
+    "quantityInvalid": "Chaque composant doit avoir une quantité valide (ex. : 1,5).",
+    "archive": "Archiver",
+    "kindLabel": "Type",
+    "pricing": "Prix",
+    "saleAutoHint": "Calculé automatiquement : revient {coefficient}.",
+    "coefficientHint": "Laissez vide pour appliquer les coefficients de l'entreprise (Paramètres métier).",
+    "vatRates": {
+      "auto": "Selon le client et le chantier",
+      "standard_21": "21 %",
+      "intermediate_12": "12 %",
+      "reduced_6": "6 %",
+      "zero": "0 %"
+    },
+    "emptyTitle": "Votre bibliothèque est vide",
+    "kindPlural": {
+      "material": "Matériaux",
+      "labour": "Main-d'œuvre",
+      "assembly": "Ouvrages",
+      "other": "Autres"
+    },
+    "showArchived": "Voir les archivés",
+    "emptyFiltered": "Aucun article ne correspond à ces filtres.",
+    "clearFilters": "Effacer les filtres",
+    "archivedChip": "Archivé",
+    "forced": "forcé"
+  },
+  "import": {
+    "title": "Importer une bibliothèque",
+    "step1": "Fichier",
+    "step2": "Colonnes",
+    "step3": "Résultat",
+    "choose": "Choisir un fichier Excel ou CSV",
+    "hint": "La première ligne doit contenir les titres de colonnes. Les articles existants sont mis à jour par leur code.",
+    "analyzing": "Analyse…",
+    "rows": "{count} lignes détectées dans {file}.",
+    "mapping": "Associez vos colonnes",
+    "mappingHint": "Nous avons reconnu ce que nous pouvions. Vérifiez et complétez.",
+    "ignore": "— Ne pas importer —",
+    "required": "obligatoire",
+    "preview": "Aperçu",
+    "fields": {
+      "code": "Code article",
+      "name": "Désignation",
+      "description": "Description",
+      "unit": "Unité",
+      "purchasePrice": "Prix d'achat",
+      "salePrice": "Prix de vente",
+      "kind": "Type",
+      "trade": "Métier",
+      "category": "Catégorie",
+      "laborHours": "Temps de pose",
+      "vatRate": "TVA",
+      "supplierCode": "Code fournisseur"
+    },
+    "simulate": "Vérifier",
+    "run": "Importer",
+    "simulation": "Vérification : {created} à créer, {updated} à mettre à jour, {unchanged} inchangés, {errors} lignes en erreur.",
+    "done": "Import terminé en {seconds} s",
+    "created": "créés",
+    "updated": "mis à jour",
+    "unchanged": "inchangés",
+    "errors": "Lignes ignorées",
+    "row": "Ligne",
+    "field": "Colonne",
+    "message": "Problème",
+    "noErrors": "Aucune erreur.",
+    "again": "Importer un autre fichier",
+    "back": "Retour à la bibliothèque",
+    "missingRequired": "Associez au moins le code, la désignation, l'unité et le prix d'achat.",
+    "requiredField": "Colonne obligatoire",
+    "defaultTrade": "Métier par défaut"
+  },
+  "webform": {
+    "title": "Formulaire web",
+    "description": "Recevez les demandes de vos clients directement dans Batimint depuis votre site.",
+    "link": "Lien direct",
+    "embed": "Intégrer sur votre site",
+    "embedHint": "Collez ce code dans votre page. Le formulaire prend votre logo et votre couleur.",
+    "preview": "Aperçu",
+    "open": "Ouvrir le formulaire",
+    "public": {
+      "title": "Demande de devis",
+      "intro": "Décrivez votre projet : {company} vous recontacte rapidement.",
+      "name": "Nom et prénom",
+      "email": "E-mail",
+      "phone": "Téléphone",
+      "street": "Adresse du chantier",
+      "postalCode": "Code postal",
+      "city": "Localité",
+      "message": "Votre projet",
+      "messagePlaceholder": "Ex. : rénovation complète d'une salle de bain de 6 m², remplacement de la baignoire par une douche…",
+      "consent": "J'accepte d'être recontacté au sujet de ma demande.",
+      "send": "Envoyer ma demande",
+      "sent": "Merci ! Votre demande est bien arrivée. {company} vous recontacte rapidement.",
+      "error": "L'envoi n'a pas abouti. Vérifiez les champs et réessayez.",
+      "poweredBy": "Formulaire sécurisé Batimint",
+      "nameRequired": "Indiquez votre nom.",
+      "emailInvalid": "Indiquez une adresse e-mail valide.",
+      "messageRequired": "Décrivez votre projet en quelques mots.",
+      "consentRequired": "Merci d'accepter d'être recontacté."
+    },
+    "inboundTitle": "Réception par e-mail",
+    "inboundHint": "Transférez à cette adresse les demandes reçues par e-mail : elles arrivent dans vos Demandes.",
+    "inboundUnavailable": "La réception par e-mail n'est pas configurée sur cette installation (INBOUND_EMAIL_DOMAIN)."
   }
 }

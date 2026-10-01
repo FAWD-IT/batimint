@@ -314,7 +314,7 @@ export const opportunityRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async
       },
     },
     async (req, reply) => {
-      const dto = await inTenant(deps, req, 'site_visits.write', async ({ tx, auth }) => {
+      const dto = await inTenant(deps, req, 'site_visits.write', async ({ tx, auth, actor }) => {
         const o = await tx.opportunity.findUnique({ where: { id: req.params.id } });
         if (!o) throw notFound('Cette opportunité');
         const v = await tx.siteVisit.create({
@@ -328,6 +328,14 @@ export const opportunityRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async
         });
         if (o.stage === 'new' && v.scheduledAt) {
           await tx.opportunity.update({ where: { id: o.id }, data: { stage: 'visit_planned' } });
+          await emitEvent(tx, {
+            tenantId: auth.tenantId,
+            type: 'opportunity.stage_changed.v1',
+            aggregateType: 'opportunity',
+            aggregateId: o.id,
+            payload: { opportunityId: o.id, from: o.stage, to: 'visit_planned' },
+            actor,
+          });
         }
         return toVisitDto(v);
       });

@@ -15,6 +15,7 @@ const FORWARDED_REQUEST_HEADERS = [
   'last-event-id',
   'origin',
   'user-agent',
+  'x-file-name',
   'x-request-id',
 ];
 

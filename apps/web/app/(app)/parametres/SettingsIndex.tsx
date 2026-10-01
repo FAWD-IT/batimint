@@ -4,6 +4,7 @@ import type { Action } from '@batimint/domain';
 import { Card, ErrorState, PageHeader } from '@batimint/ui';
 import {
   Building2,
+  Globe,
   ChevronRight,
   CreditCard,
   History,
@@ -22,7 +23,15 @@ interface Section {
   href: string;
   icon: LucideIcon;
   key:
-    'company' | 'business' | 'users' | 'integrations' | 'subscription' | 'audit' | 'diagnostic' | 'account';
+    | 'company'
+    | 'business'
+    | 'users'
+    | 'integrations'
+    | 'webform'
+    | 'subscription'
+    | 'audit'
+    | 'diagnostic'
+    | 'account';
   permission?: Action;
 }
 
@@ -31,6 +40,7 @@ const SECTIONS: Section[] = [
   { href: '/parametres/metier', icon: SlidersHorizontal, key: 'business', permission: 'settings.update' },
   { href: '/parametres/utilisateurs', icon: Users, key: 'users', permission: 'members.read' },
   { href: '/parametres/integrations', icon: Plug, key: 'integrations', permission: 'integrations.manage' },
+  { href: '/parametres/formulaire', icon: Globe, key: 'webform', permission: 'company.read' },
   {
     href: '/parametres/abonnement',
     icon: CreditCard,

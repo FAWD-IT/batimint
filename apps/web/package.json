@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start --port ${WEB_PORT:-3000}",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "lint": "eslint app components lib i18n",
+    "lint": "eslint app components lib i18n && node scripts/check-messages.mjs",
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {

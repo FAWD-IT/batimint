@@ -20,7 +20,17 @@ const nextConfig: NextConfig = {
   // Le flux SSE transite par le proxy /api/v1 : pas de compression qui bufferiserait.
   compress: false,
   async headers() {
-    return [{ source: '/:path*', headers: securityHeaders }];
+    return [
+      { source: '/((?!f/).*)', headers: securityHeaders },
+      // Le formulaire de demande est conçu pour être intégré (iframe) sur le site du client.
+      {
+        source: '/f/:path*',
+        headers: [
+          ...securityHeaders.filter((h) => h.key !== 'X-Frame-Options'),
+          { key: 'Content-Security-Policy', value: 'frame-ancestors *' },
+        ],
+      },
+    ];
   },
 };
 

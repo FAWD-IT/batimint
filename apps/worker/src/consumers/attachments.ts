@@ -17,9 +17,10 @@ export const transcribeVoiceNote: Consumer = {
         where: { id: a.id },
         data: { transcript: r.text, transcriptStatus: 'done' },
       });
-    } catch (err) {
+    } catch {
+      // Pas de nouvel essai : l'enregistrement reste disponible à l'écoute, l'écran l'indique.
+      // (Relancer l'exception annulerait aussi ce statut, et la note resterait « en cours ».)
       await tx.attachment.update({ where: { id: a.id }, data: { transcriptStatus: 'failed' } });
-      throw err;
     }
     await publish({ channel: tenantChannel(event.tenantId), topic: 'attachments', ref: a.ownerId });
   },

@@ -44,7 +44,7 @@ const LOGO_TYPES = {
 } as const;
 const LOGO_MAX_BYTES = 2 * 1024 * 1024;
 
-/** Étapes de la checklist disponibles avec les modules livrés (la bibliothèque arrive en M2). */
+/** Étapes de la checklist disponibles avec les modules livrés. */
 export const ONBOARDING_AVAILABLE: OnboardingStep[] = [
   'company',
   'bank',
@@ -317,7 +317,7 @@ export const companyRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (ap
       inTenant(deps, req, 'company.read', async ({ tx, auth }) => {
         const t = await tx.tenant.findUniqueOrThrow({ where: { id: auth.tenantId } });
         const settings = parseTenantSettings(t.settings);
-        const [members, invitations, peppol] = await Promise.all([
+        const [members, invitations, peppol, libraryItemCount] = await Promise.all([
           tx.membership.count({ where: { tenantId: auth.tenantId, status: 'active' } }),
           tx.invitation.count({ where: { tenantId: auth.tenantId, acceptedAt: null, revokedAt: null } }),
           tx.integrationConnection.findUnique({
@@ -332,7 +332,7 @@ export const companyRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (ap
             hasLogo: Boolean(t.logoKey),
             hasTerms: Boolean(t.termsAndConditions),
             hasHourlyRates: settings.rateProfiles.length > 0,
-            libraryItemCount: 0,
+            libraryItemCount,
             peppolStatus: peppol?.status ?? 'not_connected',
             invitedOrMembers: members + invitations,
           },
