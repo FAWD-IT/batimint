@@ -25,6 +25,7 @@ import { useApi } from '@/lib/hooks';
 import { useCan } from '@/lib/session';
 import { useDebounced } from '@/lib/use-debounced';
 import { useErrorMessage } from '@/lib/use-error-message';
+import { useNewParam } from '@/lib/use-new-param';
 
 type StatusFilter = 'all' | 'prospect' | 'customer';
 
@@ -37,6 +38,7 @@ export function CustomersView() {
   const [q, setQ] = useState('');
   const [status, setStatus] = useState<StatusFilter>('all');
   const [creating, setCreating] = useState(false);
+  useNewParam(() => can('customers.write') && setCreating(true));
   const query = useDebounced(q.trim(), 180);
   const params = new URLSearchParams();
   if (query) params.set('q', query);

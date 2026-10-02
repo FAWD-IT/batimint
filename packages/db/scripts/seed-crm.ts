@@ -1,6 +1,7 @@
 /**
  * Seed M2 : bibliothèques types, ~40 clients et prospects, demandes reçues et affaires
- * à toutes les étapes du pipeline, dont la visite technique chez M. Dupont (P2).
+ * à toutes les étapes du pipeline, dont la visite technique chez M. Dupont (P2), dont le devis
+ * signé a donné le chantier des maquettes (seed-projects).
  * Données déterministes (pas d'aléatoire) pour que la démo et les tests E2E soient stables.
  */
 import { customerDisplayName } from '@batimint/domain';
@@ -101,10 +102,11 @@ const OPPORTUNITIES: {
   {
     customer: 'dupont',
     title: 'Rénovation salle de bain',
-    stage: 'quoting',
-    amount: 1_850_000,
+    // Signée il y a trois semaines : c'est le chantier Dupont des maquettes (09, seed-projects).
+    stage: 'won',
+    amount: 3_500_000,
     trade: 'plumbing',
-    daysAgo: 6,
+    daysAgo: 45,
   },
   {
     customer: 0,
@@ -452,7 +454,7 @@ export async function seedCrm(tx: Tx, tenantId: string, userId: string | null): 
     opportunityId: dupontOpportunityId,
   };
   await tx.lead.create({
-    data: { tenantId, status: 'converted', receivedAt: day(7), ...dupontLead },
+    data: { tenantId, status: 'converted', receivedAt: day(48), ...dupontLead },
   });
   const opps = await tx.opportunity.findMany({
     where: { tenantId, stage: { in: ['new', 'visit_planned'] } },
@@ -495,8 +497,8 @@ export async function seedCrm(tx: Tx, tenantId: string, userId: string | null): 
     data: {
       tenantId,
       opportunityId: dupontOpportunityId,
-      scheduledAt: day(4),
-      visitedAt: day(4),
+      scheduledAt: day(42),
+      visitedAt: day(42),
       trade: 'plumbing',
       measurements: [
         { label: 'Surface au sol', value: '6,2', unit: 'm²' },

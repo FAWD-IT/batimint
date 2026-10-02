@@ -37,6 +37,7 @@ import type { AppDeps } from '../context';
 import { AppError, conflict } from '../lib/errors';
 import { iso, isoDate } from '../lib/tenant';
 import { coLineInputs, renderChangeOrderPdfFor } from '../services/change-orders';
+import { renderVersionPdf } from '../services/quotes';
 import { driftThresholdOf } from '../services/projects';
 
 const portalNotFound = () =>
@@ -297,10 +298,24 @@ export const portalProjectRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = asy
         const p = await tx.project.findUnique({ where: { id: t.projectId }, include: { quote: true } });
         if (!p?.quote) throw portalNotFound();
         const v = await tx.quoteVersion.findFirst({ where: { quoteId: p.quote.id, status: 'signed' } });
-        if (!v?.pdfKey) throw portalNotFound();
+        if (!v) throw portalNotFound();
+        const name = `${p.quote.number ?? 'devis'}-signe.pdf`;
+        const stored = v.pdfKey
+          ? await deps.integrations.storage.get('legal', v.pdfKey).catch(() => null)
+          : null;
+        if (stored) return { pdf: Buffer.from(stored), name };
+        // Contrat repris sans PDF archivé (import, démo) : régénéré avec la preuve de signature.
+        const sig = await tx.signature.findFirst({
+          where: { subjectType: 'quote_version', subjectId: v.id },
+        });
+        const cert = await tx.vatCertificate.findFirst({ where: { quoteId: p.quote.id, status: 'signed' } });
         return {
-          pdf: Buffer.from(await deps.integrations.storage.get('legal', v.pdfKey)),
-          name: `${p.quote.number ?? 'devis'}-signe.pdf`,
+          pdf: await renderVersionPdf(tx, deps.integrations, p.quote.id, v.id, {
+            date: v.sentAt ?? p.quote.signedAt ?? new Date(),
+            signature: sig ? { signerName: sig.signerName, signedAt: sig.signedAt, ip: sig.ip } : null,
+            certificate: cert?.signedAt ? { signedAt: cert.signedAt } : null,
+          }),
+          name,
         };
       });
       return reply
@@ -523,12 +538,14 @@ export const portalProjectRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = asy
       const t = await resolveProjectToken(deps, req.params.token);
       const b = req.body;
       return withTenant(deps.prisma, t.tenantId, null, async (tx) => {
-        if (b.subjectType === 'project' && b.subjectId !== t.projectId) throw portalNotFound();
+        const subjectId = b.subjectType === 'project' ? t.projectId : b.subjectId;
+        if (b.subjectType === 'project' && b.subjectId && b.subjectId !== t.projectId) throw portalNotFound();
         if (
           b.subjectType === 'change_order' &&
-          !(await tx.changeOrder.findFirst({
-            where: { id: b.subjectId, projectId: t.projectId, status: { in: [...VISIBLE_CO] } },
-          }))
+          (!subjectId ||
+            !(await tx.changeOrder.findFirst({
+              where: { id: subjectId, projectId: t.projectId, status: { in: [...VISIBLE_CO] } },
+            })))
         )
           throw portalNotFound();
         const customer = await tx.customer.findUnique({ where: { id: t.customerId ?? '' } });
@@ -537,7 +554,7 @@ export const portalProjectRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = asy
           data: {
             tenantId: t.tenantId,
             subjectType: b.subjectType,
-            subjectId: b.subjectId,
+            subjectId: subjectId!,
             projectId: t.projectId,
             body: b.body,
             authorPortalToken: t.id,
@@ -553,7 +570,7 @@ export const portalProjectRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = asy
           payload: {
             commentId: c.id,
             subjectType: b.subjectType,
-            subjectId: b.subjectId,
+            subjectId: subjectId!,
             projectId: t.projectId,
             fromClient: true,
             mentions: [],

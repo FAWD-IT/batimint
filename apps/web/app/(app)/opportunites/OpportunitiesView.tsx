@@ -11,6 +11,7 @@ import { useCan } from '@/lib/session';
 import { Kanban } from './Kanban';
 import { LeadDialog } from './LeadDialog';
 import { LeadsInbox, type LeadRow } from './LeadsInbox';
+import { useNewParam } from '@/lib/use-new-param';
 
 type Tab = 'pipeline' | 'leads';
 
@@ -22,6 +23,7 @@ export function OpportunitiesView({ initialTab }: { initialTab: Tab }) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>(initialTab);
   const [dialog, setDialog] = useState<'opportunity' | 'lead' | null>(null);
+  useNewParam(() => setDialog('opportunity'));
   const leads = useApi<{ items: LeadRow[] }>(['leads'], can('leads.read') ? '/leads' : null);
 
   if (!can('leads.read'))

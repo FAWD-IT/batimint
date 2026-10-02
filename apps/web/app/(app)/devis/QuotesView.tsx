@@ -26,6 +26,7 @@ import { useCan } from '@/lib/session';
 import { useDebounced } from '@/lib/use-debounced';
 import { useErrorMessage } from '@/lib/use-error-message';
 import { useRelativeTime } from '@/lib/use-relative-time';
+import { useNewParam } from '@/lib/use-new-param';
 
 type Filter = 'all' | 'draft' | 'sent' | 'signed' | 'lost' | 'templates';
 const FILTER_STATUS: Record<Filter, string | null> = {
@@ -46,6 +47,7 @@ export function QuotesView() {
   const [filter, setFilter] = useState<Filter>('all');
   const [q, setQ] = useState('');
   const [creating, setCreating] = useState(false);
+  useNewParam(() => can('quotes.write') && setCreating(true));
   const query = useDebounced(q.trim(), 200);
   const params = new URLSearchParams();
   if (FILTER_STATUS[filter]) params.set('status', FILTER_STATUS[filter]!);

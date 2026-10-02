@@ -171,7 +171,7 @@ describe('à faire du chantier', () => {
         { id: 'c3', ordinal: 3, title: 'Receveur', status: 'sent', sentAt: '2026-09-30' },
         { id: 'c4', ordinal: 4, title: 'Peinture', status: 'draft', sentAt: null },
       ],
-      openQuestions: [{ id: 'q', subject: 'Avenant n°3', author: 'M. Dupont' }],
+      openQuestions: [{ id: 'q', subject: 'Avenant n°3', author: 'M. Dupont', changeOrderId: 'c3' }],
     });
     expect(todos.map((t) => t.kind)).toEqual([
       'invoice_overdue',

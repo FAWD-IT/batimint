@@ -387,6 +387,14 @@ export function QuoteEditor({ id }: { id: string }) {
           })}{' '}
           {q.certificate?.status === 'signed' ? t('editor.certificateSigned') : ''}{' '}
           {q.projectId ? t('editor.projectCreated') : t('editor.projectPending')}
+          {q.projectId ? (
+            <>
+              {' '}
+              <Link href={`/chantiers/${q.projectId}`} className="font-semibold underline underline-offset-2">
+                {t('editor.openProject')}
+              </Link>
+            </>
+          ) : null}
         </Notice>
       ) : sent ? (
         <Notice

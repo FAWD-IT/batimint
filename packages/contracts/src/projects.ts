@@ -138,6 +138,7 @@ export const ProjectTodoSchema = z.discriminatedUnion('kind', [
     ref: Uuid,
     subject: z.string(),
     author: z.string(),
+    changeOrderId: Uuid.nullable(),
     severity: z.literal('warn'),
   }),
   z.object({
@@ -542,6 +543,7 @@ export const PortalChangeOrderSignSchema = z.object({
 export const PortalChangeOrderRefuseSchema = z.object({ reason: optText(1000) });
 export const PortalCommentCreateSchema = z.object({
   subjectType: z.enum(['project', 'change_order']),
-  subjectId: Uuid,
+  /** Avenant concerné ; absent pour une question sur le chantier (déduit du lien). */
+  subjectId: Uuid.optional(),
   body: z.string().trim().min(2).max(2000),
 });

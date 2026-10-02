@@ -53,14 +53,19 @@ export async function overdueInvoices(tx: Tx, projectIds: string[], today: strin
 
 export type Health = 'ok' | 'warn' | 'crit';
 
+/**
+ * Pastille d'état (barre latérale, liste) : rouge si le chantier est en retard ou à marge
+ * négative ; orange si un poste dérive, si la marge glisse de plus de 5 points ou si une facture
+ * est échue ; vert sinon.
+ */
 export function healthOf(input: { fin: ProjectFinancials; lateDays: number; overdue: boolean }): Health {
   const { fin } = input;
-  if (input.overdue || fin.estimatedMargin?.isNegative()) return 'crit';
+  if (input.lateDays > 0 || fin.estimatedMargin?.isNegative()) return 'crit';
   const marginSlip =
     fin.plannedMargin && fin.estimatedMargin
       ? fin.plannedMargin.minus(fin.estimatedMargin).greaterThan('0.05')
       : false;
-  if (input.lateDays > 0 || fin.driftingLineIds.length || marginSlip) return 'warn';
+  if (input.overdue || fin.driftingLineIds.length || marginSlip) return 'warn';
   return 'ok';
 }
 
@@ -260,6 +265,7 @@ export async function projectDetail(tx: Tx, id: string, tenantId: string, role: 
           ? `Avenant n°${coTitle.get(q.subjectId)!.ordinal}`
           : p.name,
       author: q.authorLabel,
+      changeOrderId: q.subjectType === 'change_order' ? q.subjectId : null,
     })),
   });
 

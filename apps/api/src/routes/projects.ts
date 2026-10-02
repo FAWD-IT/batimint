@@ -136,6 +136,43 @@ export const projectRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (ap
   );
 
   app.get(
+    '/projects/people',
+    {
+      schema: {
+        tags: ['chantiers'],
+        summary: 'Personnes à mentionner (@) et à qui assigner une tâche : noms seulement',
+        response: {
+          200: z.object({
+            members: z.array(z.object({ userId: z.uuid(), name: z.string() })),
+            employees: z.array(z.object({ id: z.uuid(), name: z.string(), jobTitle: z.string().nullable() })),
+          }),
+        },
+      },
+    },
+    (req) =>
+      inTenant(deps, req, 'projects.read', async ({ tx }) => {
+        const members = await tx.membership.findMany({
+          where: { status: 'active' },
+          include: { user: { select: { id: true, name: true } } },
+        });
+        const employees = await tx.employee.findMany({
+          where: { active: true },
+          orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
+        });
+        return {
+          members: members
+            .map((m) => ({ userId: m.user.id, name: m.user.name }))
+            .sort((a, b) => a.name.localeCompare(b.name, 'fr')),
+          employees: employees.map((e) => ({
+            id: e.id,
+            name: `${e.firstName} ${e.lastName}`.trim(),
+            jobTitle: e.jobTitle,
+          })),
+        };
+      }),
+  );
+
+  app.get(
     '/projects/:id',
     {
       schema: {

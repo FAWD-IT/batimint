@@ -5,6 +5,7 @@
  */
 import { createPrismaClient, withSystem } from '../src/index';
 import { seedCrm } from './seed-crm';
+import { seedProjects } from './seed-projects';
 import { seedQuotes } from './seed-quotes';
 import { loadEnv } from './env';
 import { hashPassword } from './password';
@@ -238,6 +239,7 @@ async function main(): Promise<void> {
         await seedPeople(tx, tenant.id, users);
         await seedCrm(tx, tenant.id, users.get('sophie@renov-habitat.be') ?? null);
         await seedQuotes(tx, tenant.id, users.get('sophie@renov-habitat.be') ?? null);
+        await seedProjects(tx, tenant.id, users);
       },
       { timeoutMs: 120_000 },
     );

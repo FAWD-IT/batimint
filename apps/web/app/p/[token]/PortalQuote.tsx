@@ -20,17 +20,10 @@ import {
   Switch,
   TextField,
 } from '@batimint/ui';
-import { CheckCircle2, Download, FileText, Phone } from 'lucide-react';
+import { CheckCircle2, Download, FileText } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import {
-  type CSSProperties,
-  type FormEvent,
-  type ReactNode,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { PortalShell } from '@/components/portal/PortalShell';
 import { SignaturePad } from '@/components/portal/SignaturePad';
 import { api, ApiError } from '@/lib/api';
 
@@ -107,22 +100,22 @@ export function PortalQuote({ token }: { token: string }) {
 
   if (error)
     return (
-      <Shell accent="#111111">
+      <PortalShell accent="#111111">
         <div className="flex flex-col gap-3 py-16 text-center">
           <h1 className="text-[22px] font-bold">{t('errors.title')}</h1>
           <p className="text-[15px] text-muted">{error.message}</p>
         </div>
-      </Shell>
+      </PortalShell>
     );
   if (!data || !totals)
     return (
-      <Shell accent="#111111">
+      <PortalShell accent="#111111">
         <div className="flex flex-col gap-4 py-6" aria-busy>
           <Skeleton className="h-10 w-2/3" />
           <Skeleton className="h-40" />
           <Skeleton className="h-40" />
         </div>
-      </Shell>
+      </PortalShell>
     );
 
   const q = data.quote;
@@ -137,7 +130,7 @@ export function PortalQuote({ token }: { token: string }) {
   const pdfUrl = `/api/v1/portal/quotes/${encodeURIComponent(token)}/pdf`;
 
   return (
-    <Shell accent={data.tenant.accent} tenant={data.tenant} subtitle={q.title}>
+    <PortalShell accent={data.tenant.accent} tenant={data.tenant} subtitle={q.title}>
       <section className="flex flex-col gap-2 pt-2">
         <div className="flex flex-wrap items-center gap-2">
           <Chip tone={signed ? 'good' : signable ? 'accent' : 'crit'} dot>
@@ -174,15 +167,13 @@ export function PortalQuote({ token }: { token: string }) {
           <p className="text-[14px] text-white/80">
             {data.projectCreated ? t('signed.project') : t('signed.next')}
           </p>
-          <a
-            href={pdfUrl}
-            target="_blank"
-            rel="noreferrer"
-            className={buttonClasses('inverse', 'md', 'self-start')}
-          >
-            <Download aria-hidden className="size-4" />
-            {t('signed.download')}
-          </a>
+          <div className="flex flex-wrap gap-2">
+            {data.projectCreated ? <FollowProjectButton token={token} /> : null}
+            <a href={pdfUrl} target="_blank" rel="noreferrer" className={buttonClasses('inverse', 'md')}>
+              <Download aria-hidden className="size-4" />
+              {t('signed.download')}
+            </a>
+          </div>
         </section>
       ) : !signable ? (
         <Notice tone="warn" title={t(`closed.${q.status}`)}>
@@ -348,7 +339,7 @@ export function PortalQuote({ token }: { token: string }) {
           <p className="text-[14px] whitespace-pre-line">{data.tenant.termsAndConditions}</p>
         </Dialog>
       ) : null}
-    </Shell>
+    </PortalShell>
   );
 }
 
@@ -507,57 +498,33 @@ function TotalRow({ label, value, muted }: { label: string; value: string; muted
   );
 }
 
-function Shell({
-  accent,
-  tenant,
-  subtitle,
-  children,
-}: {
-  accent: string;
-  tenant?: PortalQuoteDto['tenant'];
-  subtitle?: string;
-  children: ReactNode;
-}) {
+/** Après la signature : un lien de suivi du chantier est créé pour ce client, puis ouvert. */
+function FollowProjectButton({ token }: { token: string }) {
   const t = useTranslations('portal');
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState<string | null>(null);
   return (
-    <div style={{ '--accent': accent } as CSSProperties} className="min-h-dvh bg-surface">
-      <div className="mx-auto flex min-h-dvh max-w-xl flex-col">
-        <header className="flex items-center gap-3 border-b border-line-soft px-5 pt-6 pb-4">
-          {tenant?.logoUrl ? (
-            <img src={tenant.logoUrl} alt="" className="size-10 rounded-[10px] object-contain" />
-          ) : (
-            <span
-              aria-hidden
-              className="flex size-10 items-center justify-center rounded-[10px] bg-line-soft text-[15px] font-bold"
-            >
-              {tenant?.name.slice(0, 1) ?? ''}
-            </span>
-          )}
-          <div className="min-w-0">
-            <p className="truncate text-[15px] font-semibold">{tenant?.name ?? ''}</p>
-            {subtitle ? <p className="truncate text-[12px] text-muted">{subtitle}</p> : null}
-          </div>
-        </header>
-        <main className="flex flex-1 flex-col gap-5 px-5 py-5">{children}</main>
-        {tenant ? (
-          <footer className="flex items-center justify-between gap-3 border-t border-line-soft px-5 pt-3.5 pb-6">
-            <span className="flex flex-col">
-              <span className="text-[12px] text-muted">{t('contact')}</span>
-              <span className="text-[14px] font-semibold">{tenant.name}</span>
-            </span>
-            {tenant.phone ? (
-              <a href={`tel:${tenant.phone.replace(/\s/g, '')}`} className={buttonClasses('secondary')}>
-                <Phone aria-hidden className="size-4" />
-                {t('call')}
-              </a>
-            ) : tenant.email ? (
-              <a href={`mailto:${tenant.email}`} className={buttonClasses('secondary')}>
-                {t('write')}
-              </a>
-            ) : null}
-          </footer>
-        ) : null}
-      </div>
-    </div>
+    <>
+      <Button
+        variant="accent"
+        loading={busy}
+        onClick={async () => {
+          setBusy(true);
+          setFailed(null);
+          try {
+            const r = await api<{ url: string }>(`/portal/quotes/${encodeURIComponent(token)}/project-link`, {
+              body: {},
+            });
+            window.location.assign(new URL(r.url).pathname);
+          } catch (err) {
+            setFailed(err instanceof ApiError && err.message ? err.message : t('errors.generic'));
+            setBusy(false);
+          }
+        }}
+      >
+        {t('signed.follow')}
+      </Button>
+      {failed ? <p className="w-full text-[13px] text-white/80">{failed}</p> : null}
+    </>
   );
 }

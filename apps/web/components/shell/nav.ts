@@ -2,6 +2,7 @@ import type { Action } from '@batimint/domain';
 import {
   BookOpen,
   Briefcase,
+  Building2,
   HardHat,
   type LucideIcon,
   Settings,
@@ -14,7 +15,8 @@ import {
 export interface NavItem {
   href: string;
   /** Clé de traduction dans « nav ». */
-  labelKey: 'today' | 'pipeline' | 'customers' | 'quotes' | 'library' | 'teams' | 'settings' | 'admin';
+  labelKey:
+    'today' | 'projects' | 'pipeline' | 'customers' | 'quotes' | 'library' | 'teams' | 'settings' | 'admin';
   icon: LucideIcon;
   permission?: Action;
   platformAdmin?: boolean;
@@ -23,6 +25,7 @@ export interface NavItem {
 /** N'apparaissent que les modules livrés : aucun lien ne mène à un écran vide. */
 export const NAV_ITEMS: NavItem[] = [
   { href: '/aujourdhui', labelKey: 'today', icon: Sun },
+  { href: '/chantiers', labelKey: 'projects', icon: Building2, permission: 'projects.read' },
   { href: '/opportunites', labelKey: 'pipeline', icon: Briefcase, permission: 'leads.read' },
   { href: '/devis', labelKey: 'quotes', icon: FileText, permission: 'quotes.read' },
   { href: '/clients', labelKey: 'customers', icon: Users, permission: 'customers.read' },

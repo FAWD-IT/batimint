@@ -174,7 +174,14 @@ export type ProjectTodo =
       days: number;
       severity: 'info';
     }
-  | { kind: 'client_question'; ref: string; subject: string; author: string; severity: 'warn' }
+  | {
+      kind: 'client_question';
+      ref: string;
+      subject: string;
+      author: string;
+      changeOrderId: string | null;
+      severity: 'warn';
+    }
   | { kind: 'project_late'; ref: string; days: number; severity: 'warn' };
 
 const SEVERITY_ORDER = { crit: 0, warn: 1, info: 2 } as const;
@@ -210,7 +217,7 @@ export function projectTodos(input: {
     status: string;
     sentAt: IsoDate | null;
   }[];
-  openQuestions: readonly { id: string; subject: string; author: string }[];
+  openQuestions: readonly { id: string; subject: string; author: string; changeOrderId?: string | null }[];
 }): ProjectTodo[] {
   const todos: (ProjectTodo & { age: number })[] = [];
   for (const inv of input.invoices) {
@@ -233,6 +240,7 @@ export function projectTodos(input: {
       ref: q.id,
       subject: q.subject,
       author: q.author,
+      changeOrderId: q.changeOrderId ?? null,
       severity: 'warn',
       age: 0,
     });

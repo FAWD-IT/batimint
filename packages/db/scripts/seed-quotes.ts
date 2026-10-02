@@ -1,6 +1,6 @@
 /**
- * Seed M3 : devis composés depuis la bibliothèque type. Le devis de M. Dupont (salle de bain,
- * TVA 6 %, option douche à l'italienne) est en préparation ; d'autres sont envoyés ou vus.
+ * Seed M3 : devis composés depuis la bibliothèque type. Un devis de cuisine (option crédence) est en
+ * préparation ; d'autres sont envoyés ou vus. Le devis signé de M. Dupont vit dans seed-projects.
  */
 import {
   computeQuote,
@@ -187,38 +187,31 @@ export async function seedQuotes(tx: Tx, tenantId: string, userId: string | null
     },
   };
   await createQuote(tx, ctx, {
-    opportunityTitle: 'Rénovation salle de bain',
-    title: 'Rénovation salle de bain',
+    opportunityTitle: 'Cuisine : plomberie et carrelage',
+    title: 'Cuisine : plomberie et carrelage',
     status: 'draft',
     intro:
-      'Suite à notre visite, voici notre proposition pour la rénovation complète de votre salle de bain.',
+      'Suite à notre visite, voici notre proposition pour la plomberie et le carrelage de votre cuisine.',
     sections: [
       {
         title: 'Démolition et préparation',
         lines: [
           ['GEN-PROT', '1'],
-          ['GEN-DEM-01', '6.2'],
-          ['GEN-CONT-08', '1'],
+          ['GEN-DEM-01', '12'],
         ],
+      },
+      {
+        title: 'Plomberie',
+        lines: [['SAN-MIT-LAV', '1']],
       },
       {
         title: 'Carrelage',
         lines: [
-          ['OUV-FAI-3060', '18.5'],
-          ['OUV-SOL-6060', '6.2'],
+          ['OUV-SOL-6060', '14'],
+          ['OUV-FAI-3060', '6'],
         ],
       },
-      {
-        title: 'Sanitaires',
-        lines: [
-          ['SAN-WC-SUSP', '1'],
-          ['SAN-LAVABO', '1'],
-          ['SAN-MIT-LAV', '1'],
-          ['SAN-DOUCHE-THERMO', '1'],
-          ['SAN-RECEV-90', '1'],
-        ],
-      },
-      { title: "Option : douche à l'italienne", optional: true, lines: [['OUV-SAN-ITAL', '1']] },
+      { title: 'Option : crédence en faïence', optional: true, lines: [['OUV-FAI-3060', '3']] },
     ],
   });
   await createQuote(tx, ctx, {
