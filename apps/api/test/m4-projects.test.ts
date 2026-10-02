@@ -394,7 +394,9 @@ describe('avenants (P5)', () => {
         .toString(),
     ).toBe('%PDF-');
     expect((await outbox('change_order.sent.v1')).length).toBe(1);
-    const locked = await inject('PUT', `/v1/change-orders/${coId}`, { title: 'Modifié', delayDays: 0,
+    const locked = await inject('PUT', `/v1/change-orders/${coId}`, {
+      title: 'Modifié',
+      delayDays: 0,
       revision: row.revision,
       lines: [],
     });
