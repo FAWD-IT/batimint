@@ -71,52 +71,58 @@ model Tenant {
   createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  memberships        Membership[]
-  invitations        Invitation[]
-  auditLogs          AuditLog[]
-  outboxEvents       OutboxEvent[]
-  notifications      Notification[]
-  numberSequences    NumberSequence[]
-  teams              Team[]
-  employees          Employee[]
-  absences           Absence[]
-  integrations       IntegrationConnection[]
-  customers          Customer[]
-  contacts           Contact[]
-  sites              Site[]
-  leads              Lead[]
-  opportunities      Opportunity[]
-  siteVisits         SiteVisit[]
-  attachments        Attachment[]
-  suppliers          Supplier[]
-  items              Item[]
-  assemblyComponents AssemblyComponent[]
-  priceHistory       PriceHistory[]
-  supplierPrices     SupplierPrice[]
-  quotes             Quote[]
-  quoteVersions      QuoteVersion[]
-  quoteSections      QuoteSection[]
-  quoteLines         QuoteLine[]
-  signatures         Signature[]
-  vatCertificates    VatCertificate[]
-  portalTokens       PortalToken[]
-  projects           Project[]
-  budgetLines        BudgetLine[]
-  tasks              Task[]
-  invoices           Invoice[]
-  invoiceLines       InvoiceLine[]
-  timelineEntries    TimelineEntry[]
-  changeOrders       ChangeOrder[]
-  changeOrderLines   ChangeOrderLine[]
-  projectCosts       ProjectCost[]
-  comments           Comment[]
-  timeEntries        TimeEntry[]
-  issues             Issue[]
-  workOrders         WorkOrder[]
-  workOrderLines     WorkOrderLine[]
-  dailyReports       DailyReport[]
-  scheduleSlots      ScheduleSlot[]
-  calendarFeeds      CalendarFeed[]
+  memberships          Membership[]
+  invitations          Invitation[]
+  auditLogs            AuditLog[]
+  outboxEvents         OutboxEvent[]
+  notifications        Notification[]
+  numberSequences      NumberSequence[]
+  teams                Team[]
+  employees            Employee[]
+  absences             Absence[]
+  integrations         IntegrationConnection[]
+  customers            Customer[]
+  contacts             Contact[]
+  sites                Site[]
+  leads                Lead[]
+  opportunities        Opportunity[]
+  siteVisits           SiteVisit[]
+  attachments          Attachment[]
+  suppliers            Supplier[]
+  items                Item[]
+  assemblyComponents   AssemblyComponent[]
+  priceHistory         PriceHistory[]
+  supplierPrices       SupplierPrice[]
+  quotes               Quote[]
+  quoteVersions        QuoteVersion[]
+  quoteSections        QuoteSection[]
+  quoteLines           QuoteLine[]
+  signatures           Signature[]
+  vatCertificates      VatCertificate[]
+  portalTokens         PortalToken[]
+  projects             Project[]
+  budgetLines          BudgetLine[]
+  tasks                Task[]
+  invoices             Invoice[]
+  invoiceLines         InvoiceLine[]
+  timelineEntries      TimelineEntry[]
+  changeOrders         ChangeOrder[]
+  changeOrderLines     ChangeOrderLine[]
+  projectCosts         ProjectCost[]
+  purchaseOrders       PurchaseOrder[]
+  purchaseOrderLines   PurchaseOrderLine[]
+  goodsReceipts        GoodsReceipt[]
+  supplierInvoices     SupplierInvoice[]
+  supplierInvoiceLines SupplierInvoiceLine[]
+  costAllocations      CostAllocation[]
+  comments             Comment[]
+  timeEntries          TimeEntry[]
+  issues               Issue[]
+  workOrders           WorkOrder[]
+  workOrderLines       WorkOrderLine[]
+  dailyReports         DailyReport[]
+  scheduleSlots        ScheduleSlot[]
+  calendarFeeds        CalendarFeed[]
 
   @@map("tenants")
 }
@@ -740,6 +746,7 @@ model Supplier {
   tenant Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   items  Item[]
   prices SupplierPrice[]
+  orders PurchaseOrder[]
 
   @@index([tenantId, name])
   @@map("suppliers")
@@ -1110,20 +1117,21 @@ model Project {
   updatedAt            DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
   createdBy            String?       @map("created_by") @db.Uuid
 
-  tenant       Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  quote        Quote?         @relation(fields: [quoteId], references: [id], onDelete: SetNull)
-  customer     Customer       @relation(fields: [customerId], references: [id], onDelete: Restrict)
-  site         Site?          @relation(fields: [siteId], references: [id], onDelete: SetNull)
-  budgetLines  BudgetLine[]
-  tasks        Task[]
-  invoices     Invoice[]
-  changeOrders ChangeOrder[]
-  costs        ProjectCost[]
-  timeEntries  TimeEntry[]
-  issues       Issue[]
-  workOrders   WorkOrder[]
-  dailyReports DailyReport[]
-  slots        ScheduleSlot[]
+  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  quote          Quote?          @relation(fields: [quoteId], references: [id], onDelete: SetNull)
+  customer       Customer        @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  site           Site?           @relation(fields: [siteId], references: [id], onDelete: SetNull)
+  budgetLines    BudgetLine[]
+  tasks          Task[]
+  invoices       Invoice[]
+  changeOrders   ChangeOrder[]
+  costs          ProjectCost[]
+  purchaseOrders PurchaseOrder[]
+  timeEntries    TimeEntry[]
+  issues         Issue[]
+  workOrders     WorkOrder[]
+  dailyReports   DailyReport[]
+  slots          ScheduleSlot[]
 
   @@unique([tenantId, number])
   @@index([tenantId, status])
@@ -1640,4 +1648,193 @@ model DailyReport {
   @@unique([projectId, day])
   @@index([tenantId, day])
   @@map("daily_reports")
+}
+
+// ---------------------------------------------------------------------------
+// M7 — Achats et Peppol entrant (03 §8, 02 P6, ADR 0016)
+// ---------------------------------------------------------------------------
+
+enum PurchaseOrderStatus {
+  draft
+  sent
+  partially_received
+  received
+  cancelled
+}
+
+/// Bon de commande fournisseur : numéroté à l'envoi (BC{YYYY}-{SEQ}), figé ensuite.
+model PurchaseOrder {
+  id              String              @id @db.Uuid
+  tenantId        String              @map("tenant_id") @db.Uuid
+  projectId       String              @map("project_id") @db.Uuid
+  supplierId      String              @map("supplier_id") @db.Uuid
+  number          String?
+  status          PurchaseOrderStatus @default(draft)
+  expectedOn      DateTime?           @map("expected_on") @db.Date
+  deliveryAddress String?             @map("delivery_address")
+  notes           String?
+  totalNet        BigInt              @default(0) @map("total_net")
+  sentAt          DateTime?           @map("sent_at") @db.Timestamptz(3)
+  sentTo          String?             @map("sent_to")
+  pdfKey          String?             @map("pdf_key")
+  createdAt       DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdBy       String?             @map("created_by") @db.Uuid
+
+  tenant   Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  project  Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  supplier Supplier            @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  lines    PurchaseOrderLine[]
+  receipts GoodsReceipt[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId, projectId])
+  @@index([tenantId, supplierId])
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderLine {
+  id               String  @id @default(uuid(7)) @db.Uuid
+  tenantId         String  @map("tenant_id") @db.Uuid
+  purchaseOrderId  String  @map("purchase_order_id") @db.Uuid
+  position         Int
+  description      String
+  supplierCode     String? @map("supplier_code")
+  unit             String
+  quantity         Decimal @db.Decimal(14, 4)
+  unitPrice        BigInt  @map("unit_price")
+  budgetLineId     String? @map("budget_line_id") @db.Uuid
+  /// Ligne du devis d'origine (clé), pour ne pas commander deux fois.
+  sourceKey        String? @map("source_key")
+  receivedQuantity Decimal @default(0) @map("received_quantity") @db.Decimal(14, 4)
+
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, purchaseOrderId])
+  @@map("purchase_order_lines")
+}
+
+model GoodsReceipt {
+  id              String   @id @default(uuid(7)) @db.Uuid
+  tenantId        String   @map("tenant_id") @db.Uuid
+  purchaseOrderId String   @map("purchase_order_id") @db.Uuid
+  receivedAt      DateTime @default(now()) @map("received_at") @db.Timestamptz(3)
+  receivedBy      String?  @map("received_by") @db.Uuid
+  note            String?
+  /// [{ lineId, quantity }]
+  lines           Json     @default("[]")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, purchaseOrderId])
+  @@map("goods_receipts")
+}
+
+enum SupplierInvoiceSource {
+  peppol
+  upload
+  email
+}
+
+enum SupplierInvoiceState {
+  received
+  to_allocate
+  allocated
+  validated
+  to_pay
+  blocked
+  paid
+}
+
+/// Facture fournisseur reçue (Peppol, dépôt ou e-mail) ; le document source est conservé.
+model SupplierInvoice {
+  id              String                @id @db.Uuid
+  tenantId        String                @map("tenant_id") @db.Uuid
+  source          SupplierInvoiceSource
+  /// Identifiant du document chez le fournisseur d'accès Peppol (déduplication).
+  externalId      String?               @map("external_id")
+  supplierId      String?               @map("supplier_id") @db.Uuid
+  supplierName    String                @map("supplier_name")
+  supplierVat     String?               @map("supplier_vat")
+  number          String?
+  issueDate       DateTime?             @map("issue_date") @db.Date
+  dueDate         DateTime?             @map("due_date") @db.Date
+  currency        String                @default("EUR")
+  totalNet        BigInt                @default(0) @map("total_net")
+  totalVat        BigInt                @default(0) @map("total_vat")
+  totalGross      BigInt                @default(0) @map("total_gross")
+  orderReference  String?               @map("order_reference")
+  deliveryAddress String?               @map("delivery_address")
+  notes           String?
+  status          SupplierInvoiceState  @default(received)
+  /// `purchase_order`, `project_reference`, `address`, `ai`, `manual`.
+  matchMethod     String?               @map("match_method")
+  matchConfidence Decimal?              @map("match_confidence") @db.Decimal(4, 3)
+  purchaseOrderId String?               @map("purchase_order_id") @db.Uuid
+  projectId       String?               @map("project_id") @db.Uuid
+  /// Suggestions classées pour la boîte « À imputer ».
+  suggestions     Json                  @default("[]")
+  /// Écarts avec le bon de commande.
+  discrepancies   Json                  @default("[]")
+  documentKey     String?               @map("document_key")
+  documentType    String?               @map("document_type")
+  extraction      Json?
+  receivedAt      DateTime              @default(now()) @map("received_at") @db.Timestamptz(3)
+  allocatedAt     DateTime?             @map("allocated_at") @db.Timestamptz(3)
+  allocatedBy     String?               @map("allocated_by") @db.Uuid
+  validatedAt     DateTime?             @map("validated_at") @db.Timestamptz(3)
+  validatedBy     String?               @map("validated_by") @db.Uuid
+  paidAt          DateTime?             @map("paid_at") @db.Timestamptz(3)
+  createdAt       DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant      Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lines       SupplierInvoiceLine[]
+  allocations CostAllocation[]
+
+  @@unique([tenantId, externalId])
+  @@index([tenantId, status])
+  @@index([tenantId, supplierId])
+  @@map("supplier_invoices")
+}
+
+model SupplierInvoiceLine {
+  id           String   @id @default(uuid(7)) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  invoiceId    String   @map("invoice_id") @db.Uuid
+  position     Int
+  description  String
+  supplierCode String?  @map("supplier_code")
+  quantity     Decimal  @default(1) @db.Decimal(14, 4)
+  unitPrice    BigInt   @default(0) @map("unit_price")
+  net          BigInt   @default(0)
+  vatRate      Decimal? @map("vat_rate") @db.Decimal(5, 2)
+
+  tenant  Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoice SupplierInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, invoiceId])
+  @@map("supplier_invoice_lines")
+}
+
+/// Ventilation d'une facture fournisseur sur un chantier et un poste (multi-chantiers possible).
+model CostAllocation {
+  id           String   @id @default(uuid(7)) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  invoiceId    String   @map("invoice_id") @db.Uuid
+  projectId    String   @map("project_id") @db.Uuid
+  budgetLineId String?  @map("budget_line_id") @db.Uuid
+  amount       BigInt
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  createdBy    String?  @map("created_by") @db.Uuid
+
+  tenant  Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoice SupplierInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, invoiceId])
+  @@index([tenantId, projectId])
+  @@map("cost_allocations")
 }

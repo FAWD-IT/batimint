@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@batimint/domain": "workspace:*",
+    "fast-xml-parser": "^5.11.2",
     "pdfkit": "^0.17.2",
     "qrcode": "^1.5.4"
   },
