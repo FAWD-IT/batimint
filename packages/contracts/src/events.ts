@@ -96,6 +96,16 @@ export const EventPayloads = {
     fromClient: z.boolean(),
     mentions: z.array(Uuid),
   }),
+  'time_entry.recorded.v1': z.object({
+    timeEntryId: Uuid,
+    projectId: Uuid,
+    employeeId: Uuid,
+    kind: z.enum(['in', 'out']),
+    day: z.string(),
+  }),
+  'time_entries.validated.v1': z.object({ projectId: Uuid, day: z.string(), employeeIds: z.array(Uuid) }),
+  'issue.reported.v1': z.object({ issueId: Uuid, projectId: Uuid, urgent: z.boolean() }),
+  'work_order.signed.v1': z.object({ workOrderId: Uuid, projectId: Uuid, signatureId: Uuid }),
 } as const;
 
 export type EventType = keyof typeof EventPayloads;

@@ -9,6 +9,8 @@ import type { Mailer } from './mail/types';
 import { MemoryStorage } from './storage/memory';
 import { S3Storage } from './storage/s3';
 import type { ObjectStorage } from './storage/types';
+import { MockAttendanceRegistry } from './onss/mock';
+import type { AttendanceRegistry } from './onss/types';
 import { MockPeppolProvider } from './peppol/mock';
 import type { PeppolProvider } from './peppol/types';
 import { MockVatValidator } from './vat/mock';
@@ -23,6 +25,14 @@ export interface Integrations {
   vat: VatValidator;
   peppol: PeppolProvider;
   ai: AiAssistant;
+  attendance: AttendanceRegistry;
+}
+
+export function createAttendanceRegistry(env: Env = process.env): AttendanceRegistry {
+  const provider = env['ONSS_PROVIDER'] ?? 'mock';
+  if (provider !== 'mock')
+    throw new Error(`ONSS_PROVIDER=${provider} n'est pas encore disponible : utilisez « mock ».`);
+  return new MockAttendanceRegistry();
 }
 
 export function createAiAssistant(env: Env = process.env): AiAssistant {
@@ -80,6 +90,7 @@ export function createIntegrations(env: Env = process.env): Integrations {
     vat: createVatValidator(env),
     peppol: createPeppolProvider(env),
     ai: createAiAssistant(env),
+    attendance: createAttendanceRegistry(env),
   };
 }
 
@@ -91,6 +102,7 @@ export function createMockIntegrations(overrides: Partial<Integrations> = {}): I
     vat: new MockVatValidator(),
     peppol: new MockPeppolProvider(),
     ai: new MockAiAssistant(),
+    attendance: new MockAttendanceRegistry(),
     ...overrides,
   };
 }

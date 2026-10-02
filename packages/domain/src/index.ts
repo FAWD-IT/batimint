@@ -16,3 +16,4 @@ export * from './crm';
 export * from './quote';
 export * from './calendar';
 export * from './project';
+export * from './field';

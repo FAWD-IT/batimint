@@ -9,3 +9,4 @@ export * from './crm';
 export * from './library';
 export * from './quotes';
 export * from './projects';
+export * from './field';

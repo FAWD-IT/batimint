@@ -135,3 +135,32 @@ describe('PDF de l’avenant', () => {
     expect(sha256(delayed)).not.toBe(sha256(a));
   });
 });
+
+describe('PDF du bon de régie', () => {
+  it('sans prix, avec le bloc de signature du client', async () => {
+    const { renderWorkOrderPdf } = await import('./index');
+    const base = {
+      tenant: { name: "Rénov'Habitat SRL", lines: ['6000 Charleroi'], brandColor: '#0B6E4F' },
+      customer: { name: 'Jean Dupont' },
+      site: 'Rue de la Station 42, 6040 Jumet',
+      projectRef: 'CH2026-001',
+      workOrder: {
+        number: 'BR2026-001',
+        day: new Date('2026-10-01T12:00:00Z'),
+        description: 'Remplacement d’une canalisation en plomb découverte derrière la faïence.',
+        lines: [
+          { kind: 'labour' as const, description: 'Luca Rossi', quantity: '2.5', unit: 'h' },
+          { kind: 'material' as const, description: 'Tube multicouche 16 mm', quantity: '4', unit: 'm' },
+        ],
+      },
+    };
+    const a = await renderWorkOrderPdf(base);
+    expect(a.subarray(0, 5).toString()).toBe('%PDF-');
+    expect(sha256(a)).toBe(sha256(await renderWorkOrderPdf(base)));
+    const signed = await renderWorkOrderPdf({
+      ...base,
+      signature: { signerName: 'Jean Dupont', signedAt: new Date('2026-10-01T15:00:00Z'), ip: '203.0.113.7' },
+    });
+    expect(sha256(signed)).not.toBe(sha256(a));
+  });
+});

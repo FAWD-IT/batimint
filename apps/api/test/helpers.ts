@@ -2,6 +2,7 @@ import { createPrismaClient, type PrismaClient } from '@batimint/db';
 import { testDatabaseUrls } from '@batimint/db/testing';
 import {
   MemoryStorage,
+  MockAttendanceRegistry,
   MockAiAssistant,
   MockMailer,
   MockPeppolProvider,
@@ -47,6 +48,7 @@ export async function createTestApp(): Promise<TestApp> {
       vat: new MockVatValidator(),
       peppol: new MockPeppolProvider(),
       ai: new MockAiAssistant(),
+      attendance: new MockAttendanceRegistry(),
     },
     cipher: new FieldCipher(config.FIELD_ENCRYPTION_KEY),
     realtime: new RealtimeHub(null),

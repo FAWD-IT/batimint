@@ -14,3 +14,5 @@ export { MockPeppolProvider } from './peppol/mock';
 export * from './mail/templates';
 export type * from './ai/types';
 export { MockAiAssistant, normalizeText, similarity } from './ai/mock';
+export type * from './onss/types';
+export { MockAttendanceRegistry } from './onss/mock';

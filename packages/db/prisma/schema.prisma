@@ -110,6 +110,12 @@ model Tenant {
   changeOrderLines   ChangeOrderLine[]
   projectCosts       ProjectCost[]
   comments           Comment[]
+  timeEntries        TimeEntry[]
+  issues             Issue[]
+  workOrders         WorkOrder[]
+  workOrderLines     WorkOrderLine[]
+  dailyReports       DailyReport[]
+  scheduleSlots      ScheduleSlot[]
 
   @@map("tenants")
 }
@@ -1075,37 +1081,46 @@ enum ProjectStatus {
 
 /// Le chantier, objet pivot (03 §5). Créé à la signature du devis.
 model Project {
-  id              String        @id @default(uuid(7)) @db.Uuid
-  tenantId        String        @map("tenant_id") @db.Uuid
-  number          String
-  name            String
-  customerId      String        @map("customer_id") @db.Uuid
-  siteId          String?       @map("site_id") @db.Uuid
-  quoteId         String?       @unique @map("quote_id") @db.Uuid
-  opportunityId   String?       @map("opportunity_id") @db.Uuid
-  status          ProjectStatus @default(preparation)
+  id                   String        @id @default(uuid(7)) @db.Uuid
+  tenantId             String        @map("tenant_id") @db.Uuid
+  number               String
+  name                 String
+  customerId           String        @map("customer_id") @db.Uuid
+  siteId               String?       @map("site_id") @db.Uuid
+  quoteId              String?       @unique @map("quote_id") @db.Uuid
+  opportunityId        String?       @map("opportunity_id") @db.Uuid
+  status               ProjectStatus @default(preparation)
   /// Montant du contrat HTVA (devis signé + avenants signés).
-  contractAmount  BigInt        @default(0) @map("contract_amount")
-  managerUserId   String?       @map("manager_user_id") @db.Uuid
-  teamId          String?       @map("team_id") @db.Uuid
-  description     String?
-  startDate       DateTime?     @map("start_date") @db.Date
-  endDate         DateTime?     @map("end_date") @db.Date
+  contractAmount       BigInt        @default(0) @map("contract_amount")
+  managerUserId        String?       @map("manager_user_id") @db.Uuid
+  teamId               String?       @map("team_id") @db.Uuid
+  description          String?
+  startDate            DateTime?     @map("start_date") @db.Date
+  endDate              DateTime?     @map("end_date") @db.Date
   /// Raison de la suspension (statut `suspended`).
-  suspendedReason String?       @map("suspended_reason")
-  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt       DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
-  createdBy       String?       @map("created_by") @db.Uuid
+  suspendedReason      String?       @map("suspended_reason")
+  /// Montant total HTVA du chantier entier quand nous sommes sous-traitants (seuil Check In and Out).
+  workplaceTotalAmount BigInt?       @map("workplace_total_amount")
+  /// Check In and Out at Work imposé manuellement (sinon déduit du montant, 05 §8).
+  checkInOutForced     Boolean       @default(false) @map("check_in_out_forced")
+  createdAt            DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdBy            String?       @map("created_by") @db.Uuid
 
-  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  quote        Quote?        @relation(fields: [quoteId], references: [id], onDelete: SetNull)
-  customer     Customer      @relation(fields: [customerId], references: [id], onDelete: Restrict)
-  site         Site?         @relation(fields: [siteId], references: [id], onDelete: SetNull)
+  tenant       Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  quote        Quote?         @relation(fields: [quoteId], references: [id], onDelete: SetNull)
+  customer     Customer       @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  site         Site?          @relation(fields: [siteId], references: [id], onDelete: SetNull)
   budgetLines  BudgetLine[]
   tasks        Task[]
   invoices     Invoice[]
   changeOrders ChangeOrder[]
   costs        ProjectCost[]
+  timeEntries  TimeEntry[]
+  issues       Issue[]
+  workOrders   WorkOrder[]
+  dailyReports DailyReport[]
+  slots        ScheduleSlot[]
 
   @@unique([tenantId, number])
   @@index([tenantId, status])
@@ -1416,4 +1431,186 @@ model Comment {
   @@index([tenantId, subjectType, subjectId, createdAt])
   @@index([tenantId, projectId, createdAt])
   @@map("comments")
+}
+
+/// Créneau de planning (M6 l'édite au glisser-déposer) : qui travaille sur quel chantier quel jour.
+model ScheduleSlot {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  projectId  String   @map("project_id") @db.Uuid
+  employeeId String?  @map("employee_id") @db.Uuid
+  teamId     String?  @map("team_id") @db.Uuid
+  day        DateTime @db.Date
+  startTime  String?  @map("start_time")
+  endTime    String?  @map("end_time")
+  note       String?
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  createdBy  String?  @map("created_by") @db.Uuid
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, day])
+  @@index([tenantId, employeeId, day])
+  @@map("schedule_slots")
+}
+
+enum TimeEntryKind {
+  in
+  out
+}
+
+enum TimeEntryStatus {
+  recorded
+  synced
+  validated
+  transmitted
+}
+
+/// Pointage IN/OUT (03 §7, 05 §8) : identifiant généré sur le téléphone (UUIDv7) pour la synchro
+/// hors ligne idempotente ; position prise au seul moment du pointage (RGPD 05 §9).
+model TimeEntry {
+  id             String          @id @db.Uuid
+  tenantId       String          @map("tenant_id") @db.Uuid
+  projectId      String          @map("project_id") @db.Uuid
+  employeeId     String          @map("employee_id") @db.Uuid
+  kind           TimeEntryKind
+  /// Heure du pointage sur le téléphone (fait foi, même synchronisé plus tard).
+  at             DateTime        @db.Timestamptz(3)
+  /// Jour civil à Bruxelles (regroupement des heures).
+  day            DateTime        @db.Date
+  latitude       Decimal?        @db.Decimal(9, 6)
+  longitude      Decimal?        @db.Decimal(9, 6)
+  accuracyMeters Int?            @map("accuracy_meters")
+  distanceMeters Int?            @map("distance_meters")
+  /// `ok`, `too_far`, `no_position`, `no_site_position`.
+  geofence       String
+  /// `self` (l'ouvrier), `team` (le chef pour son équipe), `office` (correction du bureau).
+  source         String          @default("self")
+  offline        Boolean         @default(false)
+  status         TimeEntryStatus @default(synced)
+  note           String?
+  recordedBy     String?         @map("recorded_by") @db.Uuid
+  receivedAt     DateTime        @default(now()) @map("received_at") @db.Timestamptz(3)
+  validatedAt    DateTime?       @map("validated_at") @db.Timestamptz(3)
+  validatedBy    String?         @map("validated_by") @db.Uuid
+  /// Transmission ONSS (Check In and Out) : `not_required`, `pending`, `sent`, `failed`.
+  onssStatus     String          @default("not_required") @map("onss_status")
+  onssReference  String?         @map("onss_reference")
+  onssError      String?         @map("onss_error")
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, projectId, day])
+  @@index([tenantId, employeeId, day])
+  @@map("time_entries")
+}
+
+enum IssueStatus {
+  open
+  change_order
+  resolved
+}
+
+/// Signalement terrain (02 P4.4) : alerte au bureau, proposition d'avenant.
+model Issue {
+  id            String      @id @db.Uuid
+  tenantId      String      @map("tenant_id") @db.Uuid
+  projectId     String      @map("project_id") @db.Uuid
+  taskId        String?     @map("task_id") @db.Uuid
+  title         String
+  description   String?
+  urgent        Boolean     @default(false)
+  status        IssueStatus @default(open)
+  changeOrderId String?     @map("change_order_id") @db.Uuid
+  reportedBy    String?     @map("reported_by") @db.Uuid
+  reporterLabel String      @map("reporter_label")
+  latitude      Decimal?    @db.Decimal(9, 6)
+  longitude     Decimal?    @db.Decimal(9, 6)
+  reportedAt    DateTime    @map("reported_at") @db.Timestamptz(3)
+  resolvedAt    DateTime?   @map("resolved_at") @db.Timestamptz(3)
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, projectId, status])
+  @@map("issues")
+}
+
+enum WorkOrderStatus {
+  draft
+  signed
+  invoiced
+}
+
+/// Bon de régie (02 P4.5) : travail hors devis signé à l'écran par le client ; les heures et le
+/// matériel sont repris en facturation régie (M8). Pas de prix sur le terrain.
+model WorkOrder {
+  id          String          @id @db.Uuid
+  tenantId    String          @map("tenant_id") @db.Uuid
+  projectId   String          @map("project_id") @db.Uuid
+  number      String?
+  day         DateTime        @db.Date
+  description String
+  status      WorkOrderStatus @default(draft)
+  signerName  String?         @map("signer_name")
+  signatureId String?         @map("signature_id") @db.Uuid
+  signedAt    DateTime?       @map("signed_at") @db.Timestamptz(3)
+  pdfKey      String?         @map("pdf_key")
+  createdBy   String?         @map("created_by") @db.Uuid
+  createdAt   DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant  Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  project Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  lines   WorkOrderLine[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId, projectId])
+  @@map("work_orders")
+}
+
+model WorkOrderLine {
+  id          String  @id @default(uuid(7)) @db.Uuid
+  tenantId    String  @map("tenant_id") @db.Uuid
+  workOrderId String  @map("work_order_id") @db.Uuid
+  position    Int
+  /// `labour` (heures d'un ouvrier) ou `material`.
+  kind        String
+  description String
+  employeeId  String? @map("employee_id") @db.Uuid
+  quantity    Decimal @db.Decimal(12, 2)
+  unit        String
+
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+
+  @@index([workOrderId, position])
+  @@map("work_order_lines")
+}
+
+/// Rapport journalier (02 P4.7) : généré (heures, photos, tâches, signalements), modifiable par le chef.
+model DailyReport {
+  id        String    @id @default(uuid(7)) @db.Uuid
+  tenantId  String    @map("tenant_id") @db.Uuid
+  projectId String    @map("project_id") @db.Uuid
+  day       DateTime  @db.Date
+  /// Contenu généré : travailleurs et minutes, tâches, photos, signalements, bons de régie.
+  summary   Json      @default("{}")
+  notes     String?
+  weather   String?
+  /// Le chef a relu et arrêté le rapport.
+  closedAt  DateTime? @map("closed_at") @db.Timestamptz(3)
+  closedBy  String?   @map("closed_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, day])
+  @@index([tenantId, day])
+  @@map("daily_reports")
 }
