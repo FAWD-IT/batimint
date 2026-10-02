@@ -3,12 +3,12 @@
 Ce fichier est le point de reprise entre sessions cloud. Une nouvelle session doit pouvoir reprendre le travail en ne lisant que lui et `CLAUDE.md`.
 
 ## Jalon en cours
-**M7 — Achats et Peppol entrant** — livré (API, worker, écrans, seed, E2E P6 verts en local), en attente de la CI. M6 ✅ validé (CI run 32 : checks + E2E sur les images de production).
+**M8 — Facturation et encaissement** — en cours : domaine (avancement, acompte, retenue, notes de crédit, QR EPC, relances, révision de prix) et schéma livrés. M7 ✅ validé (CI run 35 : checks + E2E sur les images de production).
 
 (L'étiquette `m0-done` existe localement mais le push de tags est refusé par la politique de la session : seule la branche est poussée.)
 
 ## Prochaine action
-Vérifier la CI du push M7 ; si verte, marquer M7 ✅ et démarrer M8 (facturation et encaissement : états d'avancement, factures, notes de crédit, numérotation, PDF + UBL, Peppol sortant mock, e-mail, QR EPC, paiements, Mollie mock, relances, portail ; parcours P7 et P8).
+M8 : documents (PDF facture + QR EPC, UBL Peppol BIS 3 validé par les règles officielles EN 16931 + Peppol dans les tests), puis API + worker (émission, envoi Peppol/e-mail, paiements, Mollie mock, relances, approbation des états sur le portail), écrans, seed, E2E P7 et P8.
 
 ## Relancer l'environnement
 ```bash
@@ -98,7 +98,7 @@ docker compose -f docker-compose.coolify.yml -f docker/docker-compose.sandbox.ym
 - Seed : équipe de Karim (Dupont → extension → châssis), équipe Toiture ; congés en conflit ; conformité électrique à planifier.
 - Tests : 6 intégration API M6, 2 worker (annonce unique et différée, planning du lendemain unique), 5 domaine ; E2E P3 (glisser-déposer, conflit de congé, clavier, dialogue, portail, iCal) + planning sur téléphone.
 
-### M7 — Achats et Peppol entrant (en attente CI)
+### M7 — Achats et Peppol entrant ✅ (CI run 35)
 - Domaine : regroupement par fournisseur, engagement restant, rapprochement (BC → référence chantier → adresse de livraison), appariement des lignes, ventilation, écarts avec la commande ; tests.
 - Base : bons de commande (+ lignes), réceptions, factures fournisseurs (+ lignes), imputations ; RLS (ADR 0016).
 - Documents : lecture UBL (Peppol BIS 3), PDF de bon de commande (régénéré s'il manque).
