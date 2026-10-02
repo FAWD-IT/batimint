@@ -180,3 +180,16 @@ export function requiresCheckInOut(input: {
       : input.contractAmount;
   return total >= CHECK_IN_OUT_THRESHOLD;
 }
+
+/** Heure de Bruxelles au format belge : « 8 h 02 ». */
+export function formatClockTime(at: Date): string {
+  const parts = new Intl.DateTimeFormat('fr-BE', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hourCycle: 'h23',
+    timeZone: 'Europe/Brussels',
+  }).formatToParts(at);
+  const h = Number(parts.find((p) => p.type === 'hour')?.value ?? '0');
+  const m = parts.find((p) => p.type === 'minute')?.value ?? '00';
+  return `${h} h ${m}`;
+}

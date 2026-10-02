@@ -3,7 +3,14 @@
  * Vérifie aussi l'idempotence (rejeu = aucun double effet).
  */
 import { REALTIME_PG_CHANNEL } from '@batimint/contracts';
-import { createPrismaClient, emitEvent, type PrismaClient, withSystem, withTenant } from '@batimint/db';
+import {
+  createPrismaClient,
+  emitEvent,
+  FieldCipher,
+  type PrismaClient,
+  withSystem,
+  withTenant,
+} from '@batimint/db';
 import { testDatabaseUrls } from '@batimint/db/testing';
 import { createMockIntegrations, MockMailer } from '@batimint/integrations';
 import pg from 'pg';
@@ -28,6 +35,7 @@ const tenantId = uuidv7();
 const userId = uuidv7();
 /** E-mails envoyés par le worker de fond (relais + pg-boss). */
 const bgMailer = new MockMailer();
+const cipher = new FieldCipher('worker-test-field-key');
 const silent = process.env['DEBUG_WORKER']
   ? { info: console.info, warn: console.warn, error: console.error }
   : { info: () => undefined, warn: () => undefined, error: () => undefined };
@@ -45,6 +53,7 @@ beforeAll(async () => {
     prisma,
     integrations: createMockIntegrations({ mailer: bgMailer }),
     appUrl: 'https://app.test',
+    cipher,
   };
   listener = new pg.Client({ connectionString: urls.appUrl });
   await listener.connect();
@@ -678,5 +687,201 @@ describe('chantier : avenant signé, dérive, photos (03 §5)', () => {
       tx.timelineEntry.count({ where: { projectId: p.id, type: 'photo.added' } }),
     );
     expect(count).toBe(1);
+  });
+});
+
+describe('terrain : arrivée de l’équipe, main-d’œuvre, Check In and Out, signalements (03 §7)', () => {
+  const DAY = '2026-09-15';
+  async function fieldProject() {
+    return withTenant(prisma, tenantId, userId, async (tx) => {
+      const customer = await tx.customer.create({
+        data: { tenantId, kind: 'individual', status: 'customer', displayName: 'Jean Dupont' },
+      });
+      const team = await tx.team.create({ data: { tenantId, name: 'Équipe 1' } });
+      const karim = await tx.employee.create({
+        data: {
+          tenantId,
+          firstName: 'Karim',
+          lastName: 'Benali',
+          teamId: team.id,
+          hourlyCost: 4800n,
+          inssEnc: cipher.encrypt('85073003328'),
+          inssLast4: '3328',
+        },
+      });
+      const luca = await tx.employee.create({
+        data: { tenantId, firstName: 'Luca', lastName: 'Rossi', teamId: team.id, hourlyCost: 4200n },
+      });
+      await tx.team.update({ where: { id: team.id }, data: { leaderEmployeeId: karim.id } });
+      const p = await tx.project.create({
+        data: {
+          tenantId,
+          number: `CH-${uuidv7().slice(-6)}`,
+          name: 'Salle de bain Dupont',
+          customerId: customer.id,
+          status: 'in_progress',
+          contractAmount: 1_000_000n,
+          managerUserId: userId,
+          teamId: team.id,
+          checkInOutForced: true,
+        },
+      });
+      const line = await tx.budgetLine.create({
+        data: {
+          tenantId,
+          projectId: p.id,
+          position: 0,
+          label: 'Carrelage',
+          saleAmount: 500_000n,
+          budgetedCost: 300_000n,
+          laborHours: '10',
+        },
+      });
+      return { p, karim, luca, line };
+    });
+  }
+
+  async function clock(projectId: string, employeeId: string, kind: 'in' | 'out', at: string) {
+    return withTenant(prisma, tenantId, userId, async (tx) => {
+      const e = await tx.timeEntry.create({
+        data: {
+          id: uuidv7(),
+          tenantId,
+          projectId,
+          employeeId,
+          kind,
+          at: new Date(at),
+          day: new Date(`${DAY}T00:00:00Z`),
+          geofence: 'ok',
+          onssStatus: 'pending',
+        },
+      });
+      await emitEvent(tx, {
+        tenantId,
+        type: 'time_entry.recorded.v1',
+        aggregateType: 'project',
+        aggregateId: projectId,
+        payload: { timeEntryId: e.id, projectId, employeeId, kind, day: DAY },
+        actor: { type: 'user', id: userId, label: 'Karim Benali' },
+      });
+      return e;
+    });
+  }
+
+  it('une seule entrée « Équipe de Karim arrivée », coût main-d’œuvre au départ, présences ONSS', async () => {
+    const { p, karim, luca, line } = await fieldProject();
+    await clock(p.id, karim.id, 'in', `${DAY}T06:02:00Z`);
+    await clock(p.id, luca.id, 'in', `${DAY}T06:05:00Z`);
+    const arrival = await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.timelineEntry.findFirst({
+          where: { projectId: p.id, type: 'team.arrived', body: '2 personnes sur place' },
+        }),
+      ),
+    );
+    expect(arrival).toMatchObject({ title: 'Équipe de Karim arrivée sur chantier', visibleToClient: true });
+    expect(arrival.occurredAt.toISOString()).toBe(`${DAY}T06:02:00.000Z`);
+
+    const out = await clock(p.id, luca.id, 'out', `${DAY}T14:05:00Z`);
+    const cost = await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.projectCost.findFirst({ where: { projectId: p.id, category: 'labour' } }),
+      ),
+    );
+    // 8 h brutes − 30 min de pause (paramètres par défaut) = 7 h 30 × 42 € = 315 €
+    expect(cost).toMatchObject({ budgetLineId: line.id, amount: 31_500n, sourceType: 'time_entry' });
+    expect(cost.label).toContain('Luca R.');
+
+    // Présences : Karim (INSS connu) transmis, Luca (sans INSS) refusé, visible et notifié.
+    const lucaOut = await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.timeEntry.findFirst({ where: { id: out.id, onssStatus: 'failed' } }),
+      ),
+    );
+    expect(lucaOut.onssError).toContain('INSS');
+    const karimIn = await withTenant(prisma, tenantId, userId, (tx) =>
+      tx.timeEntry.findFirstOrThrow({ where: { projectId: p.id, employeeId: karim.id } }),
+    );
+    expect(karimIn.onssStatus).toBe('sent');
+    expect(karimIn.onssReference).toMatch(/^CIO-/);
+    await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.notification.findFirst({ where: { type: 'onss.failed', link: { contains: p.id } } }),
+      ),
+    );
+    const timeline = await withTenant(prisma, tenantId, userId, (tx) =>
+      tx.timelineEntry.count({ where: { projectId: p.id, type: 'project.cost_recorded' } }),
+    );
+    expect(timeline).toBe(0);
+    await new Promise((r) => setTimeout(r, 800));
+    const arrivals = await withTenant(prisma, tenantId, userId, (tx) =>
+      tx.timelineEntry.count({ where: { projectId: p.id, type: 'team.arrived' } }),
+    );
+    expect(arrivals).toBe(1);
+  });
+
+  it('un signalement urgent alerte le bureau ; ses photos rejoignent l’entrée du fil', async () => {
+    const { p } = await fieldProject();
+    const issueId = uuidv7();
+    await withTenant(prisma, tenantId, userId, async (tx) => {
+      await tx.issue.create({
+        data: {
+          id: issueId,
+          tenantId,
+          projectId: p.id,
+          title: 'Fuite sous l’évier',
+          urgent: true,
+          reportedBy: userId,
+          reporterLabel: 'Luca Rossi',
+          reportedAt: new Date(),
+        },
+      });
+      await emitEvent(tx, {
+        tenantId,
+        type: 'issue.reported.v1',
+        aggregateType: 'project',
+        aggregateId: p.id,
+        payload: { issueId, projectId: p.id, urgent: true },
+      });
+    });
+    await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.timelineEntry.findFirst({ where: { projectId: p.id, type: 'issue.reported' } }),
+      ),
+    );
+    await withTenant(prisma, tenantId, userId, async (tx) => {
+      const a = await tx.attachment.create({
+        data: {
+          tenantId,
+          ownerType: 'issue',
+          ownerId: issueId,
+          kind: 'photo',
+          storageKey: `k/${uuidv7()}`,
+          fileName: 'fuite.jpg',
+          contentType: 'image/jpeg',
+          sizeBytes: 10,
+        },
+      });
+      await emitEvent(tx, {
+        tenantId,
+        type: 'attachment.added.v1',
+        aggregateType: 'issue',
+        aggregateId: issueId,
+        payload: { attachmentId: a.id, ownerType: 'issue', ownerId: issueId, kind: 'photo' },
+      });
+    });
+    const entry = await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.timelineEntry
+          .findFirst({ where: { projectId: p.id, type: 'issue.reported' } })
+          .then((e) => ((e?.data as { photoIds?: string[] })?.photoIds?.length ? e : null)),
+      ),
+    );
+    expect(entry.title).toBe('Signalement urgent : Fuite sous l’évier');
+    expect(entry.visibleToClient).toBe(false);
+    const n = await withTenant(prisma, tenantId, userId, (tx) =>
+      tx.notification.findFirst({ where: { type: 'issue.urgent', link: { contains: p.id } } }),
+    );
+    expect(n?.title).toBe('Urgent — Luca Rossi signale un problème sur Salle de bain Dupont');
   });
 });

@@ -499,6 +499,11 @@ export const projectTimeline: Consumer = {
       }
       case 'project.cost_recorded.v1': {
         const p = parseEventPayload('project.cost_recorded.v1', event.payload);
+        // La main-d'œuvre est recalculée à chaque pointage : visible dans le budget, pas dans le fil.
+        if (p.category === 'labour') {
+          await publishProject(ctx, projectId, ['project', 'budget']);
+          return;
+        }
         const cost = await tx.projectCost.findUnique({ where: { id: p.costId } });
         if (!cost) return;
         const post = cost.budgetLineId

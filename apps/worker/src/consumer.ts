@@ -5,7 +5,7 @@
  */
 import type { EventType } from '@batimint/contracts';
 import type { RealtimeMessage } from '@batimint/contracts';
-import type { PrismaClient, Tx } from '@batimint/db';
+import type { FieldCipher, PrismaClient, Tx } from '@batimint/db';
 import type { Integrations } from '@batimint/integrations';
 
 export interface ConsumedEvent {
@@ -23,6 +23,8 @@ export interface WorkerDeps {
   prisma: PrismaClient;
   integrations: Integrations;
   appUrl: string;
+  /** Déchiffre l'INSS pour la transmission Check In and Out (absent : présence refusée). */
+  cipher?: FieldCipher | null;
 }
 
 export interface ConsumerContext {

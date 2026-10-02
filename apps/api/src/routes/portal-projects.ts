@@ -27,6 +27,7 @@ import {
   brusselsDate,
   computeChangeOrder,
   currentProjectStep,
+  formatClockTime,
   portalAccent,
   shiftEndDate,
 } from '@batimint/domain';
@@ -102,6 +103,28 @@ async function portalProjectDto(tx: Tx, projectId: string, token: string) {
   });
   const today = brusselsDate(new Date());
   const headline = timeline.find((e) => brusselsDate(e.occurredAt) === today) ?? null;
+  // Arrivée de l'équipe (vouvoiement) : « L'équipe de Karim est chez vous depuis 8 h 02 ».
+  let headlineTitle = headline?.title ?? null;
+  if (headline?.type === 'team.arrived') {
+    const data = headline.data as {
+      teamLabel?: string;
+      isTeam?: boolean;
+      since?: string;
+      day?: string;
+    } | null;
+    const last = await tx.timeEntry.findMany({
+      where: { projectId: p.id, day: new Date(`${today}T00:00:00Z`) },
+      orderBy: { at: 'asc' },
+      select: { employeeId: true, kind: true },
+    });
+    const state = new Map<string, string>();
+    for (const e of last) state.set(e.employeeId, e.kind);
+    const onSite = [...state.values()].some((k) => k === 'in');
+    const who = data?.isTeam ? `L’équipe de ${data.teamLabel}` : (data?.teamLabel ?? 'Notre équipe');
+    headlineTitle = onSite
+      ? `${who} est chez vous depuis ${formatClockTime(new Date(data?.since ?? headline.occurredAt))}`
+      : `${who} est passée chez vous aujourd’hui`;
+  }
   const documents: {
     id: string;
     kind: 'quote' | 'change_order' | 'attachment';
@@ -168,7 +191,7 @@ async function portalProjectDto(tx: Tx, projectId: string, token: string) {
       endDate: isoDate(p.endDate),
       address: p.site ? `${p.site.street}, ${p.site.postalCode} ${p.site.city}` : null,
     },
-    headline: headline ? { title: headline.title, at: headline.occurredAt.toISOString() } : null,
+    headline: headline ? { title: headlineTitle!, at: headline.occurredAt.toISOString() } : null,
     photoOfTheDay: latest
       ? {
           url: `${base}/attachments/${latest.id}`,

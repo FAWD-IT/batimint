@@ -38,6 +38,7 @@ import { projectRoutes } from './routes/projects';
 import { changeOrderRoutes } from './routes/change-orders';
 import { commentRoutes } from './routes/comments';
 import { searchRoutes } from './routes/search';
+import { fieldRoutes } from './routes/field';
 import { realtimeRoutes } from './routes/realtime';
 
 export interface BuildOptions {
@@ -132,6 +133,7 @@ export async function buildServer(deps: AppDeps, options: BuildOptions = {}): Pr
       await v1.register(changeOrderRoutes, { deps });
       await v1.register(commentRoutes, { deps });
       await v1.register(searchRoutes, { deps });
+      await v1.register(fieldRoutes, { deps });
       await v1.register(portalRoutes, { deps });
       await v1.register(portalProjectRoutes, { deps });
       v1.get('/openapi.json', { schema: { hide: true }, config: { rateLimit: false } }, async () =>

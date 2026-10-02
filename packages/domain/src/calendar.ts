@@ -40,6 +40,17 @@ export function brusselsDate(at: Date): IsoDate {
   return parts;
 }
 
+/** Instant de minuit (heure de Bruxelles, été comme hiver) au début d'un jour civil. */
+export function brusselsMidnight(d: IsoDate): Date {
+  const guess = new Date(`${d}T00:00:00Z`);
+  for (const offsetHours of [1, 2]) {
+    const candidate = new Date(guess.getTime() - offsetHours * 3_600_000);
+    if (brusselsDate(candidate) === d && brusselsDate(new Date(candidate.getTime() - 1)) !== d)
+      return candidate;
+  }
+  return new Date(guess.getTime() - 3_600_000);
+}
+
 /** Dimanche de Pâques (algorithme de Meeus/Jones/Butcher, calendrier grégorien). */
 export function easterSunday(year: number): IsoDate {
   const a = year % 19;

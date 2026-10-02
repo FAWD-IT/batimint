@@ -1,5 +1,5 @@
 import { writeFileSync } from 'node:fs';
-import { createPrismaClient } from '@batimint/db';
+import { createPrismaClient, FieldCipher } from '@batimint/db';
 import { createIntegrations } from '@batimint/integrations';
 import pino from 'pino';
 import { createBoss, registerConsumers } from './boss';
@@ -32,6 +32,7 @@ const deps = {
   prisma,
   integrations: createIntegrations(),
   appUrl: process.env['APP_URL'] ?? 'http://localhost:3000',
+  cipher: process.env['FIELD_ENCRYPTION_KEY'] ? new FieldCipher(process.env['FIELD_ENCRYPTION_KEY']) : null,
 };
 const boss = createBoss(databaseUrl);
 boss.on('error', (err) => logger.error({ err }, 'pg-boss'));

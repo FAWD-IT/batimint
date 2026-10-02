@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
+import { brusselsMidnight } from './calendar';
 import {
   allocateLabour,
   checkGeofence,
   computeWorkedTime,
   distanceMeters,
+  formatClockTime,
   formatMinutes,
   labourCost,
   requiresCheckInOut,
@@ -92,6 +94,8 @@ describe('heures prestées', () => {
     expect(labourCost(0, 4400n)).toBe(0n);
     expect(formatMinutes(480)).toBe('8 h');
     expect(formatMinutes(455)).toBe('7 h 35');
+    expect(formatClockTime(new Date('2026-10-02T06:02:00Z'))).toBe('8 h 02'); // heure d'été
+    expect(formatClockTime(new Date('2026-12-02T16:30:00Z'))).toBe('17 h 30');
   });
 });
 
@@ -122,5 +126,13 @@ describe('Check In and Out at Work', () => {
     expect(requiresCheckInOut({ contractAmount: 50_000_000n })).toBe(true);
     expect(requiresCheckInOut({ contractAmount: 49_999_999n })).toBe(false);
     expect(requiresCheckInOut({ contractAmount: 10_000_000n, workplaceTotalAmount: 80_000_000n })).toBe(true);
+  });
+});
+
+describe('minuit à Bruxelles', () => {
+  it('suit l’heure d’été et l’heure d’hiver', () => {
+    expect(brusselsMidnight('2026-10-02').toISOString()).toBe('2026-10-01T22:00:00.000Z');
+    expect(brusselsMidnight('2026-12-02').toISOString()).toBe('2026-12-01T23:00:00.000Z');
+    expect(brusselsMidnight('2026-03-29').toISOString()).toBe('2026-03-28T23:00:00.000Z'); // jour du passage
   });
 });

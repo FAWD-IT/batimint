@@ -106,6 +106,8 @@ export const EventPayloads = {
   'time_entries.validated.v1': z.object({ projectId: Uuid, day: z.string(), employeeIds: z.array(Uuid) }),
   'issue.reported.v1': z.object({ issueId: Uuid, projectId: Uuid, urgent: z.boolean() }),
   'work_order.signed.v1': z.object({ workOrderId: Uuid, projectId: Uuid, signatureId: Uuid }),
+  /** Nouvelle tentative de transmission ONSS (Check In and Out) des pointages en échec. */
+  'attendance.retry_requested.v1': z.object({ projectId: Uuid, timeEntryIds: z.array(Uuid) }),
 } as const;
 
 export type EventType = keyof typeof EventPayloads;

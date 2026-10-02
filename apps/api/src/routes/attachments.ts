@@ -14,7 +14,7 @@ import { badRequest, forbidden, notFound } from '../lib/errors';
 import { inTenant, iso } from '../lib/tenant';
 
 const MAX_BYTES = 25 * 1024 * 1024;
-const OWNER_TYPES = ['opportunity', 'site_visit', 'customer', 'project'] as const;
+const OWNER_TYPES = ['opportunity', 'site_visit', 'customer', 'project', 'issue'] as const;
 type OwnerType = (typeof OWNER_TYPES)[number];
 
 const WRITE_PERMISSION: Record<OwnerType, Action> = {
@@ -23,12 +23,15 @@ const WRITE_PERMISSION: Record<OwnerType, Action> = {
   customer: 'customers.write',
   // Les photos de chantier sont ajoutées par le bureau, le chef de chantier et les ouvriers.
   project: 'tasks.update',
+  // Photos d'un signalement : prises par la personne qui signale, sur le chantier.
+  issue: 'field.report',
 };
 const READ_PERMISSION: Record<OwnerType, Action> = {
   opportunity: 'leads.read',
   site_visit: 'leads.read',
   customer: 'customers.read',
   project: 'projects.read',
+  issue: 'projects.read',
 };
 
 const ALLOWED =
@@ -60,6 +63,7 @@ async function ownerExists(tx: Tx, type: OwnerType, id: string): Promise<boolean
     return Boolean(await tx.siteVisit.findUnique({ where: { id }, select: { id: true } }));
   if (type === 'project')
     return Boolean(await tx.project.findUnique({ where: { id }, select: { id: true } }));
+  if (type === 'issue') return Boolean(await tx.issue.findUnique({ where: { id }, select: { id: true } }));
   return Boolean(await tx.customer.findUnique({ where: { id }, select: { id: true } }));
 }
 
@@ -284,7 +288,11 @@ export const attachmentRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async 
         const perm = WRITE_PERMISSION[a.ownerType as OwnerType] ?? 'projects.write';
         if (!can(auth.role, perm)) throw forbidden();
         // Sur un chantier, l'ouvrier ne supprime que ses propres photos.
-        if (a.ownerType === 'project' && !can(auth.role, 'projects.write') && a.createdBy !== auth.userId)
+        if (
+          (a.ownerType === 'project' || a.ownerType === 'issue') &&
+          !can(auth.role, 'projects.write') &&
+          a.createdBy !== auth.userId
+        )
           throw forbidden();
         await tx.attachment.delete({ where: { id: a.id } });
         await audit('attachment.deleted', a.ownerType, a.ownerId, { fileName: a.fileName });
