@@ -3,12 +3,12 @@
 Ce fichier est le point de reprise entre sessions cloud. Une nouvelle session doit pouvoir reprendre le travail en ne lisant que lui et `CLAUDE.md`.
 
 ## Jalon en cours
-**M3 — Devis et signature** — livré (domaine, API, PDF, portail, worker, écrans, seed, E2E P2). Reste : vérifier la CI de la branche, puis démarrer M4.
+**M4 — Chantier pivot** — livré (domaine, API, worker, cockpit, avenants, portail chantier, ⌘K, seed, E2E P5). Reste : CI verte sur la branche.
 
 (L'étiquette `m0-done` existe localement mais le push de tags est refusé par la politique de la session : seule la branche est poussée.)
 
 ## Prochaine action
-Démarrer M4 (chantier pivot, maquette `design/maquettes/cockpit-chantier.dc.html`) : page `/chantiers/[id]` à partir des `Project`, `BudgetLine`, `Task`, `TimelineEntry` créés à la signature ; budget et marge en direct (`packages/domain/budget.ts`), timeline, documents/photos, avenants (P5), ⌘K. Le seed doit alors créer le chantier Dupont à 62 % (`docs/09`).
+Démarrer M5 (terrain, maquette `design/maquettes/terrain.dc.html`) : vue `/terrain` PWA tutoyée, pointage géolocalisé hors ligne (UUIDv7 + Idempotency-Key), photos par tâche (alimentent le fil et la « photo du jour » du portail), signalements → proposition d'avenant, bons de régie signés, rapport journalier, validation des heures par le chef. Les heures validées écrivent dans `ProjectCost` (catégorie `labour`) et émettent `project.cost_recorded.v1` (ADR 0013).
 
 ## Relancer l'environnement
 ```bash
@@ -17,7 +17,7 @@ docker info >/dev/null 2>&1 || (nohup dockerd >/tmp/dockerd.log 2>&1 &)
 pnpm install
 cp -n .env.example .env
 pnpm services:up          # Postgres :5432, MinIO :9000/:9001, Mailpit :1025/:8025
-pnpm db:migrate           # migrations + rôle batimint_app + vérification RLS
+pnpm db:migrate           # migrations + rôle batimint_app + vérification RLS (si l'invite « nom de migration » bloque : pnpm --filter @batimint/db migrate:deploy)
 pnpm db:seed              # tenant de démo
 pnpm dev:apps > /tmp/dev.log 2>&1 &   # web :3000, api :4000, worker (ou `pnpm dev` qui fait tout)
 pnpm test                 # unitaires + intégration (bases batimint_test_<package> créées à la volée)
@@ -71,8 +71,17 @@ docker compose -f docker-compose.coolify.yml -f docker/docker-compose.sandbox.ym
 - Seed : 4 devis (Dupont en préparation à 6 % avec option douche à l'italienne, devis vu, envoyés, B2B en autoliquidation).
 - Tests : 14 intégration API M3, 2 worker (chantier créé une seule fois, relances/expirations), 2 PDF, 7 domaine ; E2E P2 complet (devis → envoi → « Vu par » en direct → signature mobile avec attestation → chantier créé, affaire gagnée).
 
+### M4 — Chantier pivot ✅
+- Domaine : calendrier belge (fériés, jours ouvrés), étapes du chantier, « jour n sur m », avenants calculés comme un devis, mentions @, liste « À faire » triée ; tests.
+- Base : avenants et lignes, grand livre des coûts engagés `ProjectCost`, commentaires, tâches (avancement, checklist, assignation, échéance), timeline (montant, données), relations chantier ↔ client/adresse ; RLS sur tout (ADR 0013).
+- API : liste et cockpit recalculés depuis les données (marge prévue/estimée, engagé par catégorie, facturé, avancement pondéré, dérive, pastille d'état), fiche, cycle de vie (préparation → en cours ⇄ suspendu), tâches, coûts divers, fil (entrées + commentaires, filtres), commentaires avec mentions, avenants (brouillon, envoi numéroté avec PDF, retrait, refus, PDF), recherche ⌘K, portail chantier (consultation, questions, validation signée ou refus d'un avenant, documents, flux temps réel), photos de chantier avec visibilité client.
+- Worker : e-mail d'avenant (PDF + lien), avenant signé → postes, contrat, tâches, date de fin ; fil (statut, photos regroupées, tâches, coûts, dérive), alerte de dérive unique par poste, notifications (mentions, questions du client), réponse envoyée au client, temps réel cockpit/listes/portail.
+- Web : `/chantiers` (vues, recherche, avancement, contrat, marge), cockpit conforme à la maquette (en-tête, barre d'étapes, fil en direct, marge en direct, avancement par poste, à faire) + onglets Tâches, Photos et documents, Avenants (éditeur avec bibliothèque, suivi, échanges client), Budget (par poste, coûts divers) ; « Chantiers actifs » dans la barre latérale ; palette ⌘K (recherche, actions, `?`, « g » + lettre) ; portail chantier mobile conforme à la maquette ; lien « Suivre mon chantier » après la signature du devis.
+- Seed : 25 chantiers dans tous les statuts (dont un ≥ 500 000 € en préparation pour Check In and Out) ; chantier Dupont des maquettes (62 %, marge 24,0 % → 21,8 %, dérive Carrelage, facture 2026-118 échue, avenant n°3 en attente avec question du client).
+- Tests : 13 intégration API M4 (chiffres, dérive, tâches, statut, fil, mentions, avenants, portail, signature, isolation, Ouvrier), 3 worker (avenant signé idempotent, dérive unique, photos regroupées), 15 domaine ; E2E P5 complet (deux navigateurs synchronisés, question/réponse, validation sur mobile, budget mis à jour, ⌘K) et cockpit mobile.
+
 ## Reste à faire
-M1 → M13 selon `docs/11-plan-de-livraison.md`.
+M5 → M13 selon `docs/11-plan-de-livraison.md`.
 
 ## Écarts avec la spécification
 - Nouveau paquet `packages/documents` (PDF) en plus de la liste de `CLAUDE.md` (ADR 0012).
@@ -80,7 +89,11 @@ M1 → M13 selon `docs/11-plan-de-livraison.md`.
 - `exclude_from_hc` remplacé par des services ponctuels « au repos et sains » (ADR 0007).
 - Image MinIO communautaire `pgsty/minio` (ADR 0006).
 - Auth maison au lieu de Better Auth (ADR 0002) ; même origine via proxy Next (ADR 0003).
-- Navigation : seuls les modules livrés apparaissent (pas de lien vers un écran vide). ⌘K arrive avec M4.
+- Navigation : seuls les modules livrés apparaissent (pas de lien vers un écran vide).
+- Cockpit : le bouton « Facturer l'avancement » de la maquette arrive avec M8 ; « Nouvel avenant » tient sa place d'action principale d'ici là. « Relancer » une facture échue arrive aussi avec M8.
+- Seed Dupont : engagé ≈ 19 000 € au lieu des 21 160 € de la maquette (incompatible avec 21,8 % de marge estimée selon l'ADR 0004) ; les photos de chantier du seed arrivent avec M5 (stockage depuis le seed).
+- La numérotation des factures du seed reprend à 2026-100 (« ancien logiciel ») pour que la facture Dupont porte le n° 2026-118.
+- Vue carte des chantiers actifs (03 §5) : reportée à M11 (pilotage), avec le géocodage des adresses.
 
 ## Dette technique connue
 - Quelques routes M1/M2 lancent des requêtes en parallèle (`Promise.all`) dans une même transaction : accepté par `pg` 8 (avertissement de dépréciation), à rendre séquentiel avant une montée en `pg` 9.
@@ -102,6 +115,11 @@ M1 → M13 selon `docs/11-plan-de-livraison.md`.
 - Régime intracommunautaire pour un client assujetti étranger (proposé automatiquement, `domain/vat.ts`)
 
 ## Améliorations repérées en jouant les parcours
+- M4 · Sophie · cockpit : un retard de chantier proposait « Revoir les dates » sans action → bouton retiré tant qu'il ne mène nulle part.
+- M4 · Sophie · tâches : l'avancement réel (80 %) s'affichait arrondi au palier (75 %) → la valeur réelle est proposée parmi les paliers.
+- M4 · Sophie · avenant : le dialogue d'envoi disparaissait au premier enregistrement d'un nouvel avenant (l'éditeur se recréait) → envoi porté par le tiroir.
+- M4 · démo tôt le matin : les événements « du jour » (13 h 30) apparaissaient dans le futur → datés de la veille ouvrable avant 13 h 35.
+- M4 · M. Dupont · portail : le devis signé importé sans PDF archivé menait à une erreur → PDF régénéré avec la preuve de signature.
 - M3 · M. Dupont (mobile) · signature : un tracé qui finissait hors de la zone fermait le dialogue (clic sur le fond) → un dialogue ne se ferme que si l'appui commence sur le fond.
 - M3 · Sophie · éditeur : l'ouvrage était toujours éclaté (`z.coerce.boolean()` lit « false » comme vrai) → `z.stringbool()` dans toute l'API.
 - M3 · Sophie · seed/bibliothèques types : l'installation ignorait des articles quand un autre tenant les avait (requête sans filtre tenant en contexte système) → filtre explicite.

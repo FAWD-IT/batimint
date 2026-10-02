@@ -30,7 +30,7 @@ test.describe('P1 — inscription et mise en route', () => {
     await expect(page).toHaveURL(/\/bienvenue/);
     await expectNoA11yViolations(page);
     await page.getByLabel("Numéro d'entreprise (BCE)").fill('0123.456.749');
-    await page.getByRole('button', { name: 'Rechercher' }).click();
+    await page.getByRole('button', { name: 'Rechercher', exact: true }).click();
     await expect(page.getByText('Entreprise trouvée dans le registre européen VIES.')).toBeVisible();
     await expect(page.getByLabel('Raison sociale')).toHaveValue("Rénov'Habitat SRL");
     await expect(page.getByLabel('Localité')).toHaveValue('Charleroi');
