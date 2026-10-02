@@ -519,10 +519,49 @@ export const PortalProjectSchema = z.object({
       thread: z.array(PortalCommentSchema),
     }),
   ),
+  /** États d'avancement soumis au client (approbation ou contestation, 02 P7.2). */
+  statements: z.array(
+    z.object({
+      id: Uuid,
+      ordinal: z.number().int(),
+      status: z.enum(['submitted', 'approved', 'disputed', 'invoiced']),
+      periodEnd: IsoDay,
+      cumulativePercent: DecimalString,
+      periodAmount: CentsSchema,
+      lines: z.array(
+        z.object({
+          label: z.string(),
+          previousPercent: DecimalString,
+          cumulativePercent: DecimalString,
+          periodAmount: CentsSchema,
+        }),
+      ),
+      approvedAt: z.string().nullable(),
+      approvedByName: z.string().nullable(),
+      disputeReason: z.string().nullable(),
+    }),
+  ),
+  /** Factures émises (vouvoiement : « à payer », paiement en ligne). */
+  invoices: z.array(
+    z.object({
+      id: Uuid,
+      number: z.string(),
+      title: z.string(),
+      type: z.string(),
+      issueDate: IsoDay.nullable(),
+      dueDate: IsoDay.nullable(),
+      totalGross: CentsSchema,
+      balance: CentsSchema,
+      overdue: z.boolean(),
+      structuredCommunication: z.string().nullable(),
+      canPayOnline: z.boolean(),
+      href: z.string(),
+    }),
+  ),
   documents: z.array(
     z.object({
       id: z.string(),
-      kind: z.enum(['quote', 'change_order', 'attachment']),
+      kind: z.enum(['quote', 'change_order', 'attachment', 'invoice']),
       title: z.string(),
       date: z.string().nullable(),
       href: z.string(),

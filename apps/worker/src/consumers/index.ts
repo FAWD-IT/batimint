@@ -11,6 +11,7 @@ import {
   supplierInvoiceLedger,
   supplierInvoiceMatching,
 } from './purchasing';
+import { invoicingConsumers } from './invoicing';
 import { memberJoined } from './members';
 import { diagnosticNotification } from './notifications';
 import {
@@ -52,6 +53,7 @@ export const CONSUMERS: readonly Consumer[] = [
   supplierInvoiceMatching,
   supplierInvoiceInbox,
   supplierInvoiceLedger,
+  ...invoicingConsumers,
   realtimeBroadcast,
 ];
 

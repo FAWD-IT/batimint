@@ -16,3 +16,5 @@ export type * from './ai/types';
 export { MockAiAssistant, normalizeText, similarity } from './ai/mock';
 export type * from './onss/types';
 export { MockAttendanceRegistry } from './onss/mock';
+export type * from './payments/types';
+export { MockPaymentLinkProvider } from './payments/mock';

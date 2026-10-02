@@ -7,7 +7,7 @@
  *  - quote.reminder_due → relance du client à J+7.
  */
 import { createHash, randomBytes } from 'node:crypto';
-import { parseEventPayload, tenantChannel } from '@batimint/contracts';
+import { parseEventPayload, parseTenantSettings, tenantChannel } from '@batimint/contracts';
 import { emitEvent, loadVersionContent, nextSequenceValue, type Tx } from '@batimint/db';
 import {
   computeDocumentTotals,
@@ -246,6 +246,11 @@ export const quoteSignedProject: Consumer = {
         status: 'preparation',
         contractAmount: totals.document.totalNet,
         managerUserId: q.ownerUserId,
+        // Retenue de garantie du contrat : paramètre du tenant au moment de la signature.
+        retentionPercent: parseTenantSettings(
+          (await tx.tenant.findUniqueOrThrow({ where: { id: event.tenantId }, select: { settings: true } }))
+            .settings,
+        ).retentionPercent,
       },
     });
 

@@ -2,10 +2,13 @@
  * Tâches planifiées (pg-boss) : elles ne font qu'émettre des événements ; les effets (e-mails,
  * fil chronologique) restent dans les consommateurs (règle n°3).
  */
+import { parseTenantSettings } from '@batimint/contracts';
 import { emitEvent, withSystem } from '@batimint/db';
 import {
   addDays,
   brusselsDate,
+  dueDunningStep,
+  invoiceBalance,
   isQuoteExpired,
   isQuoteReminderDue,
   isWorkingDay,
@@ -14,10 +17,13 @@ import {
 } from '@batimint/domain';
 import type { PgBoss } from 'pg-boss';
 import type { WorkerDeps } from './consumer';
+import { dunningPolicy } from './consumers/invoicing';
 
 export const QUOTE_MAINTENANCE_QUEUE = 'schedule.quote-maintenance';
 export const ARRIVAL_NOTICE_QUEUE = 'schedule.arrival-notice';
 export const DAY_AHEAD_QUEUE = 'schedule.planning-day-ahead';
+export const DUNNING_QUEUE = 'schedule.invoice-dunning';
+export const PEPPOL_DELIVERY_QUEUE = 'schedule.peppol-delivery';
 
 /** Une date de début n'est annoncée au client qu'une fois stable (glisser-déposer successifs). */
 export const ARRIVAL_SETTLE_MS = 10 * 60_000;
@@ -160,6 +166,89 @@ export async function runDayAhead(deps: WorkerDeps, now: Date = new Date()) {
   });
 }
 
+/** Relances dues ce jour (05 §6) : une étape à la fois, jamais deux fois la même. */
+export async function runDunning(deps: WorkerDeps, now: Date = new Date()) {
+  return withSystem(deps.prisma, async (tx) => {
+    const today = brusselsDate(now);
+    const invoices = await tx.invoice.findMany({
+      where: {
+        status: { in: ['issued', 'sent', 'delivered', 'partially_paid'] },
+        type: { not: 'credit_note' },
+        remindersPaused: false,
+        dueDate: { lt: new Date(`${today}T00:00:00Z`) },
+      },
+      include: {
+        customer: { select: { kind: true } },
+        tenant: { select: { settings: true } },
+        dunning: { select: { step: true } },
+      },
+      take: 5000,
+    });
+    let due = 0;
+    for (const i of invoices) {
+      const step = dueDunningStep({
+        dueDate: iso(i.dueDate!),
+        today,
+        stepsSent: i.dunning.length,
+        balance: invoiceBalance({
+          totalGross: i.totalGross,
+          retentionAmount: i.retentionAmount,
+          paid: i.amountPaid,
+          credited: i.amountCredited,
+        }),
+        customerKind: i.customer.kind,
+        policy: dunningPolicy(parseTenantSettings(i.tenant.settings)),
+      });
+      if (!step) continue;
+      const already = await tx.outboxEvent.findFirst({
+        where: {
+          type: 'invoice.reminder_due.v1',
+          aggregateId: i.id,
+          payload: { path: ['step'], equals: step.step },
+        },
+        select: { id: true },
+      });
+      if (already) continue;
+      await emitEvent(tx, {
+        tenantId: i.tenantId,
+        type: 'invoice.reminder_due.v1',
+        aggregateType: 'invoice',
+        aggregateId: i.id,
+        payload: { invoiceId: i.id, step: step.step },
+        actor: { type: 'system', label: 'Relance automatique' },
+      });
+      due++;
+    }
+    return { due };
+  });
+}
+
+/** Suivi des factures envoyées par Peppol : statut de livraison chez le fournisseur d'accès. */
+export async function runPeppolDelivery(deps: WorkerDeps) {
+  return withSystem(deps.prisma, async (tx) => {
+    const invoices = await tx.invoice.findMany({
+      where: { deliveryChannel: 'peppol', deliveryStatus: 'sent', peppolDocumentId: { not: null } },
+      select: { id: true, tenantId: true, peppolDocumentId: true },
+      take: 500,
+    });
+    let updated = 0;
+    for (const i of invoices) {
+      const s = await deps.integrations.peppol.getDeliveryStatus(i.peppolDocumentId!).catch(() => null);
+      if (!s || s.status === 'sent' || s.status === 'queued') continue;
+      await emitEvent(tx, {
+        tenantId: i.tenantId,
+        type: 'invoice.delivery_updated.v1',
+        aggregateType: 'invoice',
+        aggregateId: i.id,
+        payload: { invoiceId: i.id, status: s.status, message: s.message ?? null },
+        actor: { type: 'system', label: 'Peppol' },
+      });
+      updated++;
+    }
+    return { updated };
+  });
+}
+
 export async function registerSchedules(
   boss: PgBoss,
   deps: WorkerDeps,
@@ -182,5 +271,17 @@ export async function registerSchedules(
   await boss.work(DAY_AHEAD_QUEUE, async () => {
     const r = await runDayAhead(deps);
     if (r.sent) logger.info(r, 'planning du lendemain envoyé');
+  });
+  await boss.createQueue(DUNNING_QUEUE, { retryLimit: 2 }).catch(() => undefined);
+  await boss.schedule(DUNNING_QUEUE, '0 9 * * *', {}, { tz: 'Europe/Brussels' });
+  await boss.work(DUNNING_QUEUE, async () => {
+    const r = await runDunning(deps);
+    if (r.due) logger.info(r, 'factures : relances dues');
+  });
+  await boss.createQueue(PEPPOL_DELIVERY_QUEUE, { retryLimit: 2 }).catch(() => undefined);
+  await boss.schedule(PEPPOL_DELIVERY_QUEUE, '*/15 * * * *', {}, { tz: 'Europe/Brussels' });
+  await boss.work(PEPPOL_DELIVERY_QUEUE, async () => {
+    const r = await runPeppolDelivery(deps);
+    if (r.updated) logger.info(r, 'factures : livraisons Peppol');
   });
 }

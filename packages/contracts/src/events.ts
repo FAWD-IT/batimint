@@ -132,6 +132,34 @@ export const EventPayloads = {
     automatic: z.boolean(),
   }),
   'supplier_invoice.to_allocate.v1': z.object({ invoiceId: Uuid }),
+  /** Facture ou note de crédit émise (numéro définitif) : envoi Peppol ou e-mail, timeline. */
+  'invoice.issued.v1': z.object({
+    invoiceId: Uuid,
+    projectId: Uuid.nullable(),
+    type: z.string(),
+    number: z.string(),
+  }),
+  /** Statut d'acheminement mis à jour (Peppol livré, e-mail en échec…). */
+  'invoice.delivery_updated.v1': z.object({
+    invoiceId: Uuid,
+    status: z.enum(['queued', 'sent', 'delivered', 'failed']),
+    message: z.string().nullable(),
+  }),
+  /** Relance due selon le calendrier (05 §6) : une étape à la fois. */
+  'invoice.reminder_due.v1': z.object({ invoiceId: Uuid, step: z.number().int() }),
+  'payment.received.v1': z.object({
+    paymentId: Uuid,
+    invoiceId: Uuid,
+    amount: z.string(),
+    source: z.enum(['manual', 'payment_link']),
+  }),
+  'progress_statement.submitted.v1': z.object({ statementId: Uuid, projectId: Uuid }),
+  'progress_statement.approved.v1': z.object({
+    statementId: Uuid,
+    projectId: Uuid,
+    byClient: z.boolean(),
+  }),
+  'progress_statement.disputed.v1': z.object({ statementId: Uuid, projectId: Uuid, reason: z.string() }),
   /** Nouvelle tentative de transmission ONSS (Check In and Out) des pointages en échec. */
   'attendance.retry_requested.v1': z.object({ projectId: Uuid, timeEntryIds: z.array(Uuid) }),
 } as const;

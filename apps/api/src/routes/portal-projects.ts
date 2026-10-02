@@ -5,6 +5,7 @@
  */
 import {
   PortalChangeOrderRefuseSchema,
+  PortalStatementDecisionSchema,
   PortalChangeOrderSignSchema,
   PortalCommentCreateSchema,
   PortalProjectSchema,
@@ -12,6 +13,7 @@ import {
 } from '@batimint/contracts';
 import {
   createPortalToken,
+  createProgressInvoiceDraft,
   emitEvent,
   type EventActor,
   hashPortalToken,
@@ -27,7 +29,9 @@ import {
   brusselsDate,
   computeChangeOrder,
   currentProjectStep,
+  dec,
   formatClockTime,
+  formatStructuredCommunication,
   portalAccent,
   shiftEndDate,
 } from '@batimint/domain';
@@ -38,6 +42,8 @@ import type { AppDeps } from '../context';
 import { AppError, conflict } from '../lib/errors';
 import { iso, isoDate } from '../lib/tenant';
 import { coLineInputs, renderChangeOrderPdfFor } from '../services/change-orders';
+import { balanceOf, invoiceDocuments } from '../services/invoicing';
+import { createPaymentLink } from './invoicing';
 import { renderVersionPdf } from '../services/quotes';
 import { driftThresholdOf } from '../services/projects';
 
@@ -59,7 +65,7 @@ async function resolveProjectToken(deps: AppDeps, token: string) {
 
 const VISIBLE_CO = ['sent', 'signed', 'refused'] as const;
 
-async function portalProjectDto(tx: Tx, projectId: string, token: string) {
+async function portalProjectDto(deps: AppDeps, tx: Tx, projectId: string, token: string) {
   const p = await tx.project.findUnique({
     where: { id: projectId },
     include: { tenant: true, customer: true, site: true, quote: true },
@@ -127,7 +133,7 @@ async function portalProjectDto(tx: Tx, projectId: string, token: string) {
   }
   const documents: {
     id: string;
-    kind: 'quote' | 'change_order' | 'attachment';
+    kind: 'quote' | 'change_order' | 'attachment' | 'invoice';
     title: string;
     date: string | null;
     href: string;
@@ -161,6 +167,28 @@ async function portalProjectDto(tx: Tx, projectId: string, token: string) {
       href: `${base}/attachments/${d.id}`,
     });
 
+  // États d'avancement soumis au client et factures émises (02 P7, P8).
+  const statements = await tx.progressStatement.findMany({
+    where: { projectId: p.id, status: { in: ['submitted', 'approved', 'disputed', 'invoiced'] } },
+    include: { lines: { orderBy: { position: 'asc' } } },
+    orderBy: { ordinal: 'desc' },
+    take: 12,
+  });
+  const pctOf = (a: bigint, c: bigint) =>
+    c === 0n ? '0' : dec(a.toString()).dividedBy(c.toString()).times(100).toDecimalPlaces(1).toString();
+  const invoices = await tx.invoice.findMany({
+    where: { projectId: p.id, status: { notIn: ['draft'] }, number: { not: null } },
+    orderBy: { issueDate: 'desc' },
+  });
+  const onlinePayments = deps.integrations.payments.provider !== 'none';
+  for (const inv of invoices)
+    documents.push({
+      id: inv.id,
+      kind: 'invoice',
+      title: `${inv.type === 'credit_note' ? 'Note de crédit' : 'Facture'} ${inv.number}`,
+      date: iso(inv.issuedAt),
+      href: `${base}/invoices/${inv.id}/pdf`,
+    });
   const manager = p.managerUserId ? await tx.user.findUnique({ where: { id: p.managerUserId } }) : null;
   const managerEmployee = p.managerUserId
     ? await tx.employee.findFirst({ where: { userId: p.managerUserId } })
@@ -233,6 +261,47 @@ async function portalProjectDto(tx: Tx, projectId: string, token: string) {
           .map(commentDto),
       };
     }),
+    statements: statements.map((st) => ({
+      id: st.id,
+      ordinal: st.ordinal,
+      status: st.status as 'submitted' | 'approved' | 'disputed' | 'invoiced',
+      periodEnd: isoDate(st.periodEnd)!,
+      cumulativePercent: pctOf(st.cumulativeAmount, st.contractAmount),
+      periodAmount: Number(st.cumulativeAmount - st.previousAmount),
+      lines: st.lines
+        .filter((l) => l.contractAmount > 0n)
+        .map((l) => ({
+          label: l.label,
+          previousPercent: pctOf(l.previousAmount, l.contractAmount),
+          cumulativePercent: pctOf(l.cumulativeAmount, l.contractAmount),
+          periodAmount: Number(l.cumulativeAmount - l.previousAmount),
+        })),
+      approvedAt: iso(st.approvedAt),
+      approvedByName: st.approvedByName,
+      disputeReason: st.disputeReason,
+    })),
+    invoices: invoices
+      .filter((inv) => inv.type !== 'credit_note')
+      .map((inv) => {
+        const balance = balanceOf(inv);
+        const due = isoDate(inv.dueDate);
+        return {
+          id: inv.id,
+          number: inv.number!,
+          title: inv.title,
+          type: inv.type,
+          issueDate: isoDate(inv.issueDate),
+          dueDate: due,
+          totalGross: Number(inv.totalGross),
+          balance: Number(balance),
+          overdue: balance > 0n && due !== null && due < today,
+          structuredCommunication: inv.structuredCommunication
+            ? formatStructuredCommunication(inv.structuredCommunication)
+            : null,
+          canPayOnline: onlinePayments && balance > 0n,
+          href: `${base}/invoices/${inv.id}/pdf`,
+        };
+      }),
     documents,
     timeline: timeline.map((e) => ({
       id: e.id,
@@ -269,7 +338,7 @@ export const portalProjectRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = asy
         // « Vu par le client » dans le cockpit : une écriture au plus toutes les 5 minutes.
         if (!t.lastUsedAt || Date.now() - t.lastUsedAt.getTime() > 5 * 60_000)
           await tx.portalToken.update({ where: { id: t.id }, data: { lastUsedAt: new Date() } });
-        return portalProjectDto(tx, t.projectId, req.params.token);
+        return portalProjectDto(deps, tx, t.projectId, req.params.token);
       });
     },
   );
@@ -488,7 +557,7 @@ export const portalProjectRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = asy
           payload: { projectId: t.projectId, changeOrderId: co.id, signatureId: signature.id },
           actor,
         });
-        return portalProjectDto(tx, t.projectId, req.params.token);
+        return portalProjectDto(deps, tx, t.projectId, req.params.token);
       });
     },
   );
@@ -540,8 +609,120 @@ export const portalProjectRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = asy
           payload: { projectId: t.projectId, changeOrderId: co.id, reason: req.body.reason ?? null },
           actor,
         });
-        return portalProjectDto(tx, t.projectId, req.params.token);
+        return portalProjectDto(deps, tx, t.projectId, req.params.token);
       });
+    },
+  );
+
+  app.post(
+    '/portal/projects/:token/progress-statements/:id/decision',
+    {
+      schema: {
+        tags: ['portail'],
+        summary: 'Approuver ou contester un état d’avancement',
+        params: coParams,
+        body: PortalStatementDecisionSchema,
+        response: { 200: PortalProjectSchema },
+      },
+      config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+    },
+    async (req) => {
+      const t = await resolveProjectToken(deps, req.params.token);
+      return withTenant(deps.prisma, t.tenantId, null, async (tx) => {
+        const st = await tx.progressStatement.findFirst({
+          where: { id: req.params.id, projectId: t.projectId },
+        });
+        if (!st) throw portalNotFound();
+        if (st.status !== 'submitted')
+          throw conflict('statement_not_pending', 'Cet état d’avancement n’attend plus votre réponse.');
+        const customer = await tx.customer.findUnique({ where: { id: t.customerId ?? '' } });
+        const actor: EventActor = { type: 'portal', id: t.id, label: customer?.displayName ?? 'Client' };
+        const b = req.body;
+        if (b.decision === 'approve') {
+          await tx.progressStatement.update({
+            where: { id: st.id },
+            data: { status: 'approved', approvedAt: new Date(), approvedByName: b.signerName },
+          });
+          await createProgressInvoiceDraft(tx, st.id, null);
+        } else
+          await tx.progressStatement.update({
+            where: { id: st.id },
+            data: { status: 'disputed', disputedAt: new Date(), disputeReason: b.reason },
+          });
+        await writeAudit(tx, {
+          tenantId: t.tenantId,
+          actor,
+          action: b.decision === 'approve' ? 'progress_statement.approved' : 'progress_statement.disputed',
+          entityType: 'progress_statement',
+          entityId: st.id,
+          changes: b.decision === 'approve' ? { signerName: b.signerName } : { reason: b.reason },
+          ip: req.ip,
+          userAgent: req.headers['user-agent'] ?? null,
+          requestId: req.id,
+        });
+        if (b.decision === 'approve')
+          await emitEvent(tx, {
+            tenantId: t.tenantId,
+            type: 'progress_statement.approved.v1',
+            aggregateType: 'project',
+            aggregateId: t.projectId,
+            payload: { statementId: st.id, projectId: t.projectId, byClient: true },
+            actor,
+          });
+        else
+          await emitEvent(tx, {
+            tenantId: t.tenantId,
+            type: 'progress_statement.disputed.v1',
+            aggregateType: 'project',
+            aggregateId: t.projectId,
+            payload: { statementId: st.id, projectId: t.projectId, reason: b.reason },
+            actor,
+          });
+        return portalProjectDto(deps, tx, t.projectId, req.params.token);
+      });
+    },
+  );
+
+  app.post(
+    '/portal/projects/:token/invoices/:id/pay',
+    {
+      schema: {
+        tags: ['portail'],
+        summary: 'Payer une facture en ligne (lien de paiement)',
+        params: coParams,
+        response: { 200: z.object({ url: z.string(), amount: z.number().int() }) },
+      },
+      config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+    },
+    async (req) => {
+      const t = await resolveProjectToken(deps, req.params.token);
+      return withTenant(deps.prisma, t.tenantId, null, async (tx) => {
+        const inv = await tx.invoice.findFirst({ where: { id: req.params.id, projectId: t.projectId } });
+        if (!inv || inv.status === 'draft') throw portalNotFound();
+        const back = `${deps.config.APP_URL.replace(/\/$/, '')}/p/${encodeURIComponent(req.params.token)}`;
+        return createPaymentLink(tx, deps, t.tenantId, inv.id, back);
+      });
+    },
+  );
+
+  app.get(
+    '/portal/projects/:token/invoices/:id/pdf',
+    { schema: { tags: ['portail'], summary: 'Facture (PDF)', params: coParams, hide: true } },
+    async (req, reply) => {
+      const t = await resolveProjectToken(deps, req.params.token);
+      const doc = await withTenant(deps.prisma, t.tenantId, null, async (tx) => {
+        const inv = await tx.invoice.findFirst({ where: { id: req.params.id, projectId: t.projectId } });
+        if (!inv || inv.status === 'draft' || !inv.number) throw portalNotFound();
+        if (inv.pdfKey) {
+          const stored = await deps.integrations.storage.get('legal', inv.pdfKey).catch(() => null);
+          if (stored) return { number: inv.number, body: Buffer.from(stored) };
+        }
+        return { number: inv.number, body: (await invoiceDocuments(tx, deps.integrations, inv.id)).pdf };
+      });
+      return reply
+        .header('content-type', 'application/pdf')
+        .header('content-disposition', `inline; filename="${doc.number.replace(/[^\w.-]/g, '_')}.pdf"`)
+        .send(doc.body);
     },
   );
 
@@ -600,7 +781,7 @@ export const portalProjectRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = asy
           },
           actor: { type: 'portal', id: t.id, label },
         });
-        return portalProjectDto(tx, t.projectId, req.params.token);
+        return portalProjectDto(deps, tx, t.projectId, req.params.token);
       });
     },
   );

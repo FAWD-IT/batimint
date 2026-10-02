@@ -24,6 +24,8 @@ import { diagnosticNotification } from '../src/consumers/notifications';
 import { loadDotEnv } from '../src/env';
 import { OutboxRelay } from '../src/relay';
 import { runConsumer } from '../src/runner';
+import type { WorkerDeps } from '../src/consumer';
+import { runDunning, runPeppolDelivery } from '../src/schedules';
 
 loadDotEnv();
 const urls = testDatabaseUrls('worker');
@@ -37,6 +39,8 @@ const userId = uuidv7();
 /** E-mails envoyés par le worker de fond (relais + pg-boss). */
 const bgMailer = new MockMailer();
 const cipher = new FieldCipher('worker-test-field-key');
+const integrations = createMockIntegrations({ mailer: bgMailer });
+let deps: WorkerDeps;
 const silent = process.env['DEBUG_WORKER']
   ? { info: console.info, warn: console.warn, error: console.error }
   : { info: () => undefined, warn: () => undefined, error: () => undefined };
@@ -50,9 +54,9 @@ beforeAll(async () => {
     await tx.user.create({ data: { id: userId, email: `w-${userId.slice(-8)}@example.test`, name: 'W' } });
     await tx.membership.create({ data: { tenantId, userId, role: 'owner' } });
   });
-  const deps = {
+  deps = {
     prisma,
-    integrations: createMockIntegrations({ mailer: bgMailer }),
+    integrations,
     appUrl: 'https://app.test',
     cipher,
   };
@@ -1197,5 +1201,313 @@ describe('achats : rapprochement des factures fournisseurs (02 P6)', () => {
         }),
       ),
     );
+  });
+});
+
+describe('facturation : envoi, livraison Peppol, paiements, états, relances (02 P7)', () => {
+  const today = brusselsDate(new Date());
+  async function issuedInvoice(opts: {
+    kind: 'individual' | 'company';
+    email?: string | null;
+    dueDate?: string;
+    status?: 'issued' | 'sent';
+  }) {
+    return withTenant(prisma, tenantId, userId, async (tx) => {
+      const customer = await tx.customer.create({
+        data: {
+          tenantId,
+          kind: opts.kind,
+          displayName: opts.kind === 'company' ? 'Immo Charleroi SA' : 'Jean Facture',
+          email: opts.email === undefined ? `client-${uuidv7().slice(-6)}@example.be` : opts.email,
+          ...(opts.kind === 'company' ? { enterpriseNumber: '0417497106', vatNumber: 'BE0417497106' } : {}),
+        },
+      });
+      const project = await tx.project.create({
+        data: {
+          tenantId,
+          number: `CH-${uuidv7().slice(-6)}`,
+          name: 'Chantier facturé',
+          customerId: customer.id,
+          status: 'in_progress',
+          contractAmount: 1_000_000n,
+        },
+      });
+      const id = uuidv7();
+      const number = `2026-${uuidv7().slice(-5)}`;
+      await integrations.storage.put({
+        bucket: 'legal',
+        key: `t/${tenantId}/invoices/${number}.xml`,
+        body: Buffer.from(
+          '<?xml version="1.0"?><Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"/>',
+        ),
+        contentType: 'application/xml',
+      });
+      const invoice = await tx.invoice.create({
+        data: {
+          id,
+          tenantId,
+          projectId: project.id,
+          customerId: customer.id,
+          type: 'progress',
+          status: opts.status ?? 'issued',
+          number,
+          title: 'État d’avancement n°1 — 40 %',
+          issueDate: new Date(`${today}T00:00:00Z`),
+          dueDate: new Date(`${opts.dueDate ?? addDays(today, 30)}T00:00:00Z`),
+          totalNet: 100_000n,
+          totalVat: 6_000n,
+          totalGross: 106_000n,
+          structuredCommunication: '104260011893',
+          ublKey: `t/${tenantId}/invoices/${number}.xml`,
+          ...(opts.status === 'sent'
+            ? { deliveryChannel: 'email', deliveryStatus: 'sent', sentAt: new Date() }
+            : {}),
+        },
+      });
+      return { invoice, customer, project };
+    });
+  }
+  const issueEvent = (i: { id: string; projectId: string | null; number: string | null }) =>
+    withTenant(prisma, tenantId, userId, (tx) =>
+      emitEvent(tx, {
+        tenantId,
+        type: 'invoice.issued.v1',
+        aggregateType: 'invoice',
+        aggregateId: i.id,
+        payload: { invoiceId: i.id, projectId: i.projectId, type: 'progress', number: i.number! },
+      }),
+    );
+
+  it('particulier : e-mail avec PDF et lien du portail, statut « envoyée », fil visible du client', async () => {
+    const { invoice, customer } = await issuedInvoice({ kind: 'individual' });
+    await issueEvent(invoice);
+    const sent = await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.invoice.findFirst({ where: { id: invoice.id, deliveryStatus: 'sent' } }),
+      ),
+    );
+    expect(sent).toMatchObject({ status: 'sent', deliveryChannel: 'email', sentTo: customer.email });
+    const mail = bgMailer.sent.find((m) => m.to === customer.email)!;
+    expect(mail.subject).toContain(`facture ${invoice.number}`);
+    expect(mail.text).toContain('+++104/2600/11893+++');
+    expect(mail.text).toContain('https://app.test/p/');
+    const entry = await withTenant(prisma, tenantId, userId, (tx) =>
+      tx.timelineEntry.findFirst({ where: { projectId: invoice.projectId, type: 'invoice.issued' } }),
+    );
+    expect(entry).toMatchObject({ visibleToClient: true, title: `Facture ${invoice.number} émise` });
+  });
+
+  it('entreprise inscrite sur Peppol : envoi Peppol, puis livraison suivie par la tâche planifiée', async () => {
+    await withTenant(prisma, tenantId, userId, (tx) =>
+      tx.integrationConnection.upsert({
+        where: { tenantId_kind: { tenantId, kind: 'peppol' } },
+        update: { status: 'active', externalId: 'le_test' },
+        create: { tenantId, kind: 'peppol', provider: 'mock', status: 'active', externalId: 'le_test' },
+      }),
+    );
+    const { invoice } = await issuedInvoice({ kind: 'company' });
+    await issueEvent(invoice);
+    const sent = await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.invoice.findFirst({ where: { id: invoice.id, deliveryChannel: 'peppol' } }),
+      ),
+    );
+    expect(sent).toMatchObject({ status: 'sent', deliveryStatus: 'sent', sentTo: '0208:0417497106' });
+    expect(sent.peppolDocumentId).toMatch(/^doc_/);
+    expect(await runPeppolDelivery(deps)).toMatchObject({ updated: 1 });
+    const delivered = await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.invoice.findFirst({ where: { id: invoice.id, status: 'delivered' } }),
+      ),
+    );
+    expect(delivered.deliveredAt).not.toBeNull();
+    await withTenant(prisma, tenantId, userId, (tx) =>
+      tx.integrationConnection.update({
+        where: { tenantId_kind: { tenantId, kind: 'peppol' } },
+        data: { status: 'not_connected' },
+      }),
+    );
+  });
+
+  it('relances : rappel à J+3 une seule fois, frais B2C absents au premier rappel, arrêt dès le paiement', async () => {
+    const { invoice, customer } = await issuedInvoice({
+      kind: 'individual',
+      dueDate: addDays(today, -4),
+      status: 'sent',
+    });
+    expect((await runDunning(deps)).due).toBeGreaterThanOrEqual(1);
+    const step = await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.dunningStep.findFirst({ where: { invoiceId: invoice.id } }),
+      ),
+    );
+    expect(step).toMatchObject({
+      step: 1,
+      kind: 'reminder',
+      fee: 0n,
+      balance: 106_000n,
+      sentTo: customer.email,
+    });
+    const mail = await waitFor(() =>
+      bgMailer.sent.find((m) => m.to === customer.email && /rappel/.test(m.subject)),
+    );
+    expect(mail.text).toContain('Il s’agit peut-être d’un oubli.');
+    // Rejouée le même jour : aucune seconde relance.
+    await runDunning(deps);
+    await new Promise((r) => setTimeout(r, 1_500));
+    const steps = await withTenant(prisma, tenantId, userId, (tx) =>
+      tx.dunningStep.count({ where: { invoiceId: invoice.id } }),
+    );
+    expect(steps).toBe(1);
+    // Payée : plus aucune relance, même au-delà de J+15.
+    await withTenant(prisma, tenantId, userId, (tx) =>
+      tx.invoice.update({ where: { id: invoice.id }, data: { amountPaid: 106_000n, status: 'paid' } }),
+    );
+    const later = await runDunning(deps, new Date(Date.now() + 20 * 86_400_000));
+    const events = await withSystem(prisma, (tx) =>
+      tx.outboxEvent.count({ where: { type: 'invoice.reminder_due.v1', aggregateId: invoice.id } }),
+    );
+    expect(events).toBe(1);
+    expect(later.due).toBeGreaterThanOrEqual(0);
+  });
+
+  it('paiement reçu : fil du chantier, liens de paiement clos, notification si payé en ligne', async () => {
+    const { invoice } = await issuedInvoice({ kind: 'individual', status: 'sent' });
+    const paymentId = uuidv7();
+    await withTenant(prisma, tenantId, userId, async (tx) => {
+      await tx.paymentLink.create({
+        data: {
+          tenantId,
+          invoiceId: invoice.id,
+          provider: 'mock',
+          externalId: `tr_${uuidv7().slice(-8)}`,
+          url: 'https://x',
+          amount: 106_000n,
+        },
+      });
+      await tx.payment.create({
+        data: {
+          id: paymentId,
+          tenantId,
+          invoiceId: invoice.id,
+          amount: 106_000n,
+          receivedOn: new Date(`${today}T00:00:00Z`),
+          method: 'bancontact',
+          source: 'payment_link',
+        },
+      });
+      await tx.invoice.update({ where: { id: invoice.id }, data: { amountPaid: 106_000n, status: 'paid' } });
+      await emitEvent(tx, {
+        tenantId,
+        type: 'payment.received.v1',
+        aggregateType: 'invoice',
+        aggregateId: invoice.id,
+        payload: { paymentId, invoiceId: invoice.id, amount: '106000', source: 'payment_link' },
+      });
+    });
+    const entry = await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.timelineEntry.findFirst({ where: { projectId: invoice.projectId, type: 'payment.received' } }),
+      ),
+    );
+    expect(entry.title).toBe(`Facture ${invoice.number} payée`);
+    const links = await withTenant(prisma, tenantId, userId, (tx) =>
+      tx.paymentLink.findMany({ where: { invoiceId: invoice.id } }),
+    );
+    expect(links.every((l) => l.status === 'canceled')).toBe(true);
+    const notif = await withTenant(prisma, tenantId, userId, (tx) =>
+      tx.notification.findFirst({
+        where: { userId, type: 'payment.received', link: `/facturation/${invoice.id}` },
+      }),
+    );
+    expect(notif?.title).toMatch(/Paiement en ligne reçu/);
+  });
+
+  it('état soumis : e-mail au client avec le lien du portail ; approuvé : brouillon de facture et notification', async () => {
+    const { project, customer } = await issuedInvoice({ kind: 'individual' });
+    const bl = uuidv7();
+    const statementId = uuidv7();
+    await withTenant(prisma, tenantId, userId, async (tx) => {
+      await tx.budgetLine.create({
+        data: {
+          id: bl,
+          tenantId,
+          projectId: project.id,
+          position: 0,
+          label: 'Gros œuvre',
+          saleAmount: 1_000_000n,
+        },
+      });
+      await tx.progressStatement.create({
+        data: {
+          id: statementId,
+          tenantId,
+          projectId: project.id,
+          ordinal: 1,
+          status: 'submitted',
+          periodEnd: new Date(`${today}T00:00:00Z`),
+          contractAmount: 1_000_000n,
+          previousAmount: 0n,
+          cumulativeAmount: 400_000n,
+          submittedAt: new Date(),
+          lines: {
+            create: [
+              {
+                tenantId,
+                budgetLineId: bl,
+                position: 0,
+                label: 'Gros œuvre',
+                contractAmount: 1_000_000n,
+                previousAmount: 0n,
+                cumulativeAmount: 400_000n,
+                cumulativePercent: '40',
+              },
+            ],
+          },
+        },
+      });
+      await emitEvent(tx, {
+        tenantId,
+        type: 'progress_statement.submitted.v1',
+        aggregateType: 'project',
+        aggregateId: project.id,
+        payload: { statementId, projectId: project.id },
+      });
+    });
+    const mail = await waitFor(() =>
+      bgMailer.sent.find((m) => m.to === customer.email && /à approuver/.test(m.subject)),
+    );
+    expect(mail.text).toContain('40 %');
+    expect(mail.text).toContain('https://app.test/p/');
+    await withTenant(prisma, tenantId, userId, async (tx) => {
+      await tx.progressStatement.update({
+        where: { id: statementId },
+        data: { status: 'approved', approvedAt: new Date(), approvedByName: 'Jean Facture' },
+      });
+      await emitEvent(tx, {
+        tenantId,
+        type: 'progress_statement.approved.v1',
+        aggregateType: 'project',
+        aggregateId: project.id,
+        payload: { statementId, projectId: project.id, byClient: true },
+      });
+    });
+    const draft = await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.invoice.findFirst({ where: { progressStatementId: statementId }, include: { lines: true } }),
+      ),
+    );
+    expect(draft).toMatchObject({
+      status: 'draft',
+      type: 'progress',
+      totalNet: 400_000n,
+      title: 'État d’avancement n°1 — 40 %',
+    });
+    const notif = await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.notification.findFirst({ where: { userId, type: 'progress_statement.approved' } }),
+      ),
+    );
+    expect(notif.link).toBe(`/facturation/${draft.id}`);
   });
 });

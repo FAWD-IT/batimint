@@ -11,6 +11,8 @@ import { S3Storage } from './storage/s3';
 import type { ObjectStorage } from './storage/types';
 import { MockAttendanceRegistry } from './onss/mock';
 import type { AttendanceRegistry } from './onss/types';
+import { MockPaymentLinkProvider } from './payments/mock';
+import type { PaymentLinkProvider } from './payments/types';
 import { MockPeppolProvider } from './peppol/mock';
 import type { PeppolProvider } from './peppol/types';
 import { MockVatValidator } from './vat/mock';
@@ -26,6 +28,7 @@ export interface Integrations {
   peppol: PeppolProvider;
   ai: AiAssistant;
   attendance: AttendanceRegistry;
+  payments: PaymentLinkProvider;
 }
 
 export function createAttendanceRegistry(env: Env = process.env): AttendanceRegistry {
@@ -33,6 +36,13 @@ export function createAttendanceRegistry(env: Env = process.env): AttendanceRegi
   if (provider !== 'mock')
     throw new Error(`ONSS_PROVIDER=${provider} n'est pas encore disponible : utilisez « mock ».`);
   return new MockAttendanceRegistry();
+}
+
+export function createPaymentLinkProvider(env: Env = process.env): PaymentLinkProvider {
+  const provider = env['PAYMENTS_PROVIDER'] ?? 'mock';
+  if (provider !== 'mock')
+    throw new Error(`PAYMENTS_PROVIDER=${provider} n'est pas encore disponible : utilisez « mock ».`);
+  return new MockPaymentLinkProvider(env['APP_URL'] ?? 'http://localhost:3000');
 }
 
 export function createAiAssistant(env: Env = process.env): AiAssistant {
@@ -91,6 +101,7 @@ export function createIntegrations(env: Env = process.env): Integrations {
     peppol: createPeppolProvider(env),
     ai: createAiAssistant(env),
     attendance: createAttendanceRegistry(env),
+    payments: createPaymentLinkProvider(env),
   };
 }
 
@@ -103,6 +114,7 @@ export function createMockIntegrations(overrides: Partial<Integrations> = {}): I
     peppol: new MockPeppolProvider(),
     ai: new MockAiAssistant(),
     attendance: new MockAttendanceRegistry(),
+    payments: new MockPaymentLinkProvider(),
     ...overrides,
   };
 }
