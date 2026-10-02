@@ -118,6 +118,20 @@ export const EventPayloads = {
   'project.arrival_scheduled.v1': z.object({ projectId: Uuid, startDate: z.string() }),
   /** Planning du lendemain d'une personne (envoyé à 18 h). */
   'planning.day_ahead.v1': z.object({ employeeId: Uuid, userId: Uuid, day: z.string() }),
+  'purchase_order.sent.v1': z.object({ purchaseOrderId: Uuid, projectId: Uuid, email: z.string() }),
+  'purchase_order.received.v1': z.object({ purchaseOrderId: Uuid, projectId: Uuid, complete: z.boolean() }),
+  /** Facture fournisseur reçue (Peppol, dépôt, e-mail) : extraction puis rapprochement. */
+  'supplier_invoice.received.v1': z.object({
+    invoiceId: Uuid,
+    source: z.enum(['peppol', 'upload', 'email']),
+  }),
+  /** Ventilée sur un ou plusieurs chantiers (automatiquement ou à la main). */
+  'supplier_invoice.allocated.v1': z.object({
+    invoiceId: Uuid,
+    projectIds: z.array(Uuid),
+    automatic: z.boolean(),
+  }),
+  'supplier_invoice.to_allocate.v1': z.object({ invoiceId: Uuid }),
   /** Nouvelle tentative de transmission ONSS (Check In and Out) des pointages en échec. */
   'attendance.retry_requested.v1': z.object({ projectId: Uuid, timeEntryIds: z.array(Uuid) }),
 } as const;

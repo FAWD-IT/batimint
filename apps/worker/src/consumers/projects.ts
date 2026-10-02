@@ -499,8 +499,8 @@ export const projectTimeline: Consumer = {
       }
       case 'project.cost_recorded.v1': {
         const p = parseEventPayload('project.cost_recorded.v1', event.payload);
-        // La main-d'œuvre est recalculée à chaque pointage : visible dans le budget, pas dans le fil.
-        if (p.category === 'labour') {
+        // Main-d'œuvre, factures et BC ont leur propre entrée (pointage, facture rapprochée, BC envoyé).
+        if (['labour', 'supplier_invoice', 'purchase_order'].includes(p.category)) {
           await publishProject(ctx, projectId, ['project', 'budget']);
           return;
         }

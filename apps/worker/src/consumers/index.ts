@@ -5,6 +5,12 @@ import { sendInvitation } from './invitations';
 import { checkInOutTransmission, fieldRealtime, fieldTimeline, labourCosts } from './field';
 import { leadIntake } from './leads';
 import { arrivalNotice, dayAhead, planningRealtime } from './planning';
+import {
+  purchaseOrderSent,
+  supplierInvoiceInbox,
+  supplierInvoiceLedger,
+  supplierInvoiceMatching,
+} from './purchasing';
 import { memberJoined } from './members';
 import { diagnosticNotification } from './notifications';
 import {
@@ -42,6 +48,10 @@ export const CONSUMERS: readonly Consumer[] = [
   planningRealtime,
   arrivalNotice,
   dayAhead,
+  purchaseOrderSent,
+  supplierInvoiceMatching,
+  supplierInvoiceInbox,
+  supplierInvoiceLedger,
   realtimeBroadcast,
 ];
 
