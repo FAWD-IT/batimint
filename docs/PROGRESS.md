@@ -3,12 +3,12 @@
 Ce fichier est le point de reprise entre sessions cloud. Une nouvelle session doit pouvoir reprendre le travail en ne lisant que lui et `CLAUDE.md`.
 
 ## Jalon en cours
-**M6 — Planning** — livré, en attente de la CI. M5 ✅ validé (CI run 26 : checks + E2E sur les images de production).
+**M7 — Achats et Peppol entrant** — API et worker livrés et testés ; reste l'interface, le seed et le parcours P6. M6 ✅ validé (CI run 32 : checks + E2E sur les images de production).
 
 (L'étiquette `m0-done` existe localement mais le push de tags est refusé par la politique de la session : seule la branche est poussée.)
 
 ## Prochaine action
-Vérifier la CI du push M6 ; si verte, marquer M6 ✅ et démarrer M7 (achats et Peppol entrant : fournisseurs, bons de commande depuis les matériaux du devis groupés par fournisseur — P3.3 —, réception, factures fournisseurs Peppol mock + upload + extraction IA mock, rapprochement BC → chantier/poste, boîte « À imputer », alertes d'écart ; parcours P6 ; 90 % des factures du seed imputées automatiquement).
+Terminer M7 : écrans Achats (bons de commande par chantier, proposition depuis le devis, envoi ; boîte « À imputer » avec suggestions et ventilation ; détail de facture avec document), seed (90 % imputé automatiquement), E2E P6, ADR 0016. Périmètre M7 : achats et Peppol entrant : fournisseurs, bons de commande depuis les matériaux du devis groupés par fournisseur — P3.3 —, réception, factures fournisseurs Peppol mock + upload + extraction IA mock, rapprochement BC → chantier/poste, boîte « À imputer », alertes d'écart ; parcours P6 ; 90 % des factures du seed imputées automatiquement).
 
 ## Relancer l'environnement
 ```bash
@@ -89,7 +89,7 @@ docker compose -f docker-compose.coolify.yml -f docker/docker-compose.sandbox.ym
 - Seed : pointages de l'équipe de Karim sur Dupont (validés, dernière journée à valider, un pointage loin du chantier), arrivée de 8 h 02, planning de l'équipe, signalement à l'origine de l'avenant n°3 + un à traiter, bon de régie signé, rapports arrêtés.
 - Tests : 10 intégration API M5, 2 worker (arrivée unique, main-d'œuvre, ONSS envoyé/refusé, signalement + photo), domaine ; E2E P4 sur téléphone (pointage, portail, photo, tâche, signalement → avenant, hors ligne puis synchro, bon de régie signé, validation, rapport). Suite E2E complète verte en local (21) et en CI (run 26). Note vocale sur les signalements (transcrite, écoutable au bureau).
 
-### M6 — Planning (en attente CI)
+### M6 — Planning ✅ (CI run 32)
 - Domaine : demi-journées ouvrées (week-ends et fériés exclus), déplacer en gardant la durée, redimensionner, conflits (double affectation, congé, équipes développées), première demi-journée planifiée, iCal RFC 5545 (échappement, pliage à 75 octets) ; tests.
 - Base : affectations en plage (`ScheduleSlot` avec demi-journées et tâche, données M5 conservées, CHECK), liens iCal hachés (RLS), date d'arrivée annoncée (ADR 0015).
 - API : grille `/planning` (équipes, personnes, chantiers, affectations, congés, conflits, tâches à planifier), création/déplacement/suppression idempotents (identifiant client), date de début du chantier tenue par le planning en préparation, `/field/planning`, liens iCal (soi, ou bureau pour tous).
@@ -98,8 +98,16 @@ docker compose -f docker-compose.coolify.yml -f docker/docker-compose.sandbox.ym
 - Seed : équipe de Karim (Dupont → extension → châssis), équipe Toiture ; congés en conflit ; conformité électrique à planifier.
 - Tests : 6 intégration API M6, 2 worker (annonce unique et différée, planning du lendemain unique), 5 domaine ; E2E P3 (glisser-déposer, conflit de congé, clavier, dialogue, portail, iCal) + planning sur téléphone.
 
+### M7 — Achats et Peppol entrant (en cours)
+- Domaine : regroupement par fournisseur, engagement restant, rapprochement (BC → référence chantier → adresse de livraison), appariement des lignes, ventilation, écarts avec la commande ; tests.
+- Base : bons de commande (+ lignes), réceptions, factures fournisseurs (+ lignes), imputations ; RLS.
+- Documents : lecture UBL (Peppol BIS 3), PDF de bon de commande.
+- API : proposition de commande depuis les matériaux du devis, bons de commande (CRUD, envoi, PDF, réceptions), factures fournisseurs (vues à imputer / imputées / à payer, détail, document, imputation et ventilation, statut, dépôt), Peppol entrant simulé (mock) et webhook.
+- Worker : envoi du BC, rapprochement automatique (extraction IA si dépôt), boîte « À imputer » + alerte au bureau, grand livre des coûts du chantier (facture et engagement restant du BC).
+- Tests : 6 intégration API, 2 worker (BC + écarts + engagement soldé ; adresse ; boîte « À imputer »).
+
 ## Reste à faire
-M7 → M13 selon `docs/11-plan-de-livraison.md`.
+M7 (web, seed, E2E P6) → M13 selon `docs/11-plan-de-livraison.md`.
 
 ## Écarts avec la spécification
 - Nouveau paquet `packages/documents` (PDF) en plus de la liste de `CLAUDE.md` (ADR 0012).

@@ -990,3 +990,212 @@ describe('planning : date d’arrivée annoncée au client, planning du lendemai
     expect(count).toBe(1);
   });
 });
+
+describe('achats : rapprochement des factures fournisseurs (02 P6)', () => {
+  async function setup(street = `Rue des Achats ${uuidv7().slice(-5)}`) {
+    return withTenant(prisma, tenantId, userId, async (tx) => {
+      const customer = await tx.customer.create({
+        data: { tenantId, kind: 'individual', displayName: 'Jean Achat' },
+      });
+      const site = await tx.site.create({
+        data: {
+          tenantId,
+          customerId: customer.id,
+          street,
+          postalCode: '6040',
+          city: 'Jumet',
+        },
+      });
+      const supplier = await tx.supplier.create({
+        data: { tenantId, name: 'Brico Pro SA', vatNumber: 'BE0412345614' },
+      });
+      const project = await tx.project.create({
+        data: {
+          tenantId,
+          number: `CH-${uuidv7().slice(-6)}`,
+          name: 'Salle de bain Achat',
+          customerId: customer.id,
+          siteId: site.id,
+          status: 'in_progress',
+          contractAmount: 1_000_000n,
+        },
+      });
+      const carrelage = await tx.budgetLine.create({
+        data: {
+          tenantId,
+          projectId: project.id,
+          position: 0,
+          label: 'Carrelage',
+          budgetedCost: 300_000n,
+          saleAmount: 500_000n,
+        },
+      });
+      const po = await tx.purchaseOrder.create({
+        data: {
+          id: uuidv7(),
+          tenantId,
+          projectId: project.id,
+          supplierId: supplier.id,
+          number: `BC2026-${uuidv7().slice(-4)}`,
+          status: 'sent',
+          totalNet: 60_800n,
+          lines: {
+            create: [
+              {
+                tenantId,
+                position: 0,
+                description: 'Faïence murale 30x60',
+                supplierCode: 'FAI-3060',
+                unit: 'm²',
+                quantity: '20',
+                unitPrice: 2_500n,
+                budgetLineId: carrelage.id,
+              },
+              {
+                tenantId,
+                position: 1,
+                description: 'Colle carrelage C2TE',
+                unit: 'sac',
+                quantity: '6',
+                unitPrice: 1_800n,
+                budgetLineId: carrelage.id,
+              },
+            ],
+          },
+        },
+      });
+      await emitEvent(tx, {
+        tenantId,
+        type: 'purchase_order.sent.v1',
+        aggregateType: 'project',
+        aggregateId: project.id,
+        payload: { purchaseOrderId: po.id, projectId: project.id, email: 'commandes@brico.example.be' },
+      });
+      return { project, supplier, po, carrelage };
+    });
+  }
+
+  async function receive(
+    supplierId: string | null,
+    patch: { orderReference?: string | null; notes?: string | null },
+    lines: { description: string; supplierCode?: string; quantity: string; unitPrice: bigint }[],
+  ) {
+    return withTenant(prisma, tenantId, userId, async (tx) => {
+      const net = lines.reduce((s, l) => s + BigInt(Number(l.quantity)) * l.unitPrice, 0n);
+      const inv = await tx.supplierInvoice.create({
+        data: {
+          id: uuidv7(),
+          tenantId,
+          source: 'peppol',
+          externalId: uuidv7(),
+          supplierId,
+          supplierName: 'Brico Pro SA',
+          totalNet: net,
+          totalVat: (net * 21n) / 100n,
+          totalGross: net + (net * 21n) / 100n,
+          orderReference: patch.orderReference ?? null,
+          notes: patch.notes ?? null,
+          lines: {
+            create: lines.map((l, position) => ({
+              tenantId,
+              position,
+              description: l.description,
+              supplierCode: l.supplierCode ?? null,
+              quantity: l.quantity,
+              unitPrice: l.unitPrice,
+              net: BigInt(Number(l.quantity)) * l.unitPrice,
+            })),
+          },
+        },
+      });
+      await emitEvent(tx, {
+        tenantId,
+        type: 'supplier_invoice.received.v1',
+        aggregateType: 'supplier_invoice',
+        aggregateId: inv.id,
+        payload: { invoiceId: inv.id, source: 'peppol' },
+      });
+      return inv;
+    });
+  }
+
+  it('BC envoyé : engagement ; facture avec le n° de BC : imputée sans saisie, écart signalé, engagement soldé', async () => {
+    const { project, supplier, po, carrelage } = await setup();
+    const commitment = await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.projectCost.findFirst({ where: { projectId: project.id, category: 'purchase_order' } }),
+      ),
+    );
+    expect(commitment).toMatchObject({ amount: 60_800n, budgetLineId: carrelage.id });
+    const inv = await receive(supplier.id, { orderReference: po.number }, [
+      { description: 'Faïence 30x60', supplierCode: 'FAI-3060', quantity: '20', unitPrice: 2_700n },
+      { description: 'Colle C2TE carrelage', quantity: '6', unitPrice: 1_800n },
+    ]);
+    const done = await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.supplierInvoice.findFirst({
+          where: { id: inv.id, status: 'allocated' },
+          include: { allocations: true },
+        }),
+      ),
+    );
+    expect(done).toMatchObject({
+      matchMethod: 'purchase_order',
+      purchaseOrderId: po.id,
+      projectId: project.id,
+    });
+    expect(done.allocations).toEqual([
+      expect.objectContaining({ budgetLineId: carrelage.id, amount: 64_800n }),
+    ]);
+    expect((done.discrepancies as { kind: string }[]).map((d) => d.kind)).toEqual(['price', 'total']);
+    const entry = await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.timelineEntry.findFirst({ where: { projectId: project.id, type: 'supplier_invoice.allocated' } }),
+      ),
+    );
+    expect(entry.title).toBe('Facture Brico Pro SA reçue via Peppol');
+    expect(entry.body).toBe(
+      `Rapprochée du bon de commande ${po.number} · imputée au poste Carrelage, sans saisie`,
+    );
+    await waitFor(() =>
+      withTenant(prisma, tenantId, userId, async (tx) =>
+        (await tx.projectCost.count({ where: { projectId: project.id, category: 'purchase_order' } })) === 0
+          ? true
+          : null,
+      ),
+    );
+    const costs = await withTenant(prisma, tenantId, userId, (tx) =>
+      tx.projectCost.findMany({ where: { projectId: project.id, category: 'supplier_invoice' } }),
+    );
+    expect(costs.map((c) => c.amount)).toEqual([64_800n]);
+  });
+
+  it('par l’adresse de livraison ; sinon boîte « À imputer » avec suggestions et alerte au bureau', async () => {
+    const { project } = await setup('Rue des Livraisons 77');
+    const byAddress = await receive(null, { notes: 'Livraison : rue des Livraisons 77, 6040 Jumet' }, [
+      { description: 'Silicone sanitaire', quantity: '4', unitPrice: 900n },
+    ]);
+    const a = await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.supplierInvoice.findFirst({ where: { id: byAddress.id, status: 'allocated' } }),
+      ),
+    );
+    expect(a).toMatchObject({ matchMethod: 'address', projectId: project.id });
+    const unknown = await receive(null, {}, [
+      { description: 'Location nacelle', quantity: '1', unitPrice: 45_000n },
+    ]);
+    const u = await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.supplierInvoice.findFirst({ where: { id: unknown.id, status: 'to_allocate' } }),
+      ),
+    );
+    expect(Array.isArray(u.suggestions)).toBe(true);
+    await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.notification.findFirst({
+          where: { type: 'supplier_invoice.to_allocate', link: { contains: unknown.id } },
+        }),
+      ),
+    );
+  });
+});
