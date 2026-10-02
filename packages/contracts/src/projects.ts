@@ -227,7 +227,11 @@ export const PortalLinkResponseSchema = z.object({
 
 export const ProjectTimelineFilterSchema = z.enum(['all', 'client', 'money', 'field', 'comments']);
 
-export const ProjectTimelinePhotoSchema = z.object({ id: Uuid, url: z.string(), caption: z.string().nullable() });
+export const ProjectTimelinePhotoSchema = z.object({
+  id: Uuid,
+  url: z.string(),
+  caption: z.string().nullable(),
+});
 
 export const ProjectTimelineItemSchema = z.object({
   id: Uuid,
