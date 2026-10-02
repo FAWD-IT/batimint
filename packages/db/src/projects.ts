@@ -28,8 +28,8 @@ const COST_KEY: Record<string, keyof CommittedCosts> = {
 
 export const UNALLOCATED = 'unallocated';
 
-/** Statuts de facture qui comptent comme « facturé » (émise, non annulée). */
-export const BILLED_STATUSES = ['issued', 'sent', 'delivered', 'partially_paid', 'paid'] as const;
+/** Émises (y compris annulées par note de crédit : la note de crédit vient en déduction). */
+export const BILLED_STATUSES = ['issued', 'sent', 'delivered', 'partially_paid', 'paid', 'cancelled'] as const;
 export const OPEN_INVOICE_STATUSES = ['issued', 'sent', 'delivered', 'partially_paid'] as const;
 
 export interface LineDetail {
@@ -89,7 +89,12 @@ export async function loadProjectNumbers(
   });
   const invoiceLines = await tx.invoiceLine.findMany({
     where: { invoice: { projectId: { in: ids }, status: { in: [...BILLED_STATUSES] } } },
-    select: { quantity: true, unitPrice: true, budgetLineId: true, invoice: { select: { projectId: true } } },
+    select: {
+      quantity: true,
+      unitPrice: true,
+      budgetLineId: true,
+      invoice: { select: { projectId: true, type: true } },
+    },
   });
   const signedCo = await tx.changeOrder.groupBy({
     by: ['projectId'],
@@ -108,7 +113,9 @@ export async function loadProjectNumbers(
     const invoicedByLine = new Map<string, Cents>();
     let unassigned = 0n;
     for (const il of invoiceLines.filter((x) => x.invoice.projectId === p.id)) {
-      const net = roundHalfAwayFromZero(dec(il.quantity.toString()).times(il.unitPrice.toString()));
+      // Une note de crédit diminue le facturé (04 : « notes de crédit déduites »).
+      const sign = il.invoice.type === 'credit_note' ? -1n : 1n;
+      const net = sign * roundHalfAwayFromZero(dec(il.quantity.toString()).times(il.unitPrice.toString()));
       if (il.budgetLineId && known.has(il.budgetLineId))
         invoicedByLine.set(il.budgetLineId, (invoicedByLine.get(il.budgetLineId) ?? 0n) + net);
       else unassigned += net;

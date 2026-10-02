@@ -105,6 +105,11 @@ model Tenant {
   tasks                Task[]
   invoices             Invoice[]
   invoiceLines         InvoiceLine[]
+  progressStatements   ProgressStatement[]
+  progressStmtLines    ProgressStatementLine[]
+  payments             Payment[]
+  paymentLinks         PaymentLink[]
+  dunningSteps         DunningStep[]
   timelineEntries      TimelineEntry[]
   changeOrders         ChangeOrder[]
   changeOrderLines     ChangeOrderLine[]
@@ -518,6 +523,7 @@ model Customer {
   quotes        Quote[]
 
   projects Project[]
+  invoices Invoice[]
 
   @@index([tenantId, status])
   @@index([tenantId, email])
@@ -1100,6 +1106,8 @@ model Project {
   status               ProjectStatus @default(preparation)
   /// Montant du contrat HTVA (devis signé + avenants signés).
   contractAmount       BigInt        @default(0) @map("contract_amount")
+  /// Retenue de garantie du contrat (%), reprise des paramètres à la création, modifiable.
+  retentionPercent     Decimal       @default(0) @map("retention_percent") @db.Decimal(5, 2)
   managerUserId        String?       @map("manager_user_id") @db.Uuid
   teamId               String?       @map("team_id") @db.Uuid
   description          String?
@@ -1117,13 +1125,14 @@ model Project {
   updatedAt            DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
   createdBy            String?       @map("created_by") @db.Uuid
 
-  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  quote          Quote?          @relation(fields: [quoteId], references: [id], onDelete: SetNull)
-  customer       Customer        @relation(fields: [customerId], references: [id], onDelete: Restrict)
-  site           Site?           @relation(fields: [siteId], references: [id], onDelete: SetNull)
+  tenant         Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  quote          Quote?              @relation(fields: [quoteId], references: [id], onDelete: SetNull)
+  customer       Customer            @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  site           Site?               @relation(fields: [siteId], references: [id], onDelete: SetNull)
   budgetLines    BudgetLine[]
   tasks          Task[]
   invoices       Invoice[]
+  statements     ProgressStatement[]
   changeOrders   ChangeOrder[]
   costs          ProjectCost[]
   purchaseOrders PurchaseOrder[]
@@ -1209,6 +1218,7 @@ enum InvoiceType {
   final
   retention_release
   free
+  credit_note
 }
 
 enum InvoiceStatus {
@@ -1221,34 +1231,78 @@ enum InvoiceStatus {
   cancelled
 }
 
-/// Facture client. Numérotée et immuable à l'émission (M8) ; ici le brouillon d'acompte.
+/// Facture client ou note de crédit (03 §10). Brouillon modifiable, puis numérotée et immuable à
+/// l'émission (règle n°4) : les montants, les parties et les documents sont figés à ce moment.
 model Invoice {
-  id         String        @id @default(uuid(7)) @db.Uuid
-  tenantId   String        @map("tenant_id") @db.Uuid
-  projectId  String?       @map("project_id") @db.Uuid
-  customerId String        @map("customer_id") @db.Uuid
-  quoteId    String?       @map("quote_id") @db.Uuid
-  type       InvoiceType
-  status     InvoiceStatus @default(draft)
-  /// Attribué à l'émission (séquence sans trou).
-  number     String?
-  title      String
-  totalNet   BigInt        @default(0) @map("total_net")
-  totalVat   BigInt        @default(0) @map("total_vat")
-  totalGross BigInt        @default(0) @map("total_gross")
-  issuedAt   DateTime?     @map("issued_at") @db.Timestamptz(3)
-  dueDate    DateTime?     @map("due_date") @db.Date
-  createdAt  DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt  DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
-  createdBy  String?       @map("created_by") @db.Uuid
+  id                      String        @id @default(uuid(7)) @db.Uuid
+  tenantId                String        @map("tenant_id") @db.Uuid
+  projectId               String?       @map("project_id") @db.Uuid
+  customerId              String        @map("customer_id") @db.Uuid
+  quoteId                 String?       @map("quote_id") @db.Uuid
+  type                    InvoiceType
+  status                  InvoiceStatus @default(draft)
+  /// Attribué à l'émission (séquence sans trou, série facture ou note de crédit).
+  number                  String?
+  title                   String
+  intro                   String?
+  notes                   String?
+  /// Note de crédit : facture d'origine.
+  creditedInvoiceId       String?       @map("credited_invoice_id") @db.Uuid
+  progressStatementId     String?       @unique @map("progress_statement_id") @db.Uuid
+  issueDate               DateTime?     @map("issue_date") @db.Date
+  servicePeriodStart      DateTime?     @map("service_period_start") @db.Date
+  servicePeriodEnd        DateTime?     @map("service_period_end") @db.Date
+  paymentTermsDays        Int           @default(30) @map("payment_terms_days")
+  totalNet                BigInt        @default(0) @map("total_net")
+  totalVat                BigInt        @default(0) @map("total_vat")
+  totalGross              BigInt        @default(0) @map("total_gross")
+  /// Ventilation TVA figée à l'émission (EN 16931 BG-23).
+  vatBreakdown            Json          @default("[]") @map("vat_breakdown")
+  /// Mentions légales (autoliquidation, attestation 6 %…).
+  vatMentions             Json          @default("[]") @map("vat_mentions")
+  retentionPercent        Decimal       @default(0) @map("retention_percent") @db.Decimal(5, 2)
+  retentionAmount         BigInt        @default(0) @map("retention_amount")
+  amountPaid              BigInt        @default(0) @map("amount_paid")
+  amountCredited          BigInt        @default(0) @map("amount_credited")
+  structuredCommunication String?       @map("structured_communication")
+  /// Parties figées à l'émission (nom, adresse, TVA, BCE, identifiant Peppol).
+  seller                  Json?
+  buyer                   Json?
+  pdfKey                  String?       @map("pdf_key")
+  pdfSha256               String?       @map("pdf_sha256")
+  ublKey                  String?       @map("ubl_key")
+  ublSha256               String?       @map("ubl_sha256")
+  /// `peppol` | `email`
+  deliveryChannel         String?       @map("delivery_channel")
+  /// `queued` | `sent` | `delivered` | `failed`
+  deliveryStatus          String?       @map("delivery_status")
+  deliveryMessage         String?       @map("delivery_message")
+  peppolDocumentId        String?       @map("peppol_document_id")
+  sentTo                  String?       @map("sent_to")
+  issuedAt                DateTime?     @map("issued_at") @db.Timestamptz(3)
+  issuedBy                String?       @map("issued_by") @db.Uuid
+  sentAt                  DateTime?     @map("sent_at") @db.Timestamptz(3)
+  deliveredAt             DateTime?     @map("delivered_at") @db.Timestamptz(3)
+  paidAt                  DateTime?     @map("paid_at") @db.Timestamptz(3)
+  dueDate                 DateTime?     @map("due_date") @db.Date
+  remindersPaused         Boolean       @default(false) @map("reminders_paused")
+  createdAt               DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt               DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdBy               String?       @map("created_by") @db.Uuid
 
-  tenant  Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  project Project?      @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  lines   InvoiceLine[]
+  tenant   Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  project  Project?      @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  customer Customer      @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  lines    InvoiceLine[]
+  payments Payment[]
+  links    PaymentLink[]
+  dunning  DunningStep[]
 
   @@unique([tenantId, number])
   @@unique([quoteId, type])
   @@index([tenantId, status])
+  @@index([tenantId, customerId])
+  @@index([tenantId, creditedInvoiceId])
   @@map("invoices")
 }
 
@@ -1257,6 +1311,8 @@ model InvoiceLine {
   tenantId     String  @map("tenant_id") @db.Uuid
   invoiceId    String  @map("invoice_id") @db.Uuid
   position     Int
+  /// `item` | `deduction` (acompte déduit : quantité −1, prix positif)
+  kind         String  @default("item")
   description  String
   unit         String  @default("u")
   quantity     Decimal @default(1) @db.Decimal(14, 4)
@@ -1267,7 +1323,147 @@ model InvoiceLine {
   tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
+  @@index([tenantId, invoiceId])
   @@map("invoice_lines")
+}
+
+enum ProgressStatementState {
+  draft
+  submitted
+  approved
+  disputed
+  invoiced
+}
+
+/// État d'avancement (02 P7) : cumul par poste, approuvé par le client (B2C) puis facturé.
+model ProgressStatement {
+  id               String                 @id @db.Uuid
+  tenantId         String                 @map("tenant_id") @db.Uuid
+  projectId        String                 @map("project_id") @db.Uuid
+  ordinal          Int
+  status           ProgressStatementState @default(draft)
+  periodEnd        DateTime               @map("period_end") @db.Date
+  contractAmount   BigInt                 @default(0) @map("contract_amount")
+  previousAmount   BigInt                 @default(0) @map("previous_amount")
+  cumulativeAmount BigInt                 @default(0) @map("cumulative_amount")
+  note             String?
+  submittedAt      DateTime?              @map("submitted_at") @db.Timestamptz(3)
+  approvedAt       DateTime?              @map("approved_at") @db.Timestamptz(3)
+  approvedByName   String?                @map("approved_by_name")
+  disputedAt       DateTime?              @map("disputed_at") @db.Timestamptz(3)
+  disputeReason    String?                @map("dispute_reason")
+  createdBy        String?                @map("created_by") @db.Uuid
+  createdAt        DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime               @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant  Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  project Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  lines   ProgressStatementLine[]
+
+  @@unique([projectId, ordinal])
+  @@index([tenantId, status])
+  @@map("progress_statements")
+}
+
+model ProgressStatementLine {
+  id                 String   @id @default(uuid(7)) @db.Uuid
+  tenantId           String   @map("tenant_id") @db.Uuid
+  statementId        String   @map("statement_id") @db.Uuid
+  budgetLineId       String   @map("budget_line_id") @db.Uuid
+  position           Int
+  label              String
+  contractAmount     BigInt   @map("contract_amount")
+  previousAmount     BigInt   @map("previous_amount")
+  cumulativeAmount   BigInt   @map("cumulative_amount")
+  cumulativePercent  Decimal  @map("cumulative_percent") @db.Decimal(7, 4)
+  unit               String?
+  totalQuantity      Decimal? @map("total_quantity") @db.Decimal(14, 4)
+  cumulativeQuantity Decimal? @map("cumulative_quantity") @db.Decimal(14, 4)
+
+  tenant    Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  statement ProgressStatement @relation(fields: [statementId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, statementId])
+  @@map("progress_statement_lines")
+}
+
+enum PaymentMethod {
+  transfer
+  bancontact
+  card
+  cash
+  online
+  other
+}
+
+/// Paiement reçu sur une facture (saisi, lien de paiement, synchro bancaire plus tard).
+model Payment {
+  id         String        @id @db.Uuid
+  tenantId   String        @map("tenant_id") @db.Uuid
+  invoiceId  String        @map("invoice_id") @db.Uuid
+  amount     BigInt
+  receivedOn DateTime      @map("received_on") @db.Date
+  method     PaymentMethod
+  /// `manual` | `payment_link`
+  source     String        @default("manual")
+  externalId String?       @map("external_id")
+  reference  String?
+  note       String?
+  createdBy  String?       @map("created_by") @db.Uuid
+  createdAt  DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, externalId])
+  @@index([tenantId, invoiceId])
+  @@map("payments")
+}
+
+/// Lien de paiement en ligne (Mollie) pour le solde d'une facture.
+model PaymentLink {
+  id         String    @id @default(uuid(7)) @db.Uuid
+  tenantId   String    @map("tenant_id") @db.Uuid
+  invoiceId  String    @map("invoice_id") @db.Uuid
+  provider   String
+  externalId String    @map("external_id")
+  url        String
+  amount     BigInt
+  /// `open` | `paid` | `expired` | `failed` | `canceled`
+  status     String    @default("open")
+  expiresAt  DateTime? @map("expires_at") @db.Timestamptz(3)
+  paidAt     DateTime? @map("paid_at") @db.Timestamptz(3)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, externalId])
+  @@index([tenantId, invoiceId])
+  @@map("payment_links")
+}
+
+/// Relance envoyée (05 §6) : une ligne par étape, jamais deux fois la même.
+model DunningStep {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  invoiceId String   @map("invoice_id") @db.Uuid
+  step      Int
+  /// `reminder` | `formal_notice`
+  kind      String
+  daysLate  Int      @map("days_late")
+  balance   BigInt
+  fee       BigInt   @default(0)
+  interest  BigInt   @default(0)
+  sentTo    String?  @map("sent_to")
+  sentAt    DateTime @default(now()) @map("sent_at") @db.Timestamptz(3)
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@unique([invoiceId, step])
+  @@index([tenantId, invoiceId])
+  @@map("dunning_steps")
 }
 
 /// Fil chronologique lisible (projection des événements), par client, affaire, devis ou chantier.
