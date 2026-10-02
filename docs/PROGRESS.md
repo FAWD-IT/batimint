@@ -3,12 +3,12 @@
 Ce fichier est le point de reprise entre sessions cloud. Une nouvelle session doit pouvoir reprendre le travail en ne lisant que lui et `CLAUDE.md`.
 
 ## Jalon en cours
-**M5 — Terrain** — livré, en attente de la CI (checks + E2E sur les images de production). M4 ✅ (CI run 21).
+**M6 — Planning** — en cours (domaine, base, API et worker poussés ; web, seed et E2E P3 à faire). M5 ✅ validé (CI run 26 : checks + E2E sur les images de production).
 
 (L'étiquette `m0-done` existe localement mais le push de tags est refusé par la politique de la session : seule la branche est poussée.)
 
 ## Prochaine action
-Vérifier la CI du push M5 ; si verte, marquer M5 ✅ ici et démarrer M6 (planning : créneaux `ScheduleSlot` par équipe/personne, congés, glisser-déposer, le chantier du jour de la vue terrain en découle déjà ; l'onglet « Planning » de la maquette terrain remplace alors « Heures » ou s'y ajoute).
+M6 web : page `/planning` (grille ressources × jours, semaine/mois, par équipe/personne/chantier, glisser-déposer + alternative clavier, tâches à planifier, conflits), onglet « Planning » de la vue terrain (`/field/planning`), lien iCal dans le profil, entrée « Planning » de la barre latérale ; seed de planning réaliste ; E2E P3 ; ADR 0015.
 
 ## Relancer l'environnement
 ```bash
@@ -80,14 +80,14 @@ docker compose -f docker-compose.coolify.yml -f docker/docker-compose.sandbox.ym
 - Seed : 25 chantiers dans tous les statuts (dont un ≥ 500 000 € en préparation pour Check In and Out) ; chantier Dupont des maquettes (62 %, marge 24,0 % → 21,8 %, dérive Carrelage, facture 2026-118 échue, avenant n°3 en attente avec question du client).
 - Tests : 13 intégration API M4 (chiffres, dérive, tâches, statut, fil, mentions, avenants, portail, signature, isolation, Ouvrier), 3 worker (avenant signé idempotent, dérive unique, photos regroupées), 15 domaine ; E2E P5 complet (deux navigateurs synchronisés, question/réponse, validation sur mobile, budget mis à jour, ⌘K) et cockpit mobile.
 
-### M5 — Terrain (en attente CI)
+### M5 — Terrain ✅
 - Domaine : distance (haversine), géorepérage avec tolérance + précision GPS, heures par paires IN/OUT (pause paramétrable, anomalies), coût main-d'œuvre et répartition sur les postes, seuil Check In and Out, minuit à Bruxelles, « 8 h 02 » ; tests.
 - Base : pointages (UUID du téléphone, position, distance, hors ligne, statut, ONSS), créneaux de planning, signalements, bons de régie et lignes, rapports journaliers ; RLS (ADR 0014).
 - API : `/field/today` (chantier du jour, équipe sur place, tâches du jour, droits), pointage idempotent (soi, équipe par le chef, bureau), synchro hors ligne par lots (une transaction par action, erreurs métier par action), signalements (photos, → avenant en un clic, résolu), bons de régie (brouillon sans prix, signature sur téléphone, numéro BR, PDF signé + empreinte, régénéré si absent), heures (anomalies, coût pour les rôles finance), validation par le chef (journée verrouillée), rapport journalier (calculé + notes, arrêté), `/field/hours`, export CSV Check In and Out, relance ONSS. `FieldCipher` partagé dans `packages/db`.
 - Worker : arrivée de l'équipe (une entrée par jour, portail « L'équipe de Karim est chez vous depuis 8 h 02 »), coût main-d'œuvre recalculé par personne/jour → `ProjectCost` + dérive, transmission ONSS via l'adaptateur (mock), refus visible + notification, signalements (alerte, photos jointes), bons signés (fil, notification), temps réel terrain.
 - Web : `/terrain` PWA conforme à la maquette (manifeste traduit, service worker, icônes), tutoiement, file hors ligne IndexedDB avec affichage optimiste et pastille d'état, photo (compressée, géodatée, par tâche), signaler (photos), faire signer (signature du client), équipe du chef, mes heures, validation, rapport du jour, profil (synchro, installation, déconnexion protégée) ; onglet « Terrain » du cockpit (signalements → avenant, heures et validation, rapports, bons de régie, export et relance ONSS) ; « Vue terrain » dans la barre latérale ; l'Ouvrier arrive directement sur `/terrain`. Le temps réel recharge les requêtes actives après chaque reconnexion SSE.
 - Seed : pointages de l'équipe de Karim sur Dupont (validés, dernière journée à valider, un pointage loin du chantier), arrivée de 8 h 02, planning de l'équipe, signalement à l'origine de l'avenant n°3 + un à traiter, bon de régie signé, rapports arrêtés.
-- Tests : 10 intégration API M5, 2 worker (arrivée unique, main-d'œuvre, ONSS envoyé/refusé, signalement + photo), domaine ; E2E P4 sur téléphone (pointage, portail, photo, tâche, signalement → avenant, hors ligne puis synchro, bon de régie signé, validation, rapport). Suite E2E complète verte en local (21).
+- Tests : 10 intégration API M5, 2 worker (arrivée unique, main-d'œuvre, ONSS envoyé/refusé, signalement + photo), domaine ; E2E P4 sur téléphone (pointage, portail, photo, tâche, signalement → avenant, hors ligne puis synchro, bon de régie signé, validation, rapport). Suite E2E complète verte en local (21) et en CI (run 26). Note vocale sur les signalements (transcrite, écoutable au bureau).
 
 ## Reste à faire
 M6 → M13 selon `docs/11-plan-de-livraison.md`.
