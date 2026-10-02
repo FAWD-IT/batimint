@@ -77,6 +77,7 @@ export async function poDto(tx: Tx, po: PoRow, invoiced?: bigint): Promise<Purch
       budgetLineId: l.budgetLineId,
       budgetLineLabel: l.budgetLineId ? (labels.get(l.budgetLineId) ?? null) : null,
       receivedQuantity: l.receivedQuantity.toString(),
+      sourceKey: l.sourceKey,
     })),
     createdAt: po.createdAt.toISOString(),
   };

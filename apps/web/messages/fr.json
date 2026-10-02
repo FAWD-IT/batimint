@@ -99,7 +99,8 @@
     "shortcut": "⌘K",
     "noActiveProjects": "Aucun chantier en cours",
     "field": "Vue terrain",
-    "planning": "Planning"
+    "planning": "Planning",
+    "purchasing": "Achats"
   },
   "notifications": {
     "title": "Notifications",
@@ -1527,7 +1528,8 @@
       "media": "Photos et documents",
       "changeOrders": "Avenants",
       "budget": "Budget",
-      "field": "Terrain"
+      "field": "Terrain",
+      "purchases": "Achats"
     },
     "timeline": {
       "title": "Fil du chantier",
@@ -2272,6 +2274,287 @@
       "link": "Lien d'abonnement",
       "open": "Ouvrir dans mon agenda",
       "secret": "Ce lien est personnel. En créer un nouveau désactive l'ancien."
+    }
+  },
+  "purchasing": {
+    "title": "Achats",
+    "nav": {
+      "label": "Sections des achats",
+      "invoices": "Factures fournisseurs",
+      "orders": "Bons de commande",
+      "suppliers": "Fournisseurs"
+    },
+    "views": {
+      "inbox": "À imputer",
+      "allocated": "Imputées",
+      "to_pay": "À payer",
+      "all": "Toutes"
+    },
+    "empty": {
+      "inbox": {
+        "title": "Rien à imputer",
+        "description": "Les factures reçues par Peppol ou déposées sont rapprochées automatiquement. Celles qui demandent votre avis apparaîtront ici."
+      },
+      "allocated": {
+        "title": "Aucune facture imputée",
+        "description": "Les factures imputées à un chantier, en attente de validation, apparaîtront ici."
+      },
+      "to_pay": {
+        "title": "Aucune facture à payer",
+        "description": "Validez une facture imputée pour la mettre à payer."
+      },
+      "all": {
+        "title": "Aucune facture fournisseur",
+        "description": "Activez Peppol dans les paramètres ou déposez une facture PDF : elle sera lue et imputée au bon chantier."
+      }
+    },
+    "columns": {
+      "supplier": "Fournisseur",
+      "project": "Chantier",
+      "net": "HTVA"
+    },
+    "source": {
+      "peppol": "Peppol",
+      "upload": "Déposée",
+      "email": "E-mail"
+    },
+    "noNumber": "Sans numéro",
+    "suggested": "Suggestion : {project}",
+    "discrepancies": "{n, plural, one {# écart avec la commande} other {# écarts avec la commande}}",
+    "upload": {
+      "button": "Déposer une facture",
+      "done": "Facture déposée",
+      "reading": "Lecture et rapprochement en cours…",
+      "failed": "Dépôt impossible"
+    },
+    "invoice": {
+      "title": "Facture fournisseur",
+      "notFound": "Facture introuvable",
+      "status": {
+        "received": "Reçue",
+        "to_allocate": "À imputer",
+        "allocated": "Imputée",
+        "validated": "Validée",
+        "to_pay": "À payer",
+        "blocked": "Bloquée",
+        "paid": "Payée"
+      },
+      "source": {
+        "peppol": "Reçue par Peppol",
+        "upload": "Déposée",
+        "email": "Reçue par e-mail"
+      },
+      "issueDate": "Date de facture",
+      "dueDate": "Échéance",
+      "orderReference": "Bon de commande",
+      "supplierVat": "TVA fournisseur",
+      "net": "HTVA",
+      "vat": "TVA",
+      "gross": "TVAC",
+      "document": "Voir le document original",
+      "reading": "Lecture de la facture et rapprochement en cours…",
+      "match": {
+        "purchase_order": "Imputée automatiquement à {project} grâce au bon de commande {order}.",
+        "project_reference": "Imputée automatiquement à {project} grâce à la référence du chantier.",
+        "address": "Imputée automatiquement à {project} grâce à l’adresse de livraison."
+      },
+      "allocations": "Imputation",
+      "noPost": "Sans poste",
+      "suggestions": "Suggestions",
+      "confidence": "Confiance {n} %",
+      "allocateHere": "Imputer ici",
+      "allocateTo": "Imputer à {project}",
+      "allocated": "Facture imputée",
+      "split": "Ventiler sur plusieurs chantiers",
+      "reallocate": "Modifier l’imputation",
+      "lines": "Lignes de la facture",
+      "description": "Description",
+      "quantity": "Quantité",
+      "unitPrice": "Prix unitaire",
+      "statusChanged": {
+        "validated": "Facture validée",
+        "to_pay": "Facture mise à payer",
+        "blocked": "Facture bloquée",
+        "paid": "Facture marquée payée",
+        "allocated": "Facture rouverte"
+      },
+      "actions": {
+        "validated": "Valider",
+        "to_pay": "Mettre à payer",
+        "blocked": "Bloquer",
+        "paid": "Marquer payée",
+        "unblock": "Débloquer et mettre à payer"
+      },
+      "discrepancy": {
+        "title": "Écarts avec le bon de commande",
+        "price": "{description} : {invoiced} facturé pour {ordered} commandé ({percent} %).",
+        "quantity": "{description} : {invoiced} facturé(s) pour {ordered} commandé(s).",
+        "unordered": "{description} ({amount}) ne figure pas sur la commande.",
+        "total": "Total facturé {invoiced} pour {ordered} commandé ({percent} %)."
+      },
+      "splitEditor": {
+        "title": "Ventilation",
+        "chooseProject": "Choisir un chantier",
+        "project": "Chantier {n}",
+        "post": "Poste {n}",
+        "amount": "Montant HTVA {n}",
+        "noPost": "Sans poste",
+        "remove": "Retirer la ligne {n}",
+        "addRow": "Ajouter un chantier",
+        "balanced": "La ventilation égale le total HTVA.",
+        "remaining": "Reste à ventiler : {amount}",
+        "missingProject": "Choisissez un chantier pour chaque ligne.",
+        "missingAmount": "Chaque ligne doit avoir un montant.",
+        "mismatch": "La ventilation doit égaler le total HTVA (reste {remaining}).",
+        "save": "Enregistrer l’imputation",
+        "saved": "Imputation enregistrée"
+      }
+    },
+    "orders": {
+      "title": "Bons de commande",
+      "new": "Nouveau bon",
+      "order": "Commande",
+      "invoiced": "Facturé",
+      "filters": {
+        "open": "En cours",
+        "received": "Réceptionnés",
+        "all": "Tous"
+      },
+      "emptyTitle": "Aucun bon de commande",
+      "empty": "Ouvrez un chantier, onglet « Achats », pour commander les matériaux du devis.",
+      "toProjects": "Voir les chantiers",
+      "projectEmptyTitle": "Rien de commandé",
+      "projectEmpty": "Générez les bons de commande depuis les matériaux du devis : un bon par fournisseur, avec un numéro que le fournisseur reportera sur sa facture.",
+      "lineCount": "{n, plural, one {# ligne} other {# lignes}}",
+      "sentAgo": "envoyé {date}",
+      "createdAgo": "brouillon {date}"
+    },
+    "order": {
+      "newTitle": "Nouveau bon de commande",
+      "draftTitle": "Brouillon · {supplier}",
+      "notFound": "Bon de commande introuvable",
+      "status": {
+        "draft": "Brouillon",
+        "sent": "Envoyé",
+        "partially_received": "Reçu en partie",
+        "received": "Réceptionné",
+        "cancelled": "Annulé"
+      },
+      "supplier": "Fournisseur",
+      "chooseSupplier": "Choisir un fournisseur",
+      "noSuppliers": "Aucun fournisseur enregistré",
+      "createSupplier": "Ajouter un fournisseur",
+      "expectedOn": "Livraison souhaitée",
+      "deliveryAddress": "Adresse de livraison",
+      "deliveryHint": "Vide : l’adresse du chantier.",
+      "lines": "Lignes",
+      "addLine": "Ajouter une ligne",
+      "line": {
+        "description": "Article {n}",
+        "descriptionColumn": "Article",
+        "code": "Code fournisseur",
+        "quantity": "Quantité",
+        "unit": "Unité",
+        "unitPrice": "Prix unitaire HTVA",
+        "post": "Poste du chantier",
+        "noPost": "Sans poste",
+        "remove": "Retirer",
+        "ordered": "Commandé",
+        "received": "Reçu",
+        "total": "Total HTVA"
+      },
+      "notes": "Remarques pour le fournisseur",
+      "totalNet": "Total HTVA",
+      "errors": {
+        "supplier": "Choisissez un fournisseur.",
+        "noLines": "Ajoutez au moins une ligne.",
+        "description": "Chaque ligne doit avoir une description.",
+        "quantity": "Chaque ligne doit avoir une quantité positive (ex. 12,5)."
+      },
+      "saved": "Brouillon enregistré",
+      "deleted": "Brouillon supprimé",
+      "deleteDraft": "Supprimer le brouillon",
+      "deleteTitle": "Supprimer ce brouillon ?",
+      "deleteDescription": "Le bon de commande n’a pas été envoyé : il disparaît simplement.",
+      "send": "Envoyer au fournisseur",
+      "sentAt": "Envoyé le",
+      "sentTo": "Envoyé à",
+      "invoiced": "Facturé / commandé",
+      "pdf": "Télécharger le PDF",
+      "receive": "Réceptionner",
+      "cancel": "Annuler la commande",
+      "cancelled": "Commande annulée",
+      "cancelTitle": "Annuler cette commande ?",
+      "cancelDescription": "Prévenez le fournisseur. L’engagement disparaît du budget du chantier.",
+      "sendDialog": {
+        "title": "Envoyer la commande à {supplier}",
+        "description": "Un numéro de BC est attribué et le PDF part par e-mail ({total} HTVA). Le fournisseur reportera ce numéro sur sa facture.",
+        "email": "E-mail du fournisseur",
+        "emailHint": "Ce fournisseur n’a pas d’adresse de commande enregistrée.",
+        "message": "Message (facultatif)",
+        "confirm": "Envoyer",
+        "sent": "{number} envoyé à {email}"
+      },
+      "receiveDialog": {
+        "title": "Réception de la marchandise",
+        "description": "Indiquez les quantités reçues aujourd’hui. Une réception partielle reste ouverte.",
+        "received": "Reçu",
+        "quantity": "Quantité reçue : {description}",
+        "progress": "{received} / {ordered} {unit} déjà reçu(s)",
+        "note": "Remarque (bon de livraison, casse…)",
+        "confirm": "Enregistrer la réception",
+        "done": "Réception enregistrée",
+        "invalid": "Saisissez des quantités valides (ex. 2 ou 2,5).",
+        "nothing": "Indiquez au moins une quantité reçue."
+      }
+    },
+    "proposal": {
+      "open": "Commander les matériaux",
+      "title": "Commander les matériaux du devis",
+      "description": "Un bon de commande brouillon par fournisseur. Vous le relisez avant de l’envoyer.",
+      "emptyTitle": "Aucun matériau à commander",
+      "empty": "Le devis signé ne contient pas de matériaux avec un prix d’achat. Créez un bon manuellement.",
+      "noQuote": "Ce chantier n’a pas de devis : créez un bon de commande manuellement.",
+      "unknownSupplier": "Fournisseur à choisir",
+      "supplierFor": "Fournisseur du groupe {n}",
+      "supplierHint": "Ces articles n’ont pas de fournisseur préféré dans la bibliothèque.",
+      "chooseSupplier": "Choisir un fournisseur",
+      "alreadyOrdered": "déjà commandé",
+      "create": "{n, plural, =0 {Créer les bons} one {Créer # bon de commande} other {Créer # bons de commande}}",
+      "created": "{n, plural, one {# bon de commande créé (brouillon)} other {# bons de commande créés (brouillons)}}",
+      "nothing": "Cochez au moins un article.",
+      "missingSupplier": "Choisissez un fournisseur pour chaque groupe."
+    },
+    "projectInvoices": {
+      "title": "Factures fournisseurs imputées",
+      "empty": "Aucune facture fournisseur imputée à ce chantier pour l’instant."
+    },
+    "suppliers": {
+      "title": "Fournisseurs",
+      "new": "Nouveau fournisseur",
+      "editTitle": "Modifier le fournisseur",
+      "search": "Rechercher un fournisseur",
+      "emptyTitle": "Aucun fournisseur",
+      "empty": "Ajoutez vos fournisseurs : leur numéro d’entreprise permet de reconnaître leurs factures Peppol.",
+      "dialogHint": "Le numéro d’entreprise (BCE) donne le numéro de TVA et l’identifiant Peppol.",
+      "enterpriseNumber": "Numéro d’entreprise",
+      "enterpriseHint": "Ex. 0412.345.614",
+      "iban": "IBAN",
+      "orderEmail": "E-mail des commandes",
+      "terms": "Délai de paiement",
+      "termsDays": "{n} jours",
+      "days": "jours",
+      "street": "Rue et numéro",
+      "postalCode": "Code postal",
+      "city": "Localité",
+      "isSubcontractor": "Sous-traitant (contrôle 30bis)",
+      "subcontractor": "Sous-traitant",
+      "created": "Fournisseur ajouté",
+      "updated": "Fournisseur mis à jour",
+      "errors": {
+        "name": "Indiquez le nom du fournisseur.",
+        "terms": "Le délai de paiement va de 0 à 120 jours."
+      }
     }
   }
 }

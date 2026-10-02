@@ -39,6 +39,8 @@ export const PurchaseOrderLineSchema = z.object({
   budgetLineId: Uuid.nullable(),
   budgetLineLabel: z.string().nullable(),
   receivedQuantity: DecimalString,
+  /** Ligne du devis d'origine (proposition de commande), conservée à l'édition du brouillon. */
+  sourceKey: z.string().nullable(),
 });
 
 export const PurchaseOrderStatusSchema = z.enum([

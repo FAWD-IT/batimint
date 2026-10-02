@@ -27,6 +27,8 @@ import {
   computeSalePrice,
   type ImportField,
   isValidEnterpriseNumber,
+  isValidIban,
+  normalizeIban,
   LibraryError,
   normalizeEnterpriseNumber,
   planImport,
@@ -681,7 +683,11 @@ export const libraryRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (ap
     email: s.email,
     orderEmail: s.orderEmail,
     phone: s.phone,
+    street: s.street,
+    postalCode: s.postalCode,
     city: s.city,
+    peppolId: s.peppolId,
+    iban: s.iban,
     paymentTermsDays: s.paymentTermsDays,
     isSubcontractor: s.isSubcontractor,
   });
@@ -694,6 +700,11 @@ export const libraryRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (ap
       data['enterpriseNumber'] = n;
       data['vatNumber'] = `BE${n}`;
       data['peppolId'] = `0208:${n}`;
+    }
+    if (b.iban) {
+      if (!isValidIban(b.iban))
+        throw badRequest('invalid_iban', "Cet IBAN n'est pas valide : vérifiez les chiffres.");
+      data['iban'] = normalizeIban(b.iban);
     }
     return data;
   };
@@ -709,7 +720,7 @@ export const libraryRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (ap
       },
     },
     (req) =>
-      inTenant(deps, req, 'library.read', async ({ tx }) => ({
+      inTenant(deps, req, 'purchases.read', async ({ tx }) => ({
         items: (
           await tx.supplier.findMany({
             where: {

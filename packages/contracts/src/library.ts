@@ -112,11 +112,16 @@ export const SupplierSchema = z
     email: z.string().nullable(),
     orderEmail: z.string().nullable(),
     phone: z.string().nullable(),
+    street: z.string().nullable(),
+    postalCode: z.string().nullable(),
     city: z.string().nullable(),
+    peppolId: z.string().nullable(),
+    iban: z.string().nullable(),
     paymentTermsDays: z.number().int(),
     isSubcontractor: z.boolean(),
   })
   .meta({ id: 'Supplier' });
+export type SupplierDto = z.infer<typeof SupplierSchema>;
 
 export const SupplierInputSchema = z.object({
   name: z.string().trim().min(2).max(160),
@@ -127,6 +132,7 @@ export const SupplierInputSchema = z.object({
   street: z.string().trim().max(160).nullable().optional(),
   postalCode: z.string().trim().max(10).nullable().optional(),
   city: z.string().trim().max(80).nullable().optional(),
+  iban: z.string().trim().max(40).nullable().optional(),
   paymentTermsDays: z.number().int().min(0).max(120).optional(),
   isSubcontractor: z.boolean().optional(),
 });
