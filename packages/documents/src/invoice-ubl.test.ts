@@ -168,3 +168,38 @@ describe('UBL Peppol BIS Billing 3.0 des factures émises (05 §1, §4)', () => 
     expect(ublAmount(-1_205n)).toBe('-12.05');
   });
 });
+
+describe('écran = UBL pour 1 000 factures aléatoires (09 « Calcul »)', () => {
+  it('mêmes totaux HTVA, TVA par taux, TVAC et lignes', () => {
+    let seed = 42;
+    const rand = (n: number) => {
+      seed = (seed * 1_103_515_245 + 12_345) % 2_147_483_648;
+      return seed % n;
+    };
+    const regimes = ['standard_21', 'reduced_6', 'intermediate_12', 'reverse_charge', 'exempt'] as const;
+    for (let k = 0; k < 1_000; k++) {
+      const lines = Array.from({ length: 1 + rand(8) }, (_, i) => ({
+        description: `Ligne ${i}`,
+        unit: ['m²', 'h', 'pc', 'forfait'][rand(4)]!,
+        quantity: `${rand(500)}.${rand(1000)}`,
+        unitPrice: BigInt(rand(2_000_000)),
+        vatRegime: regimes[rand(regimes.length)]!,
+      }));
+      const xml = buildInvoiceUbl(base({ number: `P-${k}`, lines }));
+      const doc = parser.parse(xml).Invoice;
+      const totals = computeDocumentTotals(lines);
+      const amount = (v: { '#text': number }) => Math.round(v['#text'] * 100);
+      expect(amount(doc.LegalMonetaryTotal.TaxExclusiveAmount)).toBe(Number(totals.totalNet));
+      expect(amount(doc.LegalMonetaryTotal.TaxInclusiveAmount)).toBe(Number(totals.totalGross));
+      expect(amount(doc.TaxTotal.TaxAmount)).toBe(Number(totals.totalVat));
+      const subtotals = [doc.TaxTotal.TaxSubtotal].flat();
+      expect(subtotals.map((s: { TaxAmount: { '#text': number } }) => amount(s.TaxAmount))).toEqual(
+        totals.vatBreakdown.map((v) => Number(v.taxAmount)),
+      );
+      const ublLines = [doc.InvoiceLine].flat();
+      expect(
+        ublLines.map((l: { LineExtensionAmount: { '#text': number } }) => amount(l.LineExtensionAmount)),
+      ).toEqual(totals.lines.map((l) => Number(l.netAmount)));
+    }
+  });
+});

@@ -26,10 +26,11 @@ import { Send, Stamp } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { v7 as uuidv7 } from 'uuid';
 import { fromDecimal, toDecimal } from '@/components/quotes/quote-state';
 import { useApi, useApiMutation } from '@/lib/hooks';
+import { useRealtime } from '@/lib/realtime';
 import { useCan } from '@/lib/session';
 import { useErrorMessage } from '@/lib/use-error-message';
 import { formatDay, pct, STATEMENT_TONES } from './status';
@@ -45,6 +46,9 @@ export function StatementEditor({ projectId, statementId }: { projectId: string;
   const tc = useTranslations('common');
   const errorMessage = useErrorMessage();
   const isNew = statementId === 'nouveau';
+  const { addChannels } = useRealtime();
+  // En direct : approbation ou contestation du client sur son portail.
+  useEffect(() => addChannels([`project:${projectId}`]), [addChannels, projectId]);
   const project = useApi<ProjectDto>(['project', projectId], `/projects/${projectId}`);
   const list = useApi<{ items: ProgressStatementDto[] }>(
     ['progress_statements', projectId],
@@ -167,7 +171,7 @@ function Editor({
     },
   );
   const submit = useApiMutation<void, ProgressStatementDto & { invoiceId: string | null }>(
-    () => ({ path: `/progress-statements/${id}/submit` }),
+    () => ({ path: `/progress-statements/${id}/submit`, method: 'POST' }),
     {
       successMessage: (r) => (r.status === 'submitted' ? t('submitted') : t('approved')),
       onSuccess: (r) => {

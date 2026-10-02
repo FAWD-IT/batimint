@@ -511,7 +511,8 @@ describe('notes de crédit (05 §2)', () => {
 
 describe('numérotation légale (règle n°4)', () => {
   it('émissions concurrentes : numéros continus, sans trou ni doublon', async () => {
-    const ids = Array.from({ length: 8 }, () => uuidv7());
+    // 09 : 100 émissions parallèles, zéro trou ni doublon.
+    const ids = Array.from({ length: 100 }, () => uuidv7());
     for (const id of ids)
       await inject('PUT', `/v1/invoices/${id}`, {
         id,
@@ -528,11 +529,11 @@ describe('numérotation légale (règle n°4)', () => {
       .map((r) => Number((r.json() as InvoiceDto).number!.split('-')[1]))
       .sort((a, b) => a - b);
     const first = seqs[0]!;
-    expect(seqs).toEqual(Array.from({ length: 8 }, (_, i) => first + i));
+    expect(seqs).toEqual(Array.from({ length: 100 }, (_, i) => first + i));
     // Émettre deux fois ne consomme pas de numéro.
     const again = await inject('POST', `/v1/invoices/${ids[0]}/issue`);
     expect(again.json().number).toBe(issued[0]!.json().number);
-  });
+  }, 180_000);
 });
 
 describe('B2B : facturé directement, sans approbation (paramètre par défaut)', () => {

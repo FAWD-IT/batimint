@@ -43,7 +43,7 @@ const day = (d: Date | null) => (d ? dateFr(d) : '');
 
 async function publish(ctx: ConsumerContext, projectId: string | null) {
   if (projectId) {
-    for (const topic of ['invoices', 'timeline', 'project'])
+    for (const topic of ['invoices', 'progress_statements', 'timeline', 'project'])
       await ctx.publish({ channel: projectChannel(projectId), topic, ref: projectId });
     await ctx.publish({ channel: projectPortalChannel(projectId), topic: 'portal', ref: projectId });
   }

@@ -3,12 +3,12 @@
 Ce fichier est le point de reprise entre sessions cloud. Une nouvelle session doit pouvoir reprendre le travail en ne lisant que lui et `CLAUDE.md`.
 
 ## Jalon en cours
-**M8 — Facturation et encaissement** — en cours : domaine (avancement, acompte, retenue, notes de crédit, QR EPC, relances, révision de prix) et schéma livrés. M7 ✅ validé (CI run 35 : checks + E2E sur les images de production).
+**M8 — Facturation et encaissement** — livré (domaine, documents validés Peppol, API, worker, écrans, portail, seed, E2E P7/P8 verts en local), en attente de la CI. M7 ✅ validé (CI run 35 : checks + E2E sur les images de production).
 
 (L'étiquette `m0-done` existe localement mais le push de tags est refusé par la politique de la session : seule la branche est poussée.)
 
 ## Prochaine action
-M8 : documents (PDF facture + QR EPC, UBL Peppol BIS 3 validé par les règles officielles EN 16931 + Peppol dans les tests), puis API + worker (émission, envoi Peppol/e-mail, paiements, Mollie mock, relances, approbation des états sur le portail), écrans, seed, E2E P7 et P8.
+Vérifier la CI du push M8 ; si verte, marquer M8 ✅ et démarrer M9 (sous-traitance et conformité : sous-traitants, documents, contrats, 30bis mock aux deux chemins, portail sous-traitant `/s/[token]`, Check In and Out, déclaration de travaux ; parcours P9 ; contrôle 30bis avant « à payer » des factures fournisseurs de sous-traitants reporté de M7).
 
 ## Relancer l'environnement
 ```bash
@@ -109,8 +109,18 @@ docker compose -f docker-compose.coolify.yml -f docker/docker-compose.sandbox.ym
 - Tests : 6 intégration API, 2 worker ; E2E P6 (BC depuis le devis, envoi, facture Peppol imputée seule avec écart, timeline, validation, « À imputer » ventilée sur deux chantiers, dépôt PDF extrait et rapproché, comptable en lecture) + téléphone.
 - Report : contrôle 30bis avant « à payer » (P6.4) → M9 avec la sous-traitance.
 
+### M8 — Facturation et encaissement (en attente CI)
+- Domaine (`invoicing.ts`) : états d'avancement (cumul en %, en quantité ou en €, pré-rempli par les tâches, jamais sous le déjà facturé), TVA par poste au prorata, déduction de l'acompte au prorata (solde sur la finale), retenue de garantie, solde et statut de paiement, notes de crédit (totale/partielle, plafonnées), QR EPC v002, relances B2B/B2C (calendrier, indemnité, intérêts, frais plafonnés), délai d'émission, révision de prix ; 18 tests.
+- Base : facture enrichie (parties figées, ventilation TVA, mentions, retenue, communication structurée, documents + empreintes, acheminement, paiements), états d'avancement + lignes, paiements, liens de paiement, étapes de relance ; RLS ; **déclencheur d'immuabilité** des factures émises (ADR 0017).
+- Documents : PDF facture / note de crédit (QR EPC, communication structurée, retenue, mentions) ; UBL Peppol BIS 3 (factures et notes de crédit) **validé par les règles officielles EN 16931 + Peppol** dans les tests ; écran = UBL sur 1 000 factures aléatoires.
+- API : factures (liste et encours, brouillon idempotent, émission numérotée sans trou, PDF/UBL, notes de crédit, paiements + annulation, lien de paiement, relances en pause), balance âgée, états d'avancement (pré-remplissage, saisie, envoi au client ou facturation directe), portail (approbation/contestation, factures, paiement en ligne, PDF), webhook de paiement et page de paiement simulée (mock).
+- Worker : acheminement (annuaire Peppol → Peppol, sinon e-mail vouvoyé avec PDF/UBL et lien portail ; échec signalé), suivi de livraison Peppol planifié, paiements (fil, liens clos, notification), états (e-mail au client, facture générée, contestation), relances quotidiennes ; nouveaux chantiers avec la retenue du tenant.
+- Web : module « Facturation » (encours et échu, vues, recherche, nouvelle facture libre/régie), facture (brouillon éditable, freins à l'émission, émission confirmée ; émise : documents, acheminement, paiements, lien de paiement, relances, notes de crédit), balance âgée, onglet « Facturation » du cockpit, « Facturer l'avancement » ; portail : état à approuver, vos factures, paiement en ligne ; page de paiement simulée.
+- Seed : Dupont facturé par 3 états approuvés (2026-116 à 118, payables à réception, 118 échue de 3 jours, rappel n°1) ; toutes les factures émises comme l'application ; numérotation continue 2026-099 → 118.
+- Tests : 11 intégration API (dont 100 émissions concurrentes), 5 worker, 18 domaine, 7 documents ; E2E P7 (acompte, paiement partiel, état approuvé sur le portail, facture avec acompte déduit, paiement en ligne) + P8 sur téléphone.
+
 ## Reste à faire
-M8 → M13 selon `docs/11-plan-de-livraison.md`.
+M9 → M13 selon `docs/11-plan-de-livraison.md`.
 
 ## Écarts avec la spécification
 - Nouveau paquet `packages/documents` (PDF) en plus de la liste de `CLAUDE.md` (ADR 0012).
@@ -141,7 +151,8 @@ M8 → M13 selon `docs/11-plan-de-livraison.md`.
 - Forme de l'attestation 6 % et éligibilité ligne par ligne (`05` §3)
 - Mention légale d'autoliquidation (`05` §3)
 - Délai d'émission des factures et durée de conservation (`05` §2) — bucket légal paramétré à 10 ans
-- Règles de relance B2B / B2C à jour (`05` §6)
+- Règles de relance B2B / B2C à jour (`05` §6) : taux B2B 10,15 %, indemnité 40 €, taux légal B2C 4,5 %, plafonds de frais B2C (`domain/invoicing.ts`)
+- Communication structurée placée dans le champ « non structuré » du QR EPC (+++…+++) (`05` §5)
 - Accès logiciel aux services web ONSS (Check In and Out, 30bis) (`07`)
 - Régime intracommunautaire pour un client assujetti étranger (proposé automatiquement, `domain/vat.ts`)
 

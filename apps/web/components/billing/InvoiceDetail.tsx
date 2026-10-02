@@ -221,14 +221,17 @@ function DraftPanel({ invoice: i, editable }: { invoice: InvoiceDto; editable: b
       },
     },
   );
-  const issue = useApiMutation<void, InvoiceDto>(() => ({ path: `/invoices/${i.id}/issue` }), {
-    invalidate: [['invoices'], ['project']],
-    successMessage: (dto) => t('issued', { number: dto.number ?? '' }),
-    onSuccess: (dto) => {
-      setDetail(dto);
-      setConfirmIssue(false);
+  const issue = useApiMutation<void, InvoiceDto>(
+    () => ({ path: `/invoices/${i.id}/issue`, method: 'POST' }),
+    {
+      invalidate: [['invoices'], ['project']],
+      successMessage: (dto) => t('issued', { number: dto.number ?? '' }),
+      onSuccess: (dto) => {
+        setDetail(dto);
+        setConfirmIssue(false);
+      },
     },
-  });
+  );
   const remove = useApiMutation<void>(() => ({ path: `/invoices/${i.id}`, method: 'DELETE' }), {
     invalidate: [['invoices'], ['progress_statements']],
     successMessage: t('deleted'),
@@ -592,7 +595,7 @@ function IssuedPanel({ invoice: i }: { invoice: InvoiceDto }) {
   const credit = i.type === 'credit_note';
   const setDetail = (dto: InvoiceDto) => queryClient.setQueryData(['invoices', 'detail', dto.id], dto);
   const link = useApiMutation<void, { url: string; amount: number }>(
-    () => ({ path: `/invoices/${i.id}/payment-link` }),
+    () => ({ path: `/invoices/${i.id}/payment-link`, method: 'POST' }),
     {
       onSuccess: async (r) => {
         try {
