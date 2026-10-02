@@ -547,7 +547,7 @@ function Totals({
 }) {
   const t = useTranslations('billing.totals');
   const row = (label: string, value: string, strong = false, testId?: string) => (
-    <div className="flex justify-between gap-6 py-1">
+    <div key={label} className="flex justify-between gap-6 py-1">
       <dt className={strong ? 'font-semibold' : 'text-muted'}>{label}</dt>
       <dd className={strong ? 'text-[17px] font-bold tabular-nums' : 'tabular-nums'} data-testid={testId}>
         {value}

@@ -343,7 +343,7 @@ export async function invoiceDocuments(
     paymentTerms:
       i.type === 'credit_note'
         ? null
-        : `Paiement à ${i.paymentTermsDays} jours${
+        : `${i.paymentTermsDays === 0 ? 'Payable à réception' : `Paiement à ${i.paymentTermsDays} jours`}${
             i.structuredCommunication ? ' avec la communication structurée' : ''
           }. En cas de retard, des rappels sont envoyés selon nos conditions générales.`,
   };

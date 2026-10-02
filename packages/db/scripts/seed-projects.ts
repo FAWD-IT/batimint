@@ -23,13 +23,13 @@ import {
   isWorkingDay,
   type IsoDate,
   multiplyCents,
-  roundHalfAwayFromZero,
   type VatRegime,
 } from '@batimint/domain';
 import { randomUUID } from 'node:crypto';
 import type { Tx } from '../src/client';
 import { loadVersionContent, replaceVersionContent } from '../src/quotes';
 import { nextSequenceValue } from '../src/sequences';
+import { issueSeedInvoice, seedDupontBilling } from './seed-billing';
 
 const euros = (v: number): bigint => BigInt(Math.round(v * 100));
 const at = (d: IsoDate, hhmm = '09:00') => new Date(`${d}T${hhmm}:00+02:00`);
@@ -443,29 +443,22 @@ async function issueInvoice(
     dueDate: IsoDate;
   },
 ) {
-  const rate = input.vatRegime === 'reduced_6' ? '0.06' : input.vatRegime === 'standard_21' ? '0.21' : '0';
-  const vat = roundHalfAwayFromZero(dec(input.net.toString()).times(rate));
-  const number = await nextNumber(tx, tenantId, 'invoice', '{YYYY}-{SEQ:3}');
-  await tx.invoice.create({
+  // Brouillon puis émission comme l'application (numéro, parties figées, communication, paiement).
+  const draft = await tx.invoice.create({
     data: {
       tenantId,
       projectId: input.projectId,
       customerId: input.customerId,
       type: input.type,
-      status: input.status,
-      number,
+      status: 'draft',
       title: input.title,
-      totalNet: input.net,
-      totalVat: vat,
-      totalGross: input.net + vat,
-      issuedAt: at(input.issuedAt, '10:00'),
-      dueDate: new Date(`${input.dueDate}T00:00:00Z`),
       lines: {
         create: [
           {
             tenantId,
             position: 0,
             description: input.title,
+            unit: 'forfait',
             quantity: '1',
             unitPrice: input.net,
             vatRegime: input.vatRegime,
@@ -474,7 +467,13 @@ async function issueInvoice(
       },
     },
   });
-  return number;
+  const terms = Math.round((Date.parse(input.dueDate) - Date.parse(input.issuedAt)) / 86_400_000);
+  const r = await issueSeedInvoice(tx, draft.id, {
+    issueDate: input.issuedAt,
+    paymentTermsDays: terms,
+    status: input.status,
+  });
+  return r.number;
 }
 
 // ---------------------------------------------------------------------------
@@ -745,13 +744,13 @@ export async function seedProjects(tx: Tx, tenantId: string, users: Map<string, 
   const karimTeam = await tx.team.findFirst({ where: { tenantId, name: 'Équipe Karim' } });
   const toitTeam = await tx.team.findFirst({ where: { tenantId, name: 'Équipe Toiture' } });
 
-  // Factures des chantiers terminés d'abord, pour que celle de Dupont porte le n° 2026-118 :
-  // la numérotation reprend celle de l'ancien logiciel (dernier numéro émis : 2026-099).
+  // Factures des chantiers terminés d'abord, pour que les états de Dupont portent les n° 2026-116 à
+  // 118 : la numérotation reprend celle de l'ancien logiciel (dernier numéro émis : 2026-098).
   const year = new Date().getFullYear();
   await tx.numberSequence.upsert({
     where: { tenantId_docType_year: { tenantId, docType: 'invoice', year } },
-    update: { lastValue: 99 },
-    create: { tenantId, docType: 'invoice', year, lastValue: 99 },
+    update: { lastValue: 98 },
+    create: { tenantId, docType: 'invoice', year, lastValue: 98 },
   });
 
   for (const o of OTHERS)
@@ -760,10 +759,10 @@ export async function seedProjects(tx: Tx, tenantId: string, users: Map<string, 
       karimTeam: karimTeam?.id ?? null,
       toitTeam: toitTeam?.id ?? null,
     });
-  // Complète la séquence jusqu'à 2026-117 (factures sans chantier de l'ancien logiciel).
+  // Les états d'avancement de Dupont prennent ensuite 2026-116, 117 et 118.
   await tx.numberSequence.update({
     where: { tenantId_docType_year: { tenantId, docType: 'invoice', year } },
-    data: { lastValue: 117 },
+    data: { lastValue: 115 },
   });
   await seedDupont(tx, ctx, today, { karim, teamId: karimTeam?.id ?? null });
 }
@@ -1194,19 +1193,18 @@ async function seedDupont(
     workingDaysFrom(story, -2),
   );
 
-  // Facture 2026-118 : état d'avancement à 40 %, échue depuis 3 jours.
-  const issued = addDays(today, -33);
-  const invoiceNumber = await issueInvoice(tx, ctx.tenantId, {
+  // États d'avancement n°1 à 3 approuvés par le client ; le n°3 (40 %) est la facture 2026-118,
+  // payable à réception et échue depuis 3 jours.
+  const billing = await seedDupontBilling(tx, {
+    tenantId: ctx.tenantId,
     projectId: project.id,
-    customerId: customer.id,
-    type: 'progress',
-    status: 'sent',
-    title: 'État d’avancement n°3 — 40 %',
-    net: euros(15_360),
-    vatRegime: 'reduced_6',
-    issuedAt: issued,
-    dueDate: addDays(issued, 30),
+    customerName: 'Jean Dupont',
+    userId: ctx.userId,
+    dates: [workingDaysFrom(start, 1), workingDaysFrom(start, 3), addDays(today, -3)],
+    today,
   });
+  const issued = billing.issued;
+  const invoiceNumber = billing.number;
 
   // Alerte de dérive déjà levée (l'outbox publié évite une seconde alerte au prochain coût).
   await tx.outboxEvent.create({
@@ -1263,7 +1261,7 @@ async function seedDupont(
     title: `Facture ${invoiceNumber} envoyée`,
     body: 'État d’avancement n°3 approuvé (40 %)',
     at: at(issued, '16:48'),
-    amount: euros(15_360),
+    amount: billing.gross,
     client: true,
   });
   await tl({
