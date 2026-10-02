@@ -15,6 +15,7 @@ import { MarginCard, ProgressCard, TodoCard } from '@/components/projects/Overvi
 import { TabPanel, Tabs } from '@/components/projects/Tabs';
 import { TasksTab } from '@/components/projects/TasksTab';
 import { PurchasesTab } from '@/components/purchasing/PurchasesTab';
+import { BillingTab } from '@/components/billing/BillingTab';
 import { ProjectTimeline } from '@/components/projects/Timeline';
 import { ApiError } from '@/lib/api';
 import { useApi } from '@/lib/hooks';
@@ -22,7 +23,7 @@ import { useRealtime } from '@/lib/realtime';
 import { useCan } from '@/lib/session';
 import { useErrorMessage } from '@/lib/use-error-message';
 
-type Tab = 'overview' | 'tasks' | 'field' | 'media' | 'changeOrders' | 'purchases' | 'budget';
+type Tab = 'overview' | 'tasks' | 'field' | 'media' | 'changeOrders' | 'purchases' | 'billing' | 'budget';
 const TAB_PARAM: Record<Tab, string> = {
   overview: '',
   tasks: 'taches',
@@ -30,6 +31,7 @@ const TAB_PARAM: Record<Tab, string> = {
   media: 'photos',
   changeOrders: 'avenants',
   purchases: 'achats',
+  billing: 'facturation',
   budget: 'budget',
 };
 const PARAM_TAB = Object.fromEntries(Object.entries(TAB_PARAM).map(([k, v]) => [v, k])) as Record<
@@ -108,7 +110,7 @@ export function ProjectCockpit({ id }: { id: string }) {
       case 'project_late':
         return undefined;
       case 'invoice_overdue':
-        return undefined;
+        return setTab('billing');
     }
   };
   const tabs = [
@@ -118,6 +120,7 @@ export function ProjectCockpit({ id }: { id: string }) {
     { value: 'media' as const, label: t('tabs.media'), count: p.counts.photos + p.counts.documents },
     { value: 'changeOrders' as const, label: t('tabs.changeOrders'), count: p.counts.changeOrders },
     ...(can('purchases.read') ? [{ value: 'purchases' as const, label: t('tabs.purchases') }] : []),
+    ...(can('invoices.read') ? [{ value: 'billing' as const, label: t('tabs.billing') }] : []),
     ...(p.financials ? [{ value: 'budget' as const, label: t('tabs.budget') }] : []),
   ];
 
@@ -148,6 +151,8 @@ export function ProjectCockpit({ id }: { id: string }) {
           <ChangeOrdersTab projectId={p.id} onOpen={(coId) => openCo(coId)} onNew={() => openCo(null)} />
         ) : tab === 'purchases' ? (
           <PurchasesTab project={p} />
+        ) : tab === 'billing' ? (
+          <BillingTab project={p} />
         ) : (
           <BudgetTab project={p} />
         )}

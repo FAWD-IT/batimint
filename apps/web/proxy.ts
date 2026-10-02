@@ -9,6 +9,7 @@ const PUBLIC_PREFIXES = [
   '/inscription',
   '/mot-de-passe',
   '/p/',
+  '/paiement-simule/',
   '/s/',
   '/f/',
   '/embed.js',

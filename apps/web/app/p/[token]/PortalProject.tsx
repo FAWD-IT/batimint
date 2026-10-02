@@ -17,6 +17,7 @@ import {
 import { ChevronDown, FileText, MessageCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { type FormEvent, useCallback, useEffect, useState } from 'react';
+import { PendingStatement, PortalInvoices, StatementDecisionDialog } from '@/components/portal/PortalBilling';
 import { PortalShell } from '@/components/portal/PortalShell';
 import { SignaturePad } from '@/components/portal/SignaturePad';
 import { api, ApiError } from '@/lib/api';
@@ -52,6 +53,10 @@ export function PortalProject({ token, initial }: { token: string; initial: Port
     subject: string;
   } | null>(null);
   const [refusing, setRefusing] = useState<ChangeOrder | null>(null);
+  const [deciding, setDeciding] = useState<{
+    statement: PortalProjectDto['statements'][number];
+    mode: 'approve' | 'dispute';
+  } | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
   const base = `/portal/projects/${encodeURIComponent(token)}`;
 
@@ -144,6 +149,19 @@ export function PortalProject({ token, initial }: { token: string; initial: Port
           pdfHref={`/api/v1${base}/change-orders/${co.id}/pdf`}
         />
       ))}
+
+      {data.statements
+        .filter((st) => st.status === 'submitted')
+        .map((st) => (
+          <PendingStatement
+            key={st.id}
+            statement={st}
+            onApprove={() => setDeciding({ statement: st, mode: 'approve' })}
+            onDispute={() => setDeciding({ statement: st, mode: 'dispute' })}
+          />
+        ))}
+
+      <PortalInvoices invoices={data.invoices} base={base} />
 
       {past.length ? (
         <section aria-labelledby="portal-co-history" className="flex flex-col gap-2">
@@ -259,6 +277,24 @@ export function PortalProject({ token, initial }: { token: string; initial: Port
             setData(next);
             setAsking(null);
             setFlash(t('questionSent'));
+          }}
+        />
+      ) : null}
+      {deciding ? (
+        <StatementDecisionDialog
+          statement={deciding.statement}
+          mode={deciding.mode}
+          signer={data.customer.displayName}
+          base={base}
+          onClose={() => setDeciding(null)}
+          onDone={(next) => {
+            setData(next);
+            setFlash(
+              deciding.mode === 'approve'
+                ? t('statement.approved', { n: deciding.statement.ordinal })
+                : t('statement.disputed'),
+            );
+            setDeciding(null);
           }}
         />
       ) : null}

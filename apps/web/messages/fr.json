@@ -100,7 +100,8 @@
     "noActiveProjects": "Aucun chantier en cours",
     "field": "Vue terrain",
     "planning": "Planning",
-    "purchasing": "Achats"
+    "purchasing": "Achats",
+    "billing": "Facturation"
   },
   "notifications": {
     "title": "Notifications",
@@ -1529,7 +1530,8 @@
       "changeOrders": "Avenants",
       "budget": "Budget",
       "field": "Terrain",
-      "purchases": "Achats"
+      "purchases": "Achats",
+      "billing": "Facturation"
     },
     "timeline": {
       "title": "Fil du chantier",
@@ -1976,7 +1978,40 @@
     "pdf": "Télécharger le PDF",
     "startPlanned": "Début des travaux le {date}",
     "startNotPlanned": "Date de début en cours de planification",
-    "startHeadline": "Vos travaux commencent le {date}"
+    "startHeadline": "Vos travaux commencent le {date}",
+    "statement": {
+      "toApprove": "À approuver",
+      "asOf": "au {date}",
+      "title": "État d’avancement n°{n} — {pct}",
+      "amount": "{amount} HTVA pour cette période, acompte déduit sur la facture",
+      "details": "Voir le détail par poste",
+      "hideDetails": "Masquer le détail",
+      "progress": "de {from} à {to}",
+      "approve": "Approuver",
+      "dispute": "Signaler un désaccord",
+      "approveTitle": "Approuver l’état d’avancement n°{n}",
+      "approveIntro": "La facture de {amount} HTVA vous sera ensuite envoyée.",
+      "signerName": "Votre nom",
+      "approveSubmit": "J’approuve",
+      "disputeTitle": "Désaccord sur l’état n°{n}",
+      "disputeIntro": "Expliquez ce qui ne correspond pas : l’entreprise revient vers vous.",
+      "reason": "Votre remarque",
+      "disputeSubmit": "Envoyer",
+      "nameRequired": "Indiquez votre nom.",
+      "reasonRequired": "Expliquez votre désaccord en quelques mots.",
+      "approved": "Merci : l’état n°{n} est approuvé, la facture va vous être envoyée.",
+      "disputed": "Votre remarque a été transmise à l’entreprise."
+    },
+    "invoices": {
+      "title": "Vos factures",
+      "invoice": "Facture {number}",
+      "paid": "Payée",
+      "overdue": "Échue",
+      "toPay": "À payer",
+      "due": "{amount} à payer avant le {date}",
+      "payOnline": "Payer {amount} en ligne",
+      "pdf": "Voir la facture (PDF)"
+    }
   },
   "field": {
     "manifest": {
@@ -2557,5 +2592,326 @@
         "terms": "Le délai de paiement va de 0 à 120 jours."
       }
     }
+  },
+  "billing": {
+    "title": "Facturation",
+    "new": "Nouvelle facture",
+    "search": "Rechercher (numéro, client, objet)",
+    "receivable": "Encours clients",
+    "openCount": "{n, plural, =0 {Aucune facture à encaisser} one {# facture à encaisser} other {# factures à encaisser}}",
+    "overdue": "Échu",
+    "agedBalance": "Voir la balance âgée",
+    "views": {
+      "open": "À encaisser",
+      "overdue": "En retard",
+      "draft": "Brouillons",
+      "paid": "Payées",
+      "all": "Toutes"
+    },
+    "empty": {
+      "open": {
+        "title": "Rien à encaisser",
+        "description": "Les factures émises et non payées apparaîtront ici, avec leur échéance."
+      },
+      "overdue": {
+        "title": "Aucune facture en retard",
+        "description": "Les relances partent automatiquement selon votre calendrier (Paramètres → Métier)."
+      },
+      "draft": {
+        "title": "Aucun brouillon",
+        "description": "Les acomptes à la signature et les factures d’avancement approuvées arrivent ici, prêts à émettre."
+      },
+      "paid": {
+        "title": "Aucune facture payée",
+        "description": "Les factures soldées et annulées par note de crédit apparaîtront ici."
+      },
+      "all": {
+        "title": "Aucune facture",
+        "description": "Facturez l’avancement depuis un chantier ou créez une facture libre."
+      }
+    },
+    "columns": {
+      "invoice": "Facture",
+      "customer": "Client",
+      "due": "Échéance",
+      "gross": "TVAC",
+      "balance": "Solde"
+    },
+    "draft": "Brouillon",
+    "late": "{n, plural, one {# jour de retard} other {# jours de retard}}",
+    "lateChip": "En retard de {n} j",
+    "delivery": {
+      "peppol": "Peppol",
+      "email": "E-mail"
+    },
+    "type": {
+      "deposit": "Facture d’acompte",
+      "progress": "Facture d’avancement",
+      "work_order": "Facture de régie",
+      "final": "Facture finale",
+      "retention_release": "Libération de retenue",
+      "free": "Facture",
+      "credit_note": "Note de crédit"
+    },
+    "status": {
+      "draft": "Brouillon",
+      "issued": "Émise",
+      "sent": "Envoyée",
+      "delivered": "Livrée",
+      "partially_paid": "Payée en partie",
+      "paid": "Payée",
+      "cancelled": "Annulée",
+      "overdue": "En retard"
+    },
+    "notFound": "Facture introuvable",
+    "backToList": "Retour aux factures",
+    "draftTitle": "Brouillon · {type}",
+    "nav": {
+      "label": "Sections de la facturation",
+      "invoices": "Factures",
+      "receivables": "Encours clients"
+    },
+    "newDialog": {
+      "title": "Nouvelle facture",
+      "description": "Facture libre ou de régie. Les acomptes et les états d’avancement se facturent depuis le chantier.",
+      "searchCustomer": "Rechercher un client",
+      "customer": "Client",
+      "chooseCustomer": "Choisir un client",
+      "project": "Chantier (facultatif)",
+      "noProject": "Sans chantier",
+      "type": "Type",
+      "types": {
+        "free": "Facture libre",
+        "work_order": "Facture de régie"
+      },
+      "invoiceTitle": "Objet de la facture",
+      "create": "Créer le brouillon",
+      "errors": {
+        "customer": "Choisissez un client.",
+        "title": "Indiquez l’objet de la facture."
+      }
+    },
+    "editor": {
+      "saved": "Brouillon enregistré",
+      "issued": "Facture {number} émise : envoi au client en cours",
+      "deleted": "Brouillon supprimé",
+      "errors": {
+        "title": "Indiquez l’objet de la facture.",
+        "noLines": "Ajoutez au moins une ligne.",
+        "description": "Chaque ligne doit avoir une description.",
+        "quantity": "Chaque ligne doit avoir une quantité (ex. 2 ou 2,5).",
+        "terms": "Le délai de paiement va de 0 à 120 jours."
+      },
+      "blockers": "Avant d’émettre",
+      "generatedCredit": "Note de crédit préparée depuis la facture {number} : vérifiez-la, puis émettez-la.",
+      "generatedProgress": "Facture générée par l’état d’avancement n°{n} : pour la modifier, supprimez-la et corrigez l’état.",
+      "title": "Objet",
+      "terms": "Délai de paiement",
+      "days": "jours",
+      "periodStart": "Prestations du",
+      "periodEnd": "au",
+      "intro": "Introduction (facultative)",
+      "lines": "Lignes",
+      "line": {
+        "description": "Désignation {n}",
+        "descriptionColumn": "Désignation",
+        "quantity": "Quantité",
+        "unit": "Unité",
+        "unitPrice": "Prix unitaire HTVA",
+        "vat": "TVA",
+        "remove": "Retirer la ligne {n}",
+        "net": "Total HTVA"
+      },
+      "addLine": "Ajouter une ligne",
+      "notes": "Remarques imprimées sur la facture",
+      "delete": "Supprimer le brouillon",
+      "issue": "Émettre",
+      "issueTitle": "Émettre cette {type} ?",
+      "issueDescription": "Elle reçoit son numéro définitif et ne pourra plus être modifiée (seule une note de crédit pourra la corriger). Elle part au client par Peppol s’il y est inscrit, sinon par e-mail. Total : {gross} TVAC.",
+      "issueConfirm": "Émettre et envoyer",
+      "deleteTitle": "Supprimer ce brouillon ?",
+      "deleteDescription": "Le brouillon disparaît ; aucun numéro n’a été attribué.",
+      "deleteProgress": "L’état d’avancement redevient « approuvé » : vous pourrez générer à nouveau sa facture."
+    },
+    "totals": {
+      "net": "Total HTVA",
+      "vat": "TVA {rate} % sur {base}",
+      "reverseCharge": "Autoliquidation (base {base})",
+      "gross": "Total TVAC",
+      "creditGross": "Total à créditer TVAC",
+      "retention": "Retenue de garantie {percent} %",
+      "balance": "Reste à payer"
+    },
+    "issued": {
+      "linkCopied": "Lien de paiement copié",
+      "linkReady": "Lien de paiement prêt",
+      "paymentRemoved": "Paiement annulé",
+      "issueDate": "Date",
+      "dueDate": "Échéance",
+      "period": "Période",
+      "communication": "Communication structurée",
+      "buyer": "Client",
+      "credits": "Facture corrigée",
+      "documents": "Documents et envoi",
+      "ubl": "UBL (Peppol)",
+      "delivery": {
+        "pending": "Envoi en cours…",
+        "peppol": {
+          "queued": "En attente d’envoi Peppol",
+          "sent": "Envoyée par Peppol à {to}",
+          "delivered": "Livrée par Peppol à {to}",
+          "failed": "Envoi Peppol en échec"
+        },
+        "email": {
+          "queued": "En attente d’envoi",
+          "sent": "Envoyée par e-mail à {to}",
+          "delivered": "Livrée à {to}",
+          "failed": "Non envoyée"
+        }
+      },
+      "payments": "Paiements",
+      "method": {
+        "transfer": "Virement",
+        "bancontact": "Bancontact",
+        "card": "Carte",
+        "cash": "Espèces",
+        "online": "Paiement en ligne",
+        "other": "Autre"
+      },
+      "removePayment": "Annuler le paiement de {amount}",
+      "noPayment": "Aucun paiement reçu.",
+      "settled": "Facture soldée.",
+      "recordPayment": "Enregistrer un paiement",
+      "paymentLink": "Lien de paiement",
+      "reminders": "Relances",
+      "formalNotice": "Mise en demeure",
+      "reminder": "Rappel n°{n}",
+      "daysLate": "{n} j de retard",
+      "noReminder": "Aucune relance envoyée.",
+      "remindersEnabled": "Relances automatiques",
+      "creditNotes": "Notes de crédit",
+      "createCreditNote": "Créer une note de crédit",
+      "removePaymentTitle": "Annuler ce paiement ?",
+      "removePaymentDescription": "Le solde de la facture est rétabli et les relances reprennent si elle est échue.",
+      "removePaymentConfirm": "Annuler le paiement",
+      "keep": "Garder"
+    },
+    "paymentDialog": {
+      "title": "Enregistrer un paiement",
+      "description": "Solde actuel : {balance}. Un paiement partiel laisse la facture « payée en partie ».",
+      "amount": "Montant reçu",
+      "tooMuch": "Plus que le solde de la facture",
+      "date": "Reçu le",
+      "method": "Moyen de paiement",
+      "methods": {
+        "transfer": "Virement",
+        "bancontact": "Bancontact",
+        "card": "Carte",
+        "cash": "Espèces",
+        "online": "Paiement en ligne",
+        "other": "Autre"
+      },
+      "reference": "Référence (extrait, communication)",
+      "save": "Enregistrer",
+      "recorded": "Paiement enregistré",
+      "settled": "Facture soldée"
+    },
+    "creditDialog": {
+      "title": "Note de crédit sur la facture {number}",
+      "description": "Une facture émise ne se modifie pas : la note de crédit l’annule en tout ou en partie et part au client comme la facture.",
+      "reason": "Motif",
+      "full": "Créditer toute la facture",
+      "amount": "Montant HTVA à créditer (ligne {n})",
+      "create": "Préparer la note de crédit",
+      "errors": {
+        "reason": "Indiquez le motif de la note de crédit.",
+        "amount": "Indiquez au moins un montant à créditer."
+      }
+    },
+    "receivables": {
+      "agedBalance": "Balance âgée",
+      "total": "Encours total",
+      "buckets": {
+        "notDue": "Non échu",
+        "d1_30": "1 à 30 jours",
+        "d31_60": "31 à 60 jours",
+        "d61_90": "61 à 90 jours",
+        "over90": "Plus de 90 jours"
+      },
+      "byCustomer": "Encours par client",
+      "customer": "Client",
+      "invoices": "Factures",
+      "oldest": "Plus ancien retard",
+      "overdue": "Échu",
+      "balance": "Solde",
+      "days": "{n} j",
+      "emptyTitle": "Aucun encours",
+      "empty": "Toutes vos factures émises sont payées."
+    },
+    "statement": {
+      "pageTitle": "État d’avancement",
+      "title": "État d’avancement n°{n}",
+      "notFound": "État d’avancement introuvable",
+      "notFoundHint": "Il a peut-être été supprimé. Revenez à l’onglet Facturation du chantier.",
+      "status": {
+        "draft": "Brouillon",
+        "submitted": "En attente du client",
+        "approved": "Approuvé",
+        "disputed": "Contesté",
+        "invoiced": "Facturé"
+      },
+      "approvalRequired": "Le client l’approuve sur son portail avant facturation.",
+      "directBilling": "Facturé directement, sans approbation du client.",
+      "disputed": "Contesté par le client",
+      "waiting": "Envoyé au client : vous serez prévenu dès qu’il l’approuve ou le conteste.",
+      "invoiceIssued": "Facture {number} émise",
+      "invoiceDraft": "Facture prête à émettre",
+      "periodEnd": "Situation au",
+      "note": "Remarque pour le client",
+      "posts": "Postes du chantier",
+      "contract": "Contrat {amount}",
+      "previous": "déjà facturé {pct}",
+      "tasks": "tâches {pct}",
+      "qty": "Qté",
+      "mode": "Saisie pour {post}",
+      "cumulative": "Cumul {post}",
+      "periodFor": "Montant de la période pour {post}",
+      "summary": "Cumul {pct} d’un contrat de {contract}",
+      "periodHint": "HTVA pour cette période, avant déduction de l’acompte",
+      "submit": "Envoyer au client",
+      "bill": "Facturer",
+      "saved": "État enregistré",
+      "submitted": "État envoyé au client pour approbation",
+      "approved": "État validé : facture prête à émettre",
+      "approvedBy": "Approuvé par {name} le {date}",
+      "errors": {
+        "number": "Nombre invalide",
+        "fix": "Corrigez les postes en erreur.",
+        "empty": "Rien à facturer : faites avancer au moins un poste."
+      }
+    },
+    "tab": {
+      "statements": "États d’avancement",
+      "billProgress": "Facturer l’avancement",
+      "openPending": "Reprendre l’état n°{n}",
+      "noStatement": "Aucun état d’avancement. Facturez l’avancement : les pourcentages sont pré-remplis depuis les tâches cochées.",
+      "invoices": "Factures du chantier",
+      "newInvoice": "Facture de régie ou libre",
+      "emptyTitle": "Aucune facture",
+      "empty": "L’acompte arrive en brouillon à la signature du devis ; les factures d’avancement suivent les états."
+    }
+  },
+  "mockCheckout": {
+    "pageTitle": "Paiement",
+    "simulation": "Paiement simulé (mode démonstration) : aucune somme n’est débitée.",
+    "payTo": "Paiement à {company}",
+    "invoice": "Facture {number}",
+    "pay": "Payer avec Bancontact",
+    "paid": "Paiement reçu",
+    "redirecting": "Retour à votre espace…",
+    "close": "Vous pouvez fermer cette page.",
+    "cancel": "Annuler et revenir",
+    "error": "Paiement impossible pour le moment.",
+    "errorTitle": "Lien de paiement indisponible"
   }
 }

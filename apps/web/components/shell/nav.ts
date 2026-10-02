@@ -8,6 +8,7 @@ import {
   type LucideIcon,
   Settings,
   ShoppingCart,
+  Receipt,
   Shield,
   Smartphone,
   Sun,
@@ -27,6 +28,7 @@ export interface NavItem {
     | 'customers'
     | 'quotes'
     | 'purchasing'
+    | 'billing'
     | 'library'
     | 'teams'
     | 'settings'
@@ -45,6 +47,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: '/terrain', labelKey: 'field', icon: Smartphone, permission: 'time.clock_team' },
   { href: '/opportunites', labelKey: 'pipeline', icon: Briefcase, permission: 'leads.read' },
   { href: '/devis', labelKey: 'quotes', icon: FileText, permission: 'quotes.read' },
+  { href: '/facturation', labelKey: 'billing', icon: Receipt, permission: 'invoices.read' },
   { href: '/achats', labelKey: 'purchasing', icon: ShoppingCart, permission: 'purchases.read' },
   { href: '/clients', labelKey: 'customers', icon: Users, permission: 'customers.read' },
   { href: '/bibliotheque', labelKey: 'library', icon: BookOpen, permission: 'library.read' },
