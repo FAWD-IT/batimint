@@ -3,7 +3,7 @@
 Ce fichier est le point de reprise entre sessions cloud. Une nouvelle session doit pouvoir reprendre le travail en ne lisant que lui et `CLAUDE.md`.
 
 ## Jalon en cours
-**M4 — Chantier pivot** — livré (domaine, API, worker, cockpit, avenants, portail chantier, ⌘K, seed, E2E P5). Reste : CI verte sur la branche.
+**M4 — Chantier pivot** — ✅ validé (CI verte, run 21 : checks + E2E sur les images de production). Prochain jalon : M5.
 
 (L'étiquette `m0-done` existe localement mais le push de tags est refusé par la politique de la session : seule la branche est poussée.)
 
