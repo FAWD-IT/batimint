@@ -1,0 +1,33 @@
+name: Captures de revue
+
+on:
+  push:
+    branches: ['revue-captures']
+
+jobs:
+  captures:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: cp .env.example .env
+      - name: Stack de production + seed de démo
+        run: docker compose -f docker-compose.coolify.yml -f docker/docker-compose.e2e.yml up -d --build --wait --wait-timeout 600
+      - run: pnpm --filter @batimint/e2e exec playwright install --with-deps chromium
+      - name: Captures
+        working-directory: e2e
+        env:
+          E2E_BASE_URL: http://localhost:3000
+        run: npx playwright test -c captures.config.ts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: captures
+          path: e2e/captures-out
+          if-no-files-found: warn
