@@ -29,7 +29,14 @@ const COST_KEY: Record<string, keyof CommittedCosts> = {
 export const UNALLOCATED = 'unallocated';
 
 /** Émises (y compris annulées par note de crédit : la note de crédit vient en déduction). */
-export const BILLED_STATUSES = ['issued', 'sent', 'delivered', 'partially_paid', 'paid', 'cancelled'] as const;
+export const BILLED_STATUSES = [
+  'issued',
+  'sent',
+  'delivered',
+  'partially_paid',
+  'paid',
+  'cancelled',
+] as const;
 export const OPEN_INVOICE_STATUSES = ['issued', 'sent', 'delivered', 'partially_paid'] as const;
 
 export interface LineDetail {
