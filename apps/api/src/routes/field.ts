@@ -107,6 +107,59 @@ function workOrderDto(
   };
 }
 
+type WorkOrderForPdf = Awaited<ReturnType<Tx['workOrder']['findUniqueOrThrow']>> & {
+  lines: { kind: string; description: string; quantity: { toString(): string }; unit: string }[];
+  project: {
+    number: string;
+    name: string;
+    customer: { displayName: string };
+    site: { street: string; postalCode: string; city: string } | null;
+    tenant: Parameters<typeof addressLines>[0] & {
+      name: string;
+      legalName: string | null;
+      vatNumber: string | null;
+      brandColor: string | null;
+    };
+  };
+};
+
+const WORK_ORDER_PDF_INCLUDE = {
+  lines: { orderBy: { position: 'asc' as const } },
+  project: { include: { customer: true, site: true, tenant: true } },
+};
+
+function workOrderPdf(
+  w: WorkOrderForPdf,
+  number: string | null,
+  signature: { signerName: string; signedAt: Date; ip: string | null } | null,
+): Promise<Buffer> {
+  const t = w.project.tenant;
+  return renderWorkOrderPdf({
+    tenant: {
+      name: t.legalName ?? t.name,
+      lines: [...addressLines(t), ...(t.vatNumber ? [`TVA ${t.vatNumber}`] : [])],
+      brandColor: t.brandColor,
+    },
+    customer: { name: w.project.customer.displayName },
+    site: w.project.site
+      ? `${w.project.site.street}, ${w.project.site.postalCode} ${w.project.site.city}`
+      : null,
+    projectRef: `${w.project.number} — ${w.project.name}`,
+    workOrder: {
+      number,
+      day: w.day,
+      description: w.description,
+      lines: w.lines.map((l) => ({
+        kind: l.kind as 'labour' | 'material',
+        description: l.description,
+        quantity: l.quantity.toString(),
+        unit: l.unit,
+      })),
+    },
+    signature,
+  });
+}
+
 /** Signalement (idempotent par identifiant généré sur le téléphone). */
 async function createIssue(scope: TenantScope, input: z.infer<typeof IssueInputSchema>) {
   const { tx, auth, actor } = scope;
@@ -258,21 +311,29 @@ export const fieldRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (app,
           },
         );
         const openMinutes = w.sessions.find((s) => !s.end)?.minutes ?? 0;
-        const tasks = project
+        // Tâches du jour : en cours, terminées aujourd'hui, assignées à moi ; complétées par les
+        // suivantes à faire (ordre du devis) pour en montrer au moins trois, six au plus.
+        const candidates = project
           ? await tx.task.findMany({
               where: {
                 projectId: project.id,
-                OR: [
-                  ...(me ? [{ assigneeEmployeeId: me.id }] : []),
-                  { assigneeEmployeeId: null, status: { not: 'done' } },
-                  { completedAt: { gte: brusselsMidnight(today) } },
-                ],
+                OR: [{ status: { not: 'done' } }, { completedAt: { gte: brusselsMidnight(today) } }],
               },
-              include: { budgetLine: { select: { label: true } } },
+              include: { budgetLine: { select: { label: true, position: true } } },
               orderBy: [{ position: 'asc' }],
-              take: 12,
+              take: 200,
             })
           : [];
+        const rank = (x: (typeof candidates)[number]) => x.budgetLine?.position ?? 999;
+        candidates.sort((a, b) => rank(a) - rank(b) || a.position - b.position);
+        const focus = candidates.filter(
+          (x) =>
+            x.status !== 'todo' ||
+            (me && x.assigneeEmployeeId === me.id) ||
+            (x.completedAt && x.completedAt >= brusselsMidnight(today)),
+        );
+        const upcoming = candidates.filter((x) => !focus.includes(x) && !x.assigneeEmployeeId);
+        const tasks = [...focus, ...upcoming.slice(0, Math.max(0, 3 - focus.length))].slice(0, 6);
         const photoCounts = tasks.length
           ? await tx.attachment.groupBy({
               by: ['taskId'],
@@ -339,6 +400,31 @@ export const fieldRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (app,
       }),
   );
 
+  app.get(
+    '/field/hours',
+    {
+      schema: {
+        tags: ['terrain'],
+        summary: 'Mes heures (tous chantiers), par jour',
+        querystring: z.object({ from: IsoDay.optional(), to: IsoDay.optional() }),
+        response: { 200: TimesheetSchema },
+      },
+    },
+    (req) =>
+      inTenant(deps, req, 'projects.read', async ({ tx, auth }) => {
+        const to = req.query.to ?? brusselsDate(new Date());
+        const from =
+          req.query.from ?? brusselsDate(new Date(Date.parse(`${to}T12:00:00Z`) - 13 * 86_400_000));
+        const me = await employeeOf(tx, auth.userId);
+        if (!me) return { from, to, rows: [] };
+        return {
+          from,
+          to,
+          rows: await timesheet(tx, auth.tenantId, auth.role, { employeeIds: [me.id], from, to }),
+        };
+      }),
+  );
+
   app.post(
     '/field/clock',
     {
@@ -370,7 +456,7 @@ export const fieldRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (app,
         try {
           const r = await inTenant(deps, req, null, async (scope) => {
             if (action.type === 'clock') {
-              const e = await recordClock(scope, { ...action.data, offline: true });
+              const e = await recordClock(scope, action.data);
               return { geofence: e.geofence as 'ok' | 'too_far' | 'no_position' | 'no_site_position' };
             }
             if (action.type === 'task') {
@@ -608,30 +694,10 @@ export const fieldRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (app,
           year,
           sequence: await nextSequenceValue(tx, auth.tenantId, 'work_order', year),
         });
-        const t = w.project.tenant;
-        const pdf = await renderWorkOrderPdf({
-          tenant: {
-            name: t.legalName ?? t.name,
-            lines: [...addressLines(t), ...(t.vatNumber ? [`TVA ${t.vatNumber}`] : [])],
-            brandColor: t.brandColor,
-          },
-          customer: { name: w.project.customer.displayName },
-          site: w.project.site
-            ? `${w.project.site.street}, ${w.project.site.postalCode} ${w.project.site.city}`
-            : null,
-          projectRef: `${w.project.number} — ${w.project.name}`,
-          workOrder: {
-            number,
-            day: w.day,
-            description: w.description,
-            lines: w.lines.map((l) => ({
-              kind: l.kind as 'labour' | 'material',
-              description: l.description,
-              quantity: l.quantity.toString(),
-              unit: l.unit,
-            })),
-          },
-          signature: { signerName: req.body.signerName, signedAt: now, ip: req.ip },
+        const pdf = await workOrderPdf(w, number, {
+          signerName: req.body.signerName,
+          signedAt: now,
+          ip: req.ip,
         });
         const hash = sha256(pdf);
         const key = `t/${auth.tenantId}/work-orders/${w.id}/${number}-signe.pdf`;
@@ -720,11 +786,25 @@ export const fieldRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (app,
       },
     },
     async (req, reply) => {
-      const w = await inTenant(deps, req, 'projects.read', ({ tx }) =>
-        tx.workOrder.findUnique({ where: { id: req.params.id } }),
-      );
-      if (!w?.pdfKey) throw notFound('Ce bon de régie signé');
-      const body = await deps.integrations.storage.get('legal', w.pdfKey);
+      const { w, pdf } = await inTenant(deps, req, 'projects.read', async ({ tx }) => {
+        const w = await tx.workOrder.findUnique({
+          where: { id: req.params.id },
+          include: WORK_ORDER_PDF_INCLUDE,
+        });
+        if (!w || w.status === 'draft') throw notFound('Ce bon de régie signé');
+        if (w.pdfKey) return { w, pdf: Buffer.from(await deps.integrations.storage.get('legal', w.pdfKey)) };
+        // Bon signé sans PDF conservé (données importées) : régénéré depuis la signature.
+        const sig = w.signatureId ? await tx.signature.findUnique({ where: { id: w.signatureId } }) : null;
+        return {
+          w,
+          pdf: await workOrderPdf(
+            w,
+            w.number,
+            sig ? { signerName: sig.signerName, signedAt: sig.signedAt, ip: sig.ip } : null,
+          ),
+        };
+      });
+      const body = pdf;
       return reply
         .header('content-type', 'application/pdf')
         .header('content-disposition', `inline; filename="${w.number ?? 'bon-de-regie'}.pdf"`)

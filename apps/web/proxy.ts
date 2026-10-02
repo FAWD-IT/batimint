@@ -18,6 +18,9 @@ const PUBLIC_PREFIXES = [
   '/icons/',
   '/manifest',
   '/sw.js',
+  '/terrain/sw.js',
+  '/terrain/manifest',
+  '/terrain/icon-',
   '/invitation',
 ];
 

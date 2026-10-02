@@ -111,7 +111,14 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                         className={cn('size-2 shrink-0 rounded-full', HEALTH_DOT[p.health])}
                       />
                       <span className="min-w-0 flex-1 truncate">{p.shortLabel}</span>
-                      <span className="shrink-0 text-[12px] text-[#8F8F8F] tabular-nums">{pct} %</span>
+                      <span
+                        className={cn(
+                          'shrink-0 text-[12px] tabular-nums',
+                          active ? 'text-[#D9D9D9]' : 'text-[#A3A3A3]',
+                        )}
+                      >
+                        {pct} %
+                      </span>
                     </Link>
                   </li>
                 );

@@ -357,6 +357,7 @@ export async function projectDetail(tx: Tx, id: string, tenantId: string, role: 
       documents,
       changeOrders: changeOrders.length,
       pendingChangeOrders: changeOrders.filter((c) => c.status === 'sent').length,
+      openIssues: await tx.issue.count({ where: { projectId: p.id, status: 'open' } }),
     },
     portal: {
       lastViewedAt: iso(

@@ -271,6 +271,7 @@ describe('M5 — terrain', () => {
           at: minutesAgo(30),
           latitude: SITE.latitude,
           longitude: SITE.longitude,
+          offline: true,
         },
       },
       { type: 'task', id: uuidv7(), data: { projectId, taskId, progressPercent: 60 } },

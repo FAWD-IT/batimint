@@ -3,96 +3,15 @@
  * navigateurs, avenant composé par Sophie, question puis validation par M. Dupont sur son portail,
  * budget et contrat mis à jour ; ⌘K pour retrouver le chantier.
  */
-import { type APIRequestContext, expect, type Page, test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import {
   expectNoA11yViolations,
   expectNoHorizontalOverflow,
   lastEmailTo,
+  signedProject,
   signup,
   uniqueEmail,
 } from './helpers';
-
-async function call<T>(
-  request: APIRequestContext,
-  method: 'POST' | 'PUT' | 'GET',
-  path: string,
-  data?: unknown,
-) {
-  const res = await request.fetch(`/api/v1${path}`, { method, ...(data !== undefined ? { data } : {}) });
-  expect(res.ok(), `${method} ${path} → ${res.status()} ${await res.text()}`).toBeTruthy();
-  return (await res.json()) as T;
-}
-
-/** Un chantier créé par le vrai circuit : devis composé, envoyé, signé sur le portail, worker. */
-async function signedProject(page: Page, email: string) {
-  const r = page.request;
-  const customer = await call<{ id: string }>(r, 'POST', '/customers', {
-    kind: 'individual',
-    firstName: 'Jean',
-    lastName: 'Dupont',
-    email,
-  });
-  const site = await call<{ id: string }>(r, 'POST', `/customers/${customer.id}/sites`, {
-    street: 'Rue de la Station 42',
-    postalCode: '6040',
-    city: 'Jumet',
-    isPrivateDwelling: true,
-    firstOccupancyYear: 1975,
-  });
-  const opp = await call<{ id: string }>(r, 'POST', '/opportunities', {
-    customerId: customer.id,
-    siteId: site.id,
-    title: 'Rénovation salle de bain',
-  });
-  const quote = await call<{ id: string; currentVersion: { revision: number } }>(r, 'POST', '/quotes', {
-    opportunityId: opp.id,
-    title: 'Rénovation salle de bain',
-  });
-  const line = (description: string, quantity: string, unitPrice: number, unitCost: number) => ({
-    key: crypto.randomUUID(),
-    kind: 'item',
-    description,
-    unit: 'm²',
-    quantity,
-    unitPrice,
-    unitCost,
-    laborHours: '0.5',
-    vatRegime: 'reduced_6',
-  });
-  await call(r, 'PUT', `/quotes/${quote.id}/content`, {
-    revision: quote.currentVersion.revision,
-    sections: [
-      {
-        key: crypto.randomUUID(),
-        title: 'Carrelage',
-        lines: [
-          line('Faïence murale 30×60 posée', '18', 9_000, 6_500),
-          line('Carrelage sol 60×60 posé', '6', 11_000, 8_000),
-        ],
-      },
-      {
-        key: crypto.randomUUID(),
-        title: 'Plomberie',
-        lines: [line('Douche à l’italienne', '1', 250_000, 180_000)],
-      },
-    ],
-  });
-  await call(r, 'POST', `/quotes/${quote.id}/send`, { email });
-  const mail = await lastEmailTo(email, /devis/);
-  const token = decodeURIComponent(/\/p\/([^\s"<>]+)/.exec(mail.text)![1]!);
-  await call(r, 'POST', `/portal/quotes/${encodeURIComponent(token)}/sign`, {
-    signerName: 'Jean Dupont',
-    acceptTerms: true,
-    certificate: { firstOccupancyYear: 1975, privateDwelling: true, overTenYears: true, finalConsumer: true },
-  });
-  let projectId = '';
-  await expect(async () => {
-    const list = await call<{ items: { id: string }[] }>(r, 'GET', '/projects?view=all');
-    expect(list.items).toHaveLength(1);
-    projectId = list.items[0]!.id;
-  }).toPass({ timeout: 30_000 });
-  return { projectId };
-}
 
 test('P5 : avenant envoyé, question du client, réponse, validation ; cockpit en direct', async ({
   page,

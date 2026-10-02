@@ -191,6 +191,7 @@ export const ProjectSchema = ProjectSummarySchema.extend({
     documents: z.number().int(),
     changeOrders: z.number().int(),
     pendingChangeOrders: z.number().int(),
+    openIssues: z.number().int(),
   }),
   portal: z.object({ lastViewedAt: z.string().nullable(), activeLinks: z.number().int() }),
 });

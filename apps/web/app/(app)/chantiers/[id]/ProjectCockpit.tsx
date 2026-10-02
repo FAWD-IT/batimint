@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { BudgetTab } from '@/components/projects/BudgetTab';
 import { ChangeOrderDrawer } from '@/components/projects/ChangeOrderDrawer';
 import { ChangeOrdersTab } from '@/components/projects/ChangeOrdersTab';
+import { FieldTab } from '@/components/projects/FieldTab';
 import { ProjectHeader, StatusCard } from '@/components/projects/Header';
 import { MediaTab } from '@/components/projects/MediaTab';
 import { MarginCard, ProgressCard, TodoCard } from '@/components/projects/Overview';
@@ -20,10 +21,11 @@ import { useRealtime } from '@/lib/realtime';
 import { useCan } from '@/lib/session';
 import { useErrorMessage } from '@/lib/use-error-message';
 
-type Tab = 'overview' | 'tasks' | 'media' | 'changeOrders' | 'budget';
+type Tab = 'overview' | 'tasks' | 'field' | 'media' | 'changeOrders' | 'budget';
 const TAB_PARAM: Record<Tab, string> = {
   overview: '',
   tasks: 'taches',
+  field: 'terrain',
   media: 'photos',
   changeOrders: 'avenants',
   budget: 'budget',
@@ -110,6 +112,7 @@ export function ProjectCockpit({ id }: { id: string }) {
   const tabs = [
     { value: 'overview' as const, label: t('tabs.overview') },
     { value: 'tasks' as const, label: t('tabs.tasks'), count: p.counts.openTasks },
+    { value: 'field' as const, label: t('tabs.field'), count: p.counts.openIssues },
     { value: 'media' as const, label: t('tabs.media'), count: p.counts.photos + p.counts.documents },
     { value: 'changeOrders' as const, label: t('tabs.changeOrders'), count: p.counts.changeOrders },
     ...(p.financials ? [{ value: 'budget' as const, label: t('tabs.budget') }] : []),
@@ -134,6 +137,8 @@ export function ProjectCockpit({ id }: { id: string }) {
           </div>
         ) : tab === 'tasks' ? (
           <TasksTab project={p} />
+        ) : tab === 'field' ? (
+          <FieldTab projectId={p.id} onOpenChangeOrder={(coId) => openCo(coId)} />
         ) : tab === 'media' ? (
           <MediaTab projectId={p.id} />
         ) : tab === 'changeOrders' ? (

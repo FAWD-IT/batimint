@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, type Page } from '@playwright/test';
+import { type APIRequestContext, expect, type Page } from '@playwright/test';
 
 export const MAILPIT = process.env['MAILPIT_URL'] ?? 'http://localhost:8025';
 
@@ -29,12 +29,12 @@ export async function signup(
   return { email };
 }
 
-export async function login(page: Page, email: string, password = PASSWORD) {
+export async function login(page: Page, email: string, password = PASSWORD, landing = /\/aujourdhui/) {
   await page.goto('/connexion');
   await page.getByLabel('Adresse e-mail').fill(email);
   await page.getByLabel('Mot de passe', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Se connecter' }).click();
-  await expect(page).toHaveURL(/\/aujourdhui/);
+  await expect(page).toHaveURL(landing);
 }
 
 /** Aucune violation axe critique ou sérieuse (09). */
@@ -86,4 +86,102 @@ export async function expectNoHorizontalOverflow(page: Page) {
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
   );
   expect(overflow, 'débordement horizontal (px)').toBeLessThanOrEqual(1);
+}
+
+// ---------------------------------------------------------------------------
+// Chantier de test créé par le vrai circuit (devis signé sur le portail → worker)
+// ---------------------------------------------------------------------------
+
+export async function call<T>(
+  request: APIRequestContext,
+  method: 'POST' | 'PUT' | 'PATCH' | 'GET',
+  path: string,
+  data?: unknown,
+) {
+  const res = await request.fetch(`/api/v1${path}`, { method, ...(data !== undefined ? { data } : {}) });
+  expect(res.ok(), `${method} ${path} → ${res.status()} ${await res.text()}`).toBeTruthy();
+  return (await res.json()) as T;
+}
+
+/** Un chantier créé par le vrai circuit : devis composé, envoyé, signé sur le portail, worker. */
+export async function signedProject(page: Page, email: string) {
+  const r = page.request;
+  const customer = await call<{ id: string }>(r, 'POST', '/customers', {
+    kind: 'individual',
+    firstName: 'Jean',
+    lastName: 'Dupont',
+    email,
+  });
+  const site = await call<{ id: string }>(r, 'POST', `/customers/${customer.id}/sites`, {
+    street: 'Rue de la Station 42',
+    postalCode: '6040',
+    city: 'Jumet',
+    isPrivateDwelling: true,
+    firstOccupancyYear: 1975,
+  });
+  const opp = await call<{ id: string }>(r, 'POST', '/opportunities', {
+    customerId: customer.id,
+    siteId: site.id,
+    title: 'Rénovation salle de bain',
+  });
+  const quote = await call<{ id: string; currentVersion: { revision: number } }>(r, 'POST', '/quotes', {
+    opportunityId: opp.id,
+    title: 'Rénovation salle de bain',
+  });
+  const line = (description: string, quantity: string, unitPrice: number, unitCost: number) => ({
+    key: crypto.randomUUID(),
+    kind: 'item',
+    description,
+    unit: 'm²',
+    quantity,
+    unitPrice,
+    unitCost,
+    laborHours: '0.5',
+    vatRegime: 'reduced_6',
+  });
+  await call(r, 'PUT', `/quotes/${quote.id}/content`, {
+    revision: quote.currentVersion.revision,
+    sections: [
+      {
+        key: crypto.randomUUID(),
+        title: 'Carrelage',
+        lines: [
+          line('Faïence murale 30×60 posée', '18', 9_000, 6_500),
+          line('Carrelage sol 60×60 posé', '6', 11_000, 8_000),
+        ],
+      },
+      {
+        key: crypto.randomUUID(),
+        title: 'Plomberie',
+        lines: [line('Douche à l’italienne', '1', 250_000, 180_000)],
+      },
+    ],
+  });
+  await call(r, 'POST', `/quotes/${quote.id}/send`, { email });
+  const mail = await lastEmailTo(email, /devis/);
+  const token = decodeURIComponent(/\/p\/([^\s"<>]+)/.exec(mail.text)![1]!);
+  await call(r, 'POST', `/portal/quotes/${encodeURIComponent(token)}/sign`, {
+    signerName: 'Jean Dupont',
+    acceptTerms: true,
+    certificate: { firstOccupancyYear: 1975, privateDwelling: true, overTenYears: true, finalConsumer: true },
+  });
+  let projectId = '';
+  await expect(async () => {
+    const list = await call<{ items: { id: string }[] }>(r, 'GET', '/projects?view=all');
+    expect(list.items).toHaveLength(1);
+    projectId = list.items[0]!.id;
+  }).toPass({ timeout: 30_000 });
+  return { projectId };
+}
+
+/** Accepte une invitation reçue par e-mail (Mailpit) dans la page donnée. */
+export async function acceptInvitation(page: Page, email: string, name: string, landing = /\/aujourdhui/) {
+  const mail = await lastEmailTo(email, /vous invite/);
+  const link = new URL(/(http\S+\/invitation\?token=[^\s"]+)/.exec(mail.text)![1]!);
+  await page.goto(link.pathname + link.search);
+  await expect(page.getByRole('heading', { name: /Rejoindre/ })).toBeVisible();
+  await page.getByLabel('Votre nom').fill(name);
+  await page.getByLabel('Choisissez un mot de passe').fill(PASSWORD);
+  await page.getByRole('button', { name: "Rejoindre l'entreprise" }).click();
+  await expect(page).toHaveURL(landing);
 }

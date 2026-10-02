@@ -53,7 +53,7 @@ const MONEY_TYPES = [
   'project.cost_recorded',
   'budget.drift_detected',
 ];
-const FIELD_TYPES = ['photo.added', 'task.completed', 'time_entry.created', 'issue.reported', 'team.arrived'];
+const FIELD_TYPES = ['photo.added', 'task.completed', 'issue.reported', 'team.arrived', 'work_order.signed'];
 
 const day = (s: string | null | undefined) => (s ? new Date(`${s}T00:00:00Z`) : null);
 

@@ -35,6 +35,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   const [connected, setConnected] = useState(false);
   const [channelCounts, setChannelCounts] = useState<Record<string, number>>({});
   const listeners = useRef(new Set<Listener>());
+  const everConnected = useRef(false);
 
   const channels = useMemo(
     () =>
@@ -48,7 +49,12 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const url = `/api/v1/realtime/stream${channels ? `?channels=${encodeURIComponent(channels)}` : ''}`;
     const source = new EventSource(url, { withCredentials: true });
-    source.addEventListener('ready', () => setConnected(true));
+    source.addEventListener('ready', () => {
+      setConnected(true);
+      // Reconnexion (réseau, nouveaux canaux) : des messages ont pu passer pendant la coupure.
+      if (everConnected.current) void queryClient.invalidateQueries({ type: 'active' });
+      everConnected.current = true;
+    });
     source.addEventListener('message', (e) => {
       try {
         const msg = JSON.parse((e as MessageEvent<string>).data) as RealtimeMessage;

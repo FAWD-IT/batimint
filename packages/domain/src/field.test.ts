@@ -94,6 +94,7 @@ describe('heures prestées', () => {
     expect(labourCost(0, 4400n)).toBe(0n);
     expect(formatMinutes(480)).toBe('8 h');
     expect(formatMinutes(455)).toBe('7 h 35');
+    expect(formatMinutes(30)).toBe('30 min');
     expect(formatClockTime(new Date('2026-10-02T06:02:00Z'))).toBe('8 h 02'); // heure d'été
     expect(formatClockTime(new Date('2026-12-02T16:30:00Z'))).toBe('17 h 30');
   });

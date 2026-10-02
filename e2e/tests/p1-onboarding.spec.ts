@@ -2,24 +2,13 @@
  * P1 — Inscription et mise en route (Marc, moins de 10 minutes).
  * Peppol en simulation.
  */
-import { expect, type Page, test } from '@playwright/test';
-import { expectNoA11yViolations, lastEmailTo, PASSWORD, signup, uniqueEmail } from './helpers';
+import { expect, test } from '@playwright/test';
+import { acceptInvitation, expectNoA11yViolations, signup, uniqueEmail } from './helpers';
 
 const PNG_1PX = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
   'base64',
 );
-
-async function acceptInvitation(page: Page, email: string, name: string) {
-  const mail = await lastEmailTo(email, /vous invite/);
-  const link = new URL(/(http\S+\/invitation\?token=[^\s"]+)/.exec(mail.text)![1]!);
-  await page.goto(link.pathname + link.search);
-  await expect(page.getByRole('heading', { name: /Rejoindre/ })).toBeVisible();
-  await page.getByLabel('Votre nom').fill(name);
-  await page.getByLabel('Choisissez un mot de passe').fill(PASSWORD);
-  await page.getByRole('button', { name: "Rejoindre l'entreprise" }).click();
-  await expect(page).toHaveURL(/\/aujourdhui/);
-}
 
 test.describe('P1 — inscription et mise en route', () => {
   test('Marc paramètre son entreprise et invite son équipe', async ({ page, browser }) => {
@@ -109,7 +98,8 @@ test.describe('P1 — inscription et mise en route', () => {
     // Luca accepte son invitation depuis son téléphone et arrive dans l'entreprise avec le rôle Ouvrier.
     const phone = await browser.newContext({ viewport: { width: 390, height: 844 } });
     const lucaPage = await phone.newPage();
-    await acceptInvitation(lucaPage, people[2]!.email, 'Luca Rossi');
+    // L'Ouvrier arrive directement sur la vue terrain.
+    await acceptInvitation(lucaPage, people[2]!.email, 'Luca Rossi', /\/terrain/);
     await expect(lucaPage.getByRole('heading', { name: 'Bonjour Luca' })).toBeVisible();
     await expect(lucaPage.getByText('Mise en route')).toHaveCount(0);
     await phone.close();

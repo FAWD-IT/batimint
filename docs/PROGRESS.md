@@ -3,12 +3,12 @@
 Ce fichier est le point de reprise entre sessions cloud. Une nouvelle session doit pouvoir reprendre le travail en ne lisant que lui et `CLAUDE.md`.
 
 ## Jalon en cours
-**M4 — Chantier pivot** — ✅ validé (CI verte, run 21 : checks + E2E sur les images de production). Prochain jalon : M5.
+**M5 — Terrain** — livré, en attente de la CI (checks + E2E sur les images de production). M4 ✅ (CI run 21).
 
 (L'étiquette `m0-done` existe localement mais le push de tags est refusé par la politique de la session : seule la branche est poussée.)
 
 ## Prochaine action
-Démarrer M5 (terrain, maquette `design/maquettes/terrain.dc.html`) : vue `/terrain` PWA tutoyée, pointage géolocalisé hors ligne (UUIDv7 + Idempotency-Key), photos par tâche (alimentent le fil et la « photo du jour » du portail), signalements → proposition d'avenant, bons de régie signés, rapport journalier, validation des heures par le chef. Les heures validées écrivent dans `ProjectCost` (catégorie `labour`) et émettent `project.cost_recorded.v1` (ADR 0013).
+Vérifier la CI du push M5 ; si verte, marquer M5 ✅ ici et démarrer M6 (planning : créneaux `ScheduleSlot` par équipe/personne, congés, glisser-déposer, le chantier du jour de la vue terrain en découle déjà ; l'onglet « Planning » de la maquette terrain remplace alors « Heures » ou s'y ajoute).
 
 ## Relancer l'environnement
 ```bash
@@ -80,8 +80,17 @@ docker compose -f docker-compose.coolify.yml -f docker/docker-compose.sandbox.ym
 - Seed : 25 chantiers dans tous les statuts (dont un ≥ 500 000 € en préparation pour Check In and Out) ; chantier Dupont des maquettes (62 %, marge 24,0 % → 21,8 %, dérive Carrelage, facture 2026-118 échue, avenant n°3 en attente avec question du client).
 - Tests : 13 intégration API M4 (chiffres, dérive, tâches, statut, fil, mentions, avenants, portail, signature, isolation, Ouvrier), 3 worker (avenant signé idempotent, dérive unique, photos regroupées), 15 domaine ; E2E P5 complet (deux navigateurs synchronisés, question/réponse, validation sur mobile, budget mis à jour, ⌘K) et cockpit mobile.
 
+### M5 — Terrain (en attente CI)
+- Domaine : distance (haversine), géorepérage avec tolérance + précision GPS, heures par paires IN/OUT (pause paramétrable, anomalies), coût main-d'œuvre et répartition sur les postes, seuil Check In and Out, minuit à Bruxelles, « 8 h 02 » ; tests.
+- Base : pointages (UUID du téléphone, position, distance, hors ligne, statut, ONSS), créneaux de planning, signalements, bons de régie et lignes, rapports journaliers ; RLS (ADR 0014).
+- API : `/field/today` (chantier du jour, équipe sur place, tâches du jour, droits), pointage idempotent (soi, équipe par le chef, bureau), synchro hors ligne par lots (une transaction par action, erreurs métier par action), signalements (photos, → avenant en un clic, résolu), bons de régie (brouillon sans prix, signature sur téléphone, numéro BR, PDF signé + empreinte, régénéré si absent), heures (anomalies, coût pour les rôles finance), validation par le chef (journée verrouillée), rapport journalier (calculé + notes, arrêté), `/field/hours`, export CSV Check In and Out, relance ONSS. `FieldCipher` partagé dans `packages/db`.
+- Worker : arrivée de l'équipe (une entrée par jour, portail « L'équipe de Karim est chez vous depuis 8 h 02 »), coût main-d'œuvre recalculé par personne/jour → `ProjectCost` + dérive, transmission ONSS via l'adaptateur (mock), refus visible + notification, signalements (alerte, photos jointes), bons signés (fil, notification), temps réel terrain.
+- Web : `/terrain` PWA conforme à la maquette (manifeste traduit, service worker, icônes), tutoiement, file hors ligne IndexedDB avec affichage optimiste et pastille d'état, photo (compressée, géodatée, par tâche), signaler (photos), faire signer (signature du client), équipe du chef, mes heures, validation, rapport du jour, profil (synchro, installation, déconnexion protégée) ; onglet « Terrain » du cockpit (signalements → avenant, heures et validation, rapports, bons de régie, export et relance ONSS) ; « Vue terrain » dans la barre latérale ; l'Ouvrier arrive directement sur `/terrain`. Le temps réel recharge les requêtes actives après chaque reconnexion SSE.
+- Seed : pointages de l'équipe de Karim sur Dupont (validés, dernière journée à valider, un pointage loin du chantier), arrivée de 8 h 02, planning de l'équipe, signalement à l'origine de l'avenant n°3 + un à traiter, bon de régie signé, rapports arrêtés.
+- Tests : 10 intégration API M5, 2 worker (arrivée unique, main-d'œuvre, ONSS envoyé/refusé, signalement + photo), domaine ; E2E P4 sur téléphone (pointage, portail, photo, tâche, signalement → avenant, hors ligne puis synchro, bon de régie signé, validation, rapport). Suite E2E complète verte en local (21).
+
 ## Reste à faire
-M5 → M13 selon `docs/11-plan-de-livraison.md`.
+M6 → M13 selon `docs/11-plan-de-livraison.md`.
 
 ## Écarts avec la spécification
 - Nouveau paquet `packages/documents` (PDF) en plus de la liste de `CLAUDE.md` (ADR 0012).
@@ -91,9 +100,10 @@ M5 → M13 selon `docs/11-plan-de-livraison.md`.
 - Auth maison au lieu de Better Auth (ADR 0002) ; même origine via proxy Next (ADR 0003).
 - Navigation : seuls les modules livrés apparaissent (pas de lien vers un écran vide).
 - Cockpit : le bouton « Facturer l'avancement » de la maquette arrive avec M8 ; « Nouvel avenant » tient sa place d'action principale d'ici là. « Relancer » une facture échue arrive aussi avec M8.
-- Seed Dupont : engagé ≈ 19 000 € au lieu des 21 160 € de la maquette (incompatible avec 21,8 % de marge estimée selon l'ADR 0004) ; les photos de chantier du seed arrivent avec M5 (stockage depuis le seed).
+- Seed Dupont : engagé ≈ 19 000 € au lieu des 21 160 € de la maquette (incompatible avec 21,8 % de marge estimée selon l'ADR 0004)  ; le seed ne dépose pas encore de photos de chantier dans le stockage (à ajouter, M13 seed de démo).
 - La numérotation des factures du seed reprend à 2026-100 (« ancien logiciel ») pour que la facture Dupont porte le n° 2026-118.
 - Vue carte des chantiers actifs (03 §5) : reportée à M11 (pilotage), avec le géocodage des adresses.
+- Vue terrain : l'onglet « Planning » de la maquette est « Heures » jusqu'à M6 ; la carte du chantier est un lien d'itinéraire (pas de tuiles cartographiques externes). La signature d'un bon de régie demande du réseau (PDF signé produit par le serveur) — ADR 0014.
 
 ## Dette technique connue
 - Quelques routes M1/M2 lancent des requêtes en parallèle (`Promise.all`) dans une même transaction : accepté par `pg` 8 (avertissement de dépréciation), à rendre séquentiel avant une montée en `pg` 9.

@@ -46,6 +46,8 @@ const ICONS: Record<string, { icon: LucideIcon; tone: 'good' | 'accent' | 'warn'
   'budget.drift_detected': { icon: AlertTriangle, tone: 'warn' },
   'supplier_invoice.allocated': { icon: Receipt, tone: 'accent' },
   'team.arrived': { icon: MapPin, tone: 'neutral' },
+  'issue.reported': { icon: AlertTriangle, tone: 'warn' },
+  'work_order.signed': { icon: FileSignature, tone: 'good' },
   'invoice.issued': { icon: Check, tone: 'good' },
   comment: { icon: MessageSquare, tone: 'neutral' },
   'comment.client': { icon: MessageSquare, tone: 'accent' },
