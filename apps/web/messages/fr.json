@@ -1970,7 +1970,10 @@
     },
     "signedChip": "Validé",
     "totalGross": "Total TVAC",
-    "pdf": "Télécharger le PDF"
+    "pdf": "Télécharger le PDF",
+    "startPlanned": "Début des travaux le {date}",
+    "startNotPlanned": "Date de début en cours de planification",
+    "startHeadline": "Vos travaux commencent le {date}"
   },
   "field": {
     "manifest": {

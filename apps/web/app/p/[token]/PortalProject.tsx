@@ -86,7 +86,10 @@ export function PortalProject({ token, initial }: { token: string; initial: Port
           </p>
         ) : null}
         <h1 className="text-[28px] leading-[1.15] font-bold tracking-[-0.025em]">
-          {data.headline?.title ?? t(`status.${p.status}`)}
+          {data.headline?.title ??
+            (p.status === 'preparation' && p.startDate
+              ? t('startHeadline', { date: dayFr(p.startDate) })
+              : t(`status.${p.status}`))}
         </h1>
         <StepBar
           label={t('steps.label')}
@@ -95,7 +98,13 @@ export function PortalProject({ token, initial }: { token: string; initial: Port
           progress={p.step === 'works' ? pct / 100 : 0}
         />
         <div className="flex flex-wrap justify-between gap-2 text-[14px] text-muted">
-          <span>{t('worksProgress', { percent: pct })}</span>
+          <span>
+            {p.status === 'preparation'
+              ? p.startDate
+                ? t('startPlanned', { date: dayFr(p.startDate) })
+                : t('startNotPlanned')
+              : t('worksProgress', { percent: pct })}
+          </span>
           <span>{p.endDate ? t('endPlanned', { date: dayFr(p.endDate) }) : t('noDate')}</span>
         </div>
       </section>

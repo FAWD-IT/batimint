@@ -53,10 +53,12 @@ export async function projectsForDay(
 ): Promise<string[]> {
   const slots = await tx.scheduleSlot.findMany({
     where: {
-      day: day(today),
+      startDay: { lte: day(today) },
+      endDay: { gte: day(today) },
       OR: [{ employeeId: employee.id }, ...(employee.teamId ? [{ teamId: employee.teamId }] : [])],
     },
-    orderBy: [{ startTime: 'asc' }],
+    // Affectation personnelle avant celle de l'équipe ; le matin avant l'après-midi.
+    orderBy: [{ employeeId: { sort: 'asc', nulls: 'last' } }, { startHalf: 'asc' }, { startDay: 'asc' }],
     select: { projectId: true },
   });
   const ids = [...new Set(slots.map((s) => s.projectId))];

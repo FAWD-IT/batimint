@@ -62,13 +62,13 @@ function coInputs(
   }));
 }
 
-async function greeting(tx: Tx, customerId: string | null): Promise<string> {
+export async function greeting(tx: Tx, customerId: string | null): Promise<string> {
   const c = customerId ? await tx.customer.findUnique({ where: { id: customerId } }) : null;
   const name = c?.firstName ? `${c.firstName} ${c.lastName ?? ''}`.trim() : c?.displayName;
   return name ? `Bonjour ${name},` : 'Bonjour,';
 }
 
-function footerOf(t: { name: string; phone: string | null; email: string | null }): string {
+export function footerOf(t: { name: string; phone: string | null; email: string | null }): string {
   return `${t.name}${t.phone ? ` · ${t.phone}` : ''}${t.email ? ` · ${t.email}` : ''}`;
 }
 

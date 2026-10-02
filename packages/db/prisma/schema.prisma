@@ -116,6 +116,7 @@ model Tenant {
   workOrderLines     WorkOrderLine[]
   dailyReports       DailyReport[]
   scheduleSlots      ScheduleSlot[]
+  calendarFeeds      CalendarFeed[]
 
   @@map("tenants")
 }
@@ -1101,6 +1102,8 @@ model Project {
   suspendedReason      String?       @map("suspended_reason")
   /// Montant total HTVA du chantier entier quand nous sommes sous-traitants (seuil Check In and Out).
   workplaceTotalAmount BigInt?       @map("workplace_total_amount")
+  /// Date de début déjà annoncée au client (évite de renvoyer le même e-mail).
+  arrivalNotifiedOn    DateTime?     @map("arrival_notified_on") @db.Date
   /// Check In and Out at Work imposé manuellement (sinon déduit du montant, 05 §8).
   checkInOutForced     Boolean       @default(false) @map("check_in_out_forced")
   createdAt            DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
@@ -1434,25 +1437,49 @@ model Comment {
 }
 
 /// Créneau de planning (M6 l'édite au glisser-déposer) : qui travaille sur quel chantier quel jour.
+/// Affectation au planning (03 §6) : une personne ou une équipe sur un chantier, d'une
+/// demi-journée à une autre (jours ouvrés), éventuellement pour une tâche.
 model ScheduleSlot {
-  id         String   @id @default(uuid(7)) @db.Uuid
+  id         String   @id @db.Uuid
   tenantId   String   @map("tenant_id") @db.Uuid
   projectId  String   @map("project_id") @db.Uuid
   employeeId String?  @map("employee_id") @db.Uuid
   teamId     String?  @map("team_id") @db.Uuid
-  day        DateTime @db.Date
-  startTime  String?  @map("start_time")
-  endTime    String?  @map("end_time")
+  taskId     String?  @map("task_id") @db.Uuid
+  startDay   DateTime @map("start_day") @db.Date
+  /// `am` ou `pm`.
+  startHalf  String   @default("am") @map("start_half")
+  endDay     DateTime @map("end_day") @db.Date
+  endHalf    String   @default("pm") @map("end_half")
   note       String?
   createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
   createdBy  String?  @map("created_by") @db.Uuid
 
   tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  @@index([tenantId, day])
-  @@index([tenantId, employeeId, day])
+  @@index([tenantId, startDay, endDay])
+  @@index([tenantId, employeeId])
+  @@index([tenantId, projectId])
   @@map("schedule_slots")
+}
+
+/// Lien d'abonnement iCal d'une personne (jeton haché, révocable).
+model CalendarFeed {
+  id         String    @id @default(uuid(7)) @db.Uuid
+  tenantId   String    @map("tenant_id") @db.Uuid
+  employeeId String    @map("employee_id") @db.Uuid
+  tokenHash  String    @unique @map("token_hash")
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  createdBy  String?   @map("created_by") @db.Uuid
+  revokedAt  DateTime? @map("revoked_at") @db.Timestamptz(3)
+  lastUsedAt DateTime? @map("last_used_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, employeeId])
+  @@map("calendar_feeds")
 }
 
 enum TimeEntryKind {

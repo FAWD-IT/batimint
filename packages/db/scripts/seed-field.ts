@@ -122,19 +122,20 @@ export async function seedField(
   // la vue terrain ouvre ce chantier chaque matin.
   const teamId = crew[0]!.teamId;
   const end = project.endDate ? (project.endDate.toISOString().slice(0, 10) as IsoDate) : addDays(today, 7);
-  const slots = [];
-  for (let d = start; d <= end; d = addDays(d, 1))
-    if (isWorkingDay(d) && teamId)
-      slots.push({
+  if (teamId)
+    await tx.scheduleSlot.create({
+      data: {
+        id: randomUUID(),
         tenantId,
         projectId: project.id,
         teamId,
-        day: dayDate(d),
-        startTime: '08:00',
-        endTime: '16:30',
+        startDay: dayDate(start),
+        startHalf: 'am',
+        endDay: dayDate(end),
+        endHalf: 'pm',
         createdBy: karimUser,
-      });
-  if (slots.length) await tx.scheduleSlot.createMany({ data: slots });
+      },
+    });
 
   // Arrivée de 8 h 02 (fil et portail : « L'équipe de Karim est chez vous depuis 8 h 02 »).
   await tx.timelineEntry.updateMany({

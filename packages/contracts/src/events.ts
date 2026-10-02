@@ -106,6 +106,18 @@ export const EventPayloads = {
   'time_entries.validated.v1': z.object({ projectId: Uuid, day: z.string(), employeeIds: z.array(Uuid) }),
   'issue.reported.v1': z.object({ issueId: Uuid, projectId: Uuid, urgent: z.boolean() }),
   'work_order.signed.v1': z.object({ workOrderId: Uuid, projectId: Uuid, signatureId: Uuid }),
+  /** Planning modifié (création, déplacement, suppression d'une affectation). */
+  'schedule.changed.v1': z.object({
+    projectId: Uuid,
+    slotId: Uuid,
+    action: z.enum(['created', 'updated', 'deleted']),
+    /** Date de début du chantier mise à jour par le planning (AAAA-MM-JJ) ou null. */
+    startDate: z.string().nullable(),
+  }),
+  /** Date de début stable depuis 10 min : à annoncer au client (portail + e-mail). */
+  'project.arrival_scheduled.v1': z.object({ projectId: Uuid, startDate: z.string() }),
+  /** Planning du lendemain d'une personne (envoyé à 18 h). */
+  'planning.day_ahead.v1': z.object({ employeeId: Uuid, userId: Uuid, day: z.string() }),
   /** Nouvelle tentative de transmission ONSS (Check In and Out) des pointages en échec. */
   'attendance.retry_requested.v1': z.object({ projectId: Uuid, timeEntryIds: z.array(Uuid) }),
 } as const;

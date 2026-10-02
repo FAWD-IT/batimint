@@ -13,6 +13,7 @@ import {
 } from '@batimint/db';
 import { testDatabaseUrls } from '@batimint/db/testing';
 import { createMockIntegrations, MockMailer } from '@batimint/integrations';
+import { addDays, brusselsDate, isWorkingDay } from '@batimint/domain';
 import pg from 'pg';
 import type { PgBoss } from 'pg-boss';
 import { v7 as uuidv7 } from 'uuid';
@@ -883,5 +884,109 @@ describe('terrain : arrivée de l’équipe, main-d’œuvre, Check In and Out, 
       tx.notification.findFirst({ where: { type: 'issue.urgent', link: { contains: p.id } } }),
     );
     expect(n?.title).toBe('Urgent — Luca Rossi signale un problème sur Salle de bain Dupont');
+  });
+});
+
+describe('planning : date d’arrivée annoncée au client, planning du lendemain (03 §6)', () => {
+  it('une date de début stable est annoncée une fois (fil, portail, e-mail)', async () => {
+    const { runArrivalNotices } = await import('../src/schedules');
+    const deps = { prisma, integrations: createMockIntegrations(), appUrl: 'https://app.test' };
+    const email = `arrivee-${uuidv7().slice(-8)}@example.be`;
+    const start = addDays(brusselsDate(new Date()), 10);
+    const project = await withTenant(prisma, tenantId, userId, async (tx) => {
+      const c = await tx.customer.create({
+        data: {
+          tenantId,
+          kind: 'individual',
+          displayName: 'Jean Arrivée',
+          firstName: 'Jean',
+          lastName: 'Arrivée',
+          email,
+        },
+      });
+      return tx.project.create({
+        data: {
+          tenantId,
+          number: `CH-${uuidv7().slice(-6)}`,
+          name: 'Toiture Arrivée',
+          customerId: c.id,
+          status: 'preparation',
+          contractAmount: 1_000_000n,
+          startDate: new Date(`${start}T00:00:00Z`),
+        },
+      });
+    });
+    // Date modifiée il y a moins de 10 minutes : on attend qu'elle se stabilise.
+    expect((await runArrivalNotices(deps, new Date())).sent).toBe(0);
+    const later = new Date(Date.now() + 11 * 60_000);
+    expect((await runArrivalNotices(deps, later)).sent).toBeGreaterThanOrEqual(1);
+    expect((await runArrivalNotices(deps, later)).sent).toBe(0);
+    const entry = await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.timelineEntry.findFirst({ where: { projectId: project.id, type: 'project.start_scheduled' } }),
+      ),
+    );
+    expect(entry.visibleToClient).toBe(true);
+    expect(entry.title).toMatch(/^Début des travaux prévu le \w+ \d+ \w+$/);
+    const mail = await waitFor(() => bgMailer.sent.find((m) => m.to === email));
+    expect(mail.subject).toContain('vos travaux commencent le');
+  });
+
+  it('à 18 h : une notification et un e-mail par personne pour le prochain jour ouvré, une seule fois', async () => {
+    const { runDayAhead } = await import('../src/schedules');
+    const deps = { prisma, integrations: createMockIntegrations(), appUrl: 'https://app.test' };
+    const workerUser = uuidv7();
+    const workerEmail = `luca-${workerUser.slice(-8)}@example.test`;
+    let next = addDays(brusselsDate(new Date()), 1);
+    while (!isWorkingDay(next)) next = addDays(next, 1);
+    await withSystem(prisma, async (tx) => {
+      await tx.user.create({ data: { id: workerUser, email: workerEmail, name: 'Luca Demain' } });
+      await tx.membership.create({ data: { tenantId, userId: workerUser, role: 'worker' } });
+    });
+    await withTenant(prisma, tenantId, userId, async (tx) => {
+      const c = await tx.customer.create({ data: { tenantId, kind: 'individual', displayName: 'Demain' } });
+      const team = await tx.team.create({ data: { tenantId, name: `Équipe ${uuidv7().slice(-4)}` } });
+      await tx.employee.create({
+        data: { tenantId, firstName: 'Luca', lastName: 'Demain', teamId: team.id, userId: workerUser },
+      });
+      const p = await tx.project.create({
+        data: {
+          tenantId,
+          number: `CH-${uuidv7().slice(-6)}`,
+          name: 'Façade Demain',
+          customerId: c.id,
+          status: 'in_progress',
+          contractAmount: 1_000_000n,
+        },
+      });
+      await tx.scheduleSlot.create({
+        data: {
+          id: uuidv7(),
+          tenantId,
+          projectId: p.id,
+          teamId: team.id,
+          startDay: new Date(`${next}T00:00:00Z`),
+          startHalf: 'am',
+          endDay: new Date(`${next}T00:00:00Z`),
+          endHalf: 'am',
+        },
+      });
+    });
+    await runDayAhead(deps);
+    await runDayAhead(deps);
+    const n = await waitFor(() =>
+      withTenant(prisma, tenantId, workerUser, (tx) =>
+        tx.notification.findFirst({ where: { userId: workerUser, type: 'planning.day_ahead' } }),
+      ),
+    );
+    expect(n.title).toContain('Façade Demain');
+    expect(n.body).toBe('Façade Demain (matin)');
+    const mail = await waitFor(() => bgMailer.sent.find((m) => m.to === workerEmail));
+    expect(mail.subject).toMatch(/^Ton planning de demain/);
+    await new Promise((r) => setTimeout(r, 800));
+    const count = await withSystem(prisma, (tx) =>
+      tx.notification.count({ where: { userId: workerUser, type: 'planning.day_ahead' } }),
+    );
+    expect(count).toBe(1);
   });
 });

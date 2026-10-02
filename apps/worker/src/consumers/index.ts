@@ -4,6 +4,7 @@ import { realtimeBroadcast } from './broadcast';
 import { sendInvitation } from './invitations';
 import { checkInOutTransmission, fieldRealtime, fieldTimeline, labourCosts } from './field';
 import { leadIntake } from './leads';
+import { arrivalNotice, dayAhead, planningRealtime } from './planning';
 import { memberJoined } from './members';
 import { diagnosticNotification } from './notifications';
 import {
@@ -38,6 +39,9 @@ export const CONSUMERS: readonly Consumer[] = [
   labourCosts,
   checkInOutTransmission,
   fieldRealtime,
+  planningRealtime,
+  arrivalNotice,
+  dayAhead,
   realtimeBroadcast,
 ];
 
