@@ -1,6 +1,7 @@
 import 'server-only';
 import type { MeResponse } from '@batimint/contracts';
 import { cookies } from 'next/headers';
+import { cache } from 'react';
 
 export function apiInternalUrl(): string {
   return process.env['API_INTERNAL_URL'] ?? 'http://localhost:4000';
@@ -16,7 +17,8 @@ export async function serverApi(path: string, init: RequestInit = {}): Promise<R
   });
 }
 
-export async function getMe(): Promise<MeResponse | null> {
+/** Une seule lecture de la session par requête (layout et page la demandent tous les deux). */
+export const getMe = cache(async (): Promise<MeResponse | null> => {
   try {
     const res = await serverApi('/me');
     if (res.status === 401) return null;
@@ -26,4 +28,4 @@ export async function getMe(): Promise<MeResponse | null> {
     console.error('Impossible de joindre l’API', err);
     throw err;
   }
-}
+});

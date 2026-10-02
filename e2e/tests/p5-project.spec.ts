@@ -131,8 +131,12 @@ test('P5 : avenant envoyé, question du client, réponse, validation ; cockpit e
 
   // ⌘K : retrouver le chantier depuis n'importe où.
   await page.goto('/aujourdhui');
-  await page.keyboard.press('Control+k');
   const palette = page.getByRole('combobox', { name: 'Recherche et actions' });
+  // Le raccourci n'existe qu'une fois la page hydratée : on réessaie jusqu'à l'ouverture.
+  await expect(async () => {
+    await page.keyboard.press('Control+k');
+    await expect(palette).toBeVisible({ timeout: 1_000 });
+  }).toPass({ timeout: 15_000 });
   await palette.fill('Dupont');
   await expect(page.getByRole('option', { name: /Rénovation salle de bain/ }).first()).toBeVisible();
   await palette.press('Enter');
