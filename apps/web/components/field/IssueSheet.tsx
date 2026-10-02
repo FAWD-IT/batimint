@@ -2,10 +2,11 @@
 
 import type { FieldTodayDto } from '@batimint/contracts';
 import { Button, Dialog, SelectField, Switch, TextAreaField, TextField, useToast } from '@batimint/ui';
-import { Camera, X } from 'lucide-react';
+import { Camera, Mic, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { v7 as uuidv7 } from 'uuid';
+import { VoiceRecorder } from '@/components/visit/VoiceRecorder';
 import { currentPosition, useField } from './FieldProvider';
 
 /**
@@ -38,6 +39,7 @@ export function IssueSheet({
   const [urgent, setUrgent] = useState(false);
   const [taskId, setTaskId] = useState('');
   const [files, setFiles] = useState<File[]>([]);
+  const [voice, setVoice] = useState<{ blob: Blob; fileName: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const input = useRef<HTMLInputElement>(null);
@@ -55,6 +57,7 @@ export function IssueSheet({
     setUrgent(false);
     setTaskId('');
     setFiles([]);
+    setVoice(null);
     setError(null);
   };
 
@@ -70,6 +73,20 @@ export function IssueSheet({
       const pos = await currentPosition();
       // Les photos attendent dans la file que le signalement soit arrivé (même passe de synchro).
       await queuePhotos(files, { ownerType: 'issue', ownerId: id, projectId, taskId: taskId || null });
+      if (voice)
+        await f.addPhoto({
+          id: uuidv7(),
+          kind: 'voice_note',
+          ownerType: 'issue',
+          ownerId: id,
+          projectId,
+          taskId: taskId || null,
+          blob: voice.blob,
+          fileName: voice.fileName,
+          takenAt: new Date().toISOString(),
+          latitude: pos?.latitude ?? null,
+          longitude: pos?.longitude ?? null,
+        });
       await f.enqueue({
         type: 'issue',
         id,
@@ -143,6 +160,19 @@ export function IssueSheet({
           />
         ) : null}
         <Switch checked={urgent} onChange={setUrgent} label={t('urgent')} description={t('urgentHint')} />
+        {voice ? (
+          <div className="flex items-center justify-between gap-2 rounded-[12px] bg-line-soft px-3 py-2 text-[14px]">
+            <span className="inline-flex items-center gap-2">
+              <Mic aria-hidden className="size-4" />
+              {t('voiceNote')}
+            </span>
+            <Button variant="ghost" size="sm" onClick={() => setVoice(null)}>
+              {t('removeVoice')}
+            </Button>
+          </div>
+        ) : (
+          <VoiceRecorder familiar onRecorded={(blob, fileName) => setVoice({ blob, fileName })} />
+        )}
         <div className="flex flex-col gap-2">
           <input
             ref={input}

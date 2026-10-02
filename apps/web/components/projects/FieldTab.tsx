@@ -119,6 +119,22 @@ function IssuesSection({
                       ))}
                     </ul>
                   ) : null}
+                  {i.voiceNotes.map((v) => (
+                    <div key={v.id} className="mt-1 flex flex-col gap-1">
+                      <audio
+                        controls
+                        preload="none"
+                        src={v.url}
+                        aria-label={t('voiceNote')}
+                        className="h-9 max-w-full"
+                      />
+                      {v.transcript ? (
+                        <p className="text-[13px] text-ink italic">« {v.transcript} »</p>
+                      ) : v.transcriptStatus === 'pending' ? (
+                        <p className="text-[12px] text-muted">{t('transcribing')}</p>
+                      ) : null}
+                    </div>
+                  ))}
                 </div>
                 {can('projects.write') ? (
                   <div className="flex shrink-0 flex-wrap gap-2">

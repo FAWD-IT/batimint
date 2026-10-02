@@ -56,11 +56,12 @@ import { addressLines } from '../services/quotes';
 const IsoDay = z.iso.date();
 
 async function issueDto(tx: Tx, i: Awaited<ReturnType<Tx['issue']['findUniqueOrThrow']>>) {
-  const photos = await tx.attachment.findMany({
+  const media = await tx.attachment.findMany({
     where: { ownerType: 'issue', ownerId: i.id },
     orderBy: { createdAt: 'asc' },
-    select: { id: true },
+    select: { id: true, kind: true, transcript: true, transcriptStatus: true },
   });
+  const url = (id: string) => `/api/v1/attachments/${id}/file`;
   return {
     id: i.id,
     projectId: i.projectId,
@@ -72,7 +73,15 @@ async function issueDto(tx: Tx, i: Awaited<ReturnType<Tx['issue']['findUniqueOrT
     changeOrderId: i.changeOrderId,
     reporterLabel: i.reporterLabel,
     reportedAt: i.reportedAt.toISOString(),
-    photos: photos.map((p) => ({ id: p.id, url: `/api/v1/attachments/${p.id}/file` })),
+    photos: media.filter((m) => m.kind === 'photo').map((m) => ({ id: m.id, url: url(m.id) })),
+    voiceNotes: media
+      .filter((m) => m.kind === 'voice_note')
+      .map((m) => ({
+        id: m.id,
+        url: url(m.id),
+        transcript: m.transcript,
+        transcriptStatus: m.transcriptStatus,
+      })),
   };
 }
 

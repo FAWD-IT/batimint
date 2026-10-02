@@ -101,7 +101,7 @@ async function doSync(): Promise<SyncResult> {
     const params = new URLSearchParams({
       ownerType: p.ownerType,
       ownerId: p.ownerId,
-      kind: 'photo',
+      kind: p.kind ?? 'photo',
       id: p.id,
       takenAt: p.takenAt,
     });

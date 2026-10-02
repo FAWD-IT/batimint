@@ -373,9 +373,17 @@ describe('M5 — terrain', () => {
       payload: Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3]),
     });
     expect(photo.statusCode).toBe(201);
+    const voice = await t.app.inject({
+      method: 'POST',
+      url: `/v1/attachments?ownerType=issue&ownerId=${issueId}&kind=voice_note&id=${uuidv7()}`,
+      headers: { cookie: sessions.luca.cookie, 'content-type': 'audio/webm', 'x-file-name': 'note.webm' },
+      payload: Buffer.from([0x1a, 0x45, 0xdf, 0xa3, 1, 2, 3]),
+    });
+    expect(voice.statusCode).toBe(201);
     const list = (await inject('GET', `/v1/projects/${projectId}/issues`)).json();
     const issue = list.items.find((i: { id: string }) => i.id === issueId);
     expect(issue.photos).toHaveLength(1);
+    expect(issue.voiceNotes).toHaveLength(1);
     expect(issue.reporterLabel).toBe('Luca Rossi');
 
     expect(

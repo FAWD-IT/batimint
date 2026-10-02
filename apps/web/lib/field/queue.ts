@@ -14,6 +14,8 @@ export type QueuedAction = FieldAction & {
 
 export interface QueuedPhoto {
   id: string;
+  /** Photo (par défaut) ou note vocale d'un signalement. */
+  kind?: 'photo' | 'voice_note';
   ownerType: 'project' | 'issue';
   ownerId: string;
   /** Chantier concerné (affichage et invalidation). */

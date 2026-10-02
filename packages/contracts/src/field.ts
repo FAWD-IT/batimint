@@ -154,6 +154,14 @@ export const IssueSchema = z.object({
   reporterLabel: z.string(),
   reportedAt: z.string(),
   photos: z.array(z.object({ id: Uuid, url: z.string() })),
+  voiceNotes: z.array(
+    z.object({
+      id: Uuid,
+      url: z.string(),
+      transcript: z.string().nullable(),
+      transcriptStatus: z.string().nullable(),
+    }),
+  ),
 });
 export type IssueDto = z.infer<typeof IssueSchema>;
 

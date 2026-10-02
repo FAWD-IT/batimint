@@ -1768,7 +1768,9 @@
       "lines": "Heures et matériel",
       "draft": "Brouillon",
       "signedBy": "Signé par {name}",
-      "pdf": "PDF signé"
+      "pdf": "PDF signé",
+      "voiceNote": "Note vocale du signalement",
+      "transcribing": "Transcription en cours…"
     }
   },
   "changeOrders": {
@@ -2070,7 +2072,9 @@
       "removePhoto": "Retirer la photo {n}",
       "submit": "Envoyer au bureau",
       "sent": "Signalement envoyé au bureau",
-      "savedOffline": "Signalement gardé sur ton téléphone : il partira dès que le réseau revient."
+      "savedOffline": "Signalement gardé sur ton téléphone : il partira dès que le réseau revient.",
+      "voiceNote": "Note vocale jointe",
+      "removeVoice": "Retirer la note vocale"
     },
     "workOrder": {
       "title": "Bon de régie",
@@ -2160,6 +2164,13 @@
       "logoutPendingTitle": "Des actions ne sont pas encore parties",
       "logoutPendingText": "{n, plural, one {# action sera perdue} other {# actions seront perdues}} si tu te déconnectes maintenant. Attends d'avoir du réseau.",
       "logoutAnyway": "Me déconnecter quand même"
+    },
+    "voice": {
+      "record": "Dicter une note",
+      "stop": "Arrêter",
+      "recording": "Enregistrement… {seconds} s",
+      "micDenied": "Micro inaccessible : autorise-le dans le navigateur, ou envoie un fichier audio.",
+      "uploadAudio": "Envoyer un fichier audio"
     }
   }
 }

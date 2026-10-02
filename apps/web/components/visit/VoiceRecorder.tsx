@@ -15,11 +15,16 @@ const MIME_CANDIDATES = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'a
 export function VoiceRecorder({
   onRecorded,
   disabled,
+  familiar = false,
 }: {
   onRecorded: (blob: Blob, fileName: string) => void;
   disabled?: boolean;
+  /** Tutoiement (vue terrain). */
+  familiar?: boolean;
 }) {
-  const t = useTranslations('visit');
+  const tVisit = useTranslations('visit');
+  const tField = useTranslations('field.voice');
+  const t = familiar ? tField : tVisit;
   const [state, setState] = useState<'idle' | 'recording' | 'denied'>('idle');
   const [seconds, setSeconds] = useState(0);
   const recorder = useRef<MediaRecorder | null>(null);
