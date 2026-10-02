@@ -105,7 +105,8 @@ beforeAll(async () => {
         key: sectionKeys.carrelage,
         position: 0,
         title: 'Carrelage',
-        selected: true,
+        // Section obligatoire : « selected » ne concerne que les options (comme dans l'éditeur).
+        selected: false,
       },
     });
     const s2 = await tx.quoteSection.create({

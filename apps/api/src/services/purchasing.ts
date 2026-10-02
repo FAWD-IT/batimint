@@ -94,7 +94,8 @@ export async function orderProposal(tx: Tx, projectId: string): Promise<OrderPro
     : null;
   if (!quote?.currentVersionId) return { groups: [] };
   const sections = await tx.quoteSection.findMany({
-    where: { versionId: quote.currentVersionId, selected: true },
+    // Sections obligatoires, et options retenues par le client.
+    where: { versionId: quote.currentVersionId, OR: [{ optional: false }, { selected: true }] },
     include: { lines: { orderBy: { position: 'asc' } } },
     orderBy: { position: 'asc' },
   });
@@ -345,6 +346,7 @@ export async function invoiceDto(tx: Tx, i: InvoiceRow): Promise<SupplierInvoice
     totalVat: Number(i.totalVat),
     totalGross: Number(i.totalGross),
     orderReference: i.orderReference,
+    notes: i.notes,
     status: i.status,
     matchMethod: i.matchMethod,
     matchConfidence: i.matchConfidence ? Number(i.matchConfidence) : null,

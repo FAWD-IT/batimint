@@ -1176,7 +1176,7 @@ async function seedDupont(
     workingDaysFrom(start, 1),
   );
   await c(demolition, 'other', 'Location conteneur 8 m³', 950, workingDaysFrom(start, 1));
-  await c(plomberie, 'supplier_invoice', 'Facture Van Marcke — sanitaires', 9200, workingDaysFrom(start, 3));
+  await c(plomberie, 'supplier_invoice', 'Facture Sanitherm — sanitaires', 9200, workingDaysFrom(start, 3));
   await c(plomberie, 'labour', 'Main-d’œuvre plomberie', 4600, workingDaysFrom(story, -1));
   await c(
     carrelage,
@@ -1189,7 +1189,7 @@ async function seedDupont(
   await c(
     electricite,
     'supplier_invoice',
-    'Facture Rexel — matériel électrique',
+    'Facture Élec Distribution — matériel électrique',
     980,
     workingDaysFrom(story, -2),
   );

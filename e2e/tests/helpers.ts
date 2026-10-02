@@ -104,8 +104,15 @@ export async function call<T>(
 }
 
 /** Un chantier créé par le vrai circuit : devis composé, envoyé, signé sur le portail, worker. */
-export async function signedProject(page: Page, email: string) {
+export async function signedProject(
+  page: Page,
+  email: string,
+  options: { materials?: boolean; siteStreet?: string } = {},
+) {
   const r = page.request;
+  const before = new Set(
+    (await call<{ items: { id: string }[] }>(r, 'GET', '/projects?view=all')).items.map((p) => p.id),
+  );
   const customer = await call<{ id: string }>(r, 'POST', '/customers', {
     kind: 'individual',
     firstName: 'Jean',
@@ -113,7 +120,7 @@ export async function signedProject(page: Page, email: string) {
     email,
   });
   const site = await call<{ id: string }>(r, 'POST', `/customers/${customer.id}/sites`, {
-    street: 'Rue de la Station 42',
+    street: options.siteStreet ?? 'Rue de la Station 42',
     postalCode: '6040',
     city: 'Jumet',
     isPrivateDwelling: true,
@@ -155,6 +162,18 @@ export async function signedProject(page: Page, email: string) {
         title: 'Plomberie',
         lines: [line('Douche à l’italienne', '1', 250_000, 180_000)],
       },
+      ...(options.materials
+        ? [
+            {
+              key: crypto.randomUUID(),
+              title: 'Fournitures',
+              lines: [
+                { ...line('Colle carrelage C2TE 25 kg', '12', 4_200, 2_500), unit: 'sac', laborHours: '0' },
+                { ...line('Joint époxy 2,5 kg', '4', 5_500, 3_000), unit: 'pot', laborHours: '0' },
+              ],
+            },
+          ]
+        : []),
     ],
   });
   await call(r, 'POST', `/quotes/${quote.id}/send`, { email });
@@ -168,8 +187,9 @@ export async function signedProject(page: Page, email: string) {
   let projectId = '';
   await expect(async () => {
     const list = await call<{ items: { id: string }[] }>(r, 'GET', '/projects?view=all');
-    expect(list.items).toHaveLength(1);
-    projectId = list.items[0]!.id;
+    const created = list.items.filter((p) => !before.has(p.id));
+    expect(created).toHaveLength(1);
+    projectId = created[0]!.id;
   }).toPass({ timeout: 30_000 });
   return { projectId };
 }

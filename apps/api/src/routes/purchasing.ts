@@ -70,6 +70,55 @@ async function writeLines(
   return sumCents(lines.map((l) => lineTotal(l.quantity, BigInt(l.unitPrice))));
 }
 
+/** PDF du bon de commande, rangé dans le stockage ; renvoie sa clé. */
+async function storeOrderPdf(
+  deps: AppDeps,
+  tx: Tx,
+  poId: string,
+  at: { number: string; date: Date },
+): Promise<string> {
+  const po = await tx.purchaseOrder.findUniqueOrThrow({
+    where: { id: poId },
+    include: {
+      lines: { orderBy: { position: 'asc' } },
+      project: { include: { tenant: true } },
+      supplier: true,
+    },
+  });
+  const t = po.project.tenant;
+  const pdf = await renderPurchaseOrderPdf({
+    tenant: {
+      name: t.legalName ?? t.name,
+      lines: [...addressLines(t), ...(t.vatNumber ? [`TVA ${t.vatNumber}`] : [])],
+      brandColor: t.brandColor,
+    },
+    supplier: {
+      name: po.supplier.name,
+      lines: [
+        po.supplier.street,
+        [po.supplier.postalCode, po.supplier.city].filter(Boolean).join(' '),
+      ].filter((x): x is string => Boolean(x)),
+    },
+    number: at.number,
+    date: at.date,
+    projectRef: `${po.project.number} — ${po.project.name}`,
+    deliveryAddress: po.deliveryAddress,
+    expectedOn: po.expectedOn,
+    notes: po.notes,
+    lines: po.lines.map((l) => ({
+      description: l.description,
+      supplierCode: l.supplierCode,
+      unit: l.unit,
+      quantity: l.quantity.toString(),
+      unitPrice: l.unitPrice,
+    })),
+    totalNet: po.totalNet,
+  });
+  const key = `t/${po.tenantId}/purchase-orders/${po.id}/${at.number}.pdf`;
+  await deps.integrations.storage.put({ bucket: 'uploads', key, body: pdf, contentType: 'application/pdf' });
+  return key;
+}
+
 export const purchasingRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (app, { deps }) => {
   app.addContentTypeParser(
     /^(application\/(pdf|xml|octet-stream)|text\/xml|image\/(jpeg|png|webp))$/,
@@ -290,41 +339,7 @@ export const purchasingRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async 
           year,
           sequence: await nextSequenceValue(tx, auth.tenantId, 'purchase_order', year),
         });
-        const pdf = await renderPurchaseOrderPdf({
-          tenant: {
-            name: t.legalName ?? t.name,
-            lines: [...addressLines(t), ...(t.vatNumber ? [`TVA ${t.vatNumber}`] : [])],
-            brandColor: t.brandColor,
-          },
-          supplier: {
-            name: po.supplier.name,
-            lines: [
-              po.supplier.street,
-              [po.supplier.postalCode, po.supplier.city].filter(Boolean).join(' '),
-            ].filter((x): x is string => Boolean(x)),
-          },
-          number,
-          date: now,
-          projectRef: `${po.project.number} — ${po.project.name}`,
-          deliveryAddress: po.deliveryAddress,
-          expectedOn: po.expectedOn,
-          notes: po.notes,
-          lines: po.lines.map((l) => ({
-            description: l.description,
-            supplierCode: l.supplierCode,
-            unit: l.unit,
-            quantity: l.quantity.toString(),
-            unitPrice: l.unitPrice,
-          })),
-          totalNet: po.totalNet,
-        });
-        const key = `t/${auth.tenantId}/purchase-orders/${po.id}/${number}.pdf`;
-        await deps.integrations.storage.put({
-          bucket: 'uploads',
-          key,
-          body: pdf,
-          contentType: 'application/pdf',
-        });
+        const key = await storeOrderPdf(deps, tx, po.id, { number, date: now });
         const sent = await tx.purchaseOrder.update({
           where: { id: po.id },
           data: { status: 'sent', number, sentAt: now, sentTo: email, pdfKey: key },
@@ -358,9 +373,17 @@ export const purchasingRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async 
       },
     },
     async (req, reply) => {
-      const po = await inTenant(deps, req, 'purchases.read', ({ tx }) =>
-        tx.purchaseOrder.findUnique({ where: { id: req.params.id } }),
-      );
+      // Bon envoyé sans PDF rangé (reprise de l'ancien logiciel, stockage perdu) : on le régénère.
+      const po = await inTenant(deps, req, 'purchases.read', async ({ tx }) => {
+        const row = await tx.purchaseOrder.findUnique({ where: { id: req.params.id } });
+        if (!row?.number) return null;
+        if (row.pdfKey) return row;
+        const pdfKey = await storeOrderPdf(deps, tx, row.id, {
+          number: row.number,
+          date: row.sentAt ?? row.createdAt,
+        });
+        return tx.purchaseOrder.update({ where: { id: row.id }, data: { pdfKey } });
+      });
       if (!po?.pdfKey) throw notFound('Ce bon de commande envoyé');
       const body = await deps.integrations.storage.get('uploads', po.pdfKey);
       return reply

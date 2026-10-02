@@ -3,12 +3,12 @@
 Ce fichier est le point de reprise entre sessions cloud. Une nouvelle session doit pouvoir reprendre le travail en ne lisant que lui et `CLAUDE.md`.
 
 ## Jalon en cours
-**M7 — Achats et Peppol entrant** — API et worker livrés et testés ; reste l'interface, le seed et le parcours P6. M6 ✅ validé (CI run 32 : checks + E2E sur les images de production).
+**M7 — Achats et Peppol entrant** — livré (API, worker, écrans, seed, E2E P6 verts en local), en attente de la CI. M6 ✅ validé (CI run 32 : checks + E2E sur les images de production).
 
 (L'étiquette `m0-done` existe localement mais le push de tags est refusé par la politique de la session : seule la branche est poussée.)
 
 ## Prochaine action
-Terminer M7 : écrans Achats (bons de commande par chantier, proposition depuis le devis, envoi ; boîte « À imputer » avec suggestions et ventilation ; détail de facture avec document), seed (90 % imputé automatiquement), E2E P6, ADR 0016. Périmètre M7 : achats et Peppol entrant : fournisseurs, bons de commande depuis les matériaux du devis groupés par fournisseur — P3.3 —, réception, factures fournisseurs Peppol mock + upload + extraction IA mock, rapprochement BC → chantier/poste, boîte « À imputer », alertes d'écart ; parcours P6 ; 90 % des factures du seed imputées automatiquement).
+Vérifier la CI du push M7 ; si verte, marquer M7 ✅ et démarrer M8 (facturation et encaissement : états d'avancement, factures, notes de crédit, numérotation, PDF + UBL, Peppol sortant mock, e-mail, QR EPC, paiements, Mollie mock, relances, portail ; parcours P7 et P8).
 
 ## Relancer l'environnement
 ```bash
@@ -98,16 +98,19 @@ docker compose -f docker-compose.coolify.yml -f docker/docker-compose.sandbox.ym
 - Seed : équipe de Karim (Dupont → extension → châssis), équipe Toiture ; congés en conflit ; conformité électrique à planifier.
 - Tests : 6 intégration API M6, 2 worker (annonce unique et différée, planning du lendemain unique), 5 domaine ; E2E P3 (glisser-déposer, conflit de congé, clavier, dialogue, portail, iCal) + planning sur téléphone.
 
-### M7 — Achats et Peppol entrant (en cours)
+### M7 — Achats et Peppol entrant (en attente CI)
 - Domaine : regroupement par fournisseur, engagement restant, rapprochement (BC → référence chantier → adresse de livraison), appariement des lignes, ventilation, écarts avec la commande ; tests.
-- Base : bons de commande (+ lignes), réceptions, factures fournisseurs (+ lignes), imputations ; RLS.
-- Documents : lecture UBL (Peppol BIS 3), PDF de bon de commande.
-- API : proposition de commande depuis les matériaux du devis, bons de commande (CRUD, envoi, PDF, réceptions), factures fournisseurs (vues à imputer / imputées / à payer, détail, document, imputation et ventilation, statut, dépôt), Peppol entrant simulé (mock) et webhook.
-- Worker : envoi du BC, rapprochement automatique (extraction IA si dépôt), boîte « À imputer » + alerte au bureau, grand livre des coûts du chantier (facture et engagement restant du BC).
-- Tests : 6 intégration API, 2 worker (BC + écarts + engagement soldé ; adresse ; boîte « À imputer »).
+- Base : bons de commande (+ lignes), réceptions, factures fournisseurs (+ lignes), imputations ; RLS (ADR 0016).
+- Documents : lecture UBL (Peppol BIS 3), PDF de bon de commande (régénéré s'il manque).
+- API : fournisseurs (BCE → TVA + Peppol, IBAN), proposition de commande depuis les matériaux du devis (sections obligatoires + options retenues), bons de commande (brouillon idempotent, envoi avec n° BC continu, PDF, réceptions, annulation), factures fournisseurs (à imputer / imputées / à payer, détail, document, imputation et ventilation multi-chantiers, statuts), Peppol entrant simulé (mock) et webhook signé, dépôt PDF/photo/XML.
+- Worker : envoi du BC (e-mail + PDF), rapprochement automatique (extraction IA si dépôt), boîte « À imputer » + notification, grand livre (facture par ventilation, engagement restant du BC), écarts notifiés, timeline.
+- Web : module « Achats » (barre latérale) — factures fournisseurs (boîte « À imputer » avec suggestions classées et imputation en un clic, ventilation sur plusieurs chantiers et postes, écarts, valider / mettre à payer / bloquer / payée, dépôt d'une facture), bons de commande (liste, tiroir : brouillon modifiable, envoi, PDF, réception partielle, annulation), fournisseurs ; onglet « Achats » du cockpit (« Commander les matériaux » → un BC par fournisseur, factures imputées au chantier).
+- Seed : 4 fournisseurs fictifs, fournisseur préféré des matériaux de la bibliothèque, coûts fournisseurs convertis en BC + factures Peppol rapprochées (mêmes montants : marges inchangées) — 61/63 imputées automatiquement (97 %), 2 dans « À imputer », 3 BC ouverts + 1 brouillon, BC2026-417 de Dupont.
+- Tests : 6 intégration API, 2 worker ; E2E P6 (BC depuis le devis, envoi, facture Peppol imputée seule avec écart, timeline, validation, « À imputer » ventilée sur deux chantiers, dépôt PDF extrait et rapproché, comptable en lecture) + téléphone.
+- Report : contrôle 30bis avant « à payer » (P6.4) → M9 avec la sous-traitance.
 
 ## Reste à faire
-M7 (web, seed, E2E P6) → M13 selon `docs/11-plan-de-livraison.md`.
+M8 → M13 selon `docs/11-plan-de-livraison.md`.
 
 ## Écarts avec la spécification
 - Nouveau paquet `packages/documents` (PDF) en plus de la liste de `CLAUDE.md` (ADR 0012).

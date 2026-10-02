@@ -157,6 +157,8 @@ export const SupplierInvoiceSchema = z.object({
   totalVat: CentsSchema,
   totalGross: CentsSchema,
   orderReference: z.string().nullable(),
+  /** Remarque libre du fournisseur (référence client, adresse, personne qui a enlevé). */
+  notes: z.string().nullable(),
   status: SupplierInvoiceStatusSchema,
   matchMethod: z.string().nullable(),
   matchConfidence: z.number().nullable(),

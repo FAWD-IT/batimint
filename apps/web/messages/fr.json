@@ -2408,7 +2408,8 @@
         "mismatch": "La ventilation doit égaler le total HTVA (reste {remaining}).",
         "save": "Enregistrer l’imputation",
         "saved": "Imputation enregistrée"
-      }
+      },
+      "notes": "Remarque du fournisseur"
     },
     "orders": {
       "title": "Bons de commande",

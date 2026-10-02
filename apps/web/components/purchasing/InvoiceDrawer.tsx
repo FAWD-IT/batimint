@@ -108,6 +108,13 @@ function InvoiceBody({ invoice: i }: { invoice: SupplierInvoiceDto }) {
         <Amount label={t('gross')} cents={i.totalGross} />
       </Card>
 
+      {i.notes ? (
+        <p className="rounded-[12px] bg-line-soft/60 px-4 py-3 text-[14px] whitespace-pre-line">
+          <span className="block text-[12px] text-muted">{t('notes')}</span>
+          {i.notes}
+        </p>
+      ) : null}
+
       {i.documentUrl ? (
         <a
           href={i.documentUrl}
