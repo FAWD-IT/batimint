@@ -12,7 +12,12 @@ import {
   uniqueEmail,
 } from './helpers';
 
-async function call<T>(request: APIRequestContext, method: 'POST' | 'PUT' | 'GET', path: string, data?: unknown) {
+async function call<T>(
+  request: APIRequestContext,
+  method: 'POST' | 'PUT' | 'GET',
+  path: string,
+  data?: unknown,
+) {
   const res = await request.fetch(`/api/v1${path}`, { method, ...(data !== undefined ? { data } : {}) });
   expect(res.ok(), `${method} ${path} → ${res.status()} ${await res.text()}`).toBeTruthy();
   return (await res.json()) as T;
@@ -60,9 +65,16 @@ async function signedProject(page: Page, email: string) {
       {
         key: crypto.randomUUID(),
         title: 'Carrelage',
-        lines: [line('Faïence murale 30×60 posée', '18', 9_000, 6_500), line('Carrelage sol 60×60 posé', '6', 11_000, 8_000)],
+        lines: [
+          line('Faïence murale 30×60 posée', '18', 9_000, 6_500),
+          line('Carrelage sol 60×60 posé', '6', 11_000, 8_000),
+        ],
       },
-      { key: crypto.randomUUID(), title: 'Plomberie', lines: [line('Douche à l’italienne', '1', 250_000, 180_000)] },
+      {
+        key: crypto.randomUUID(),
+        title: 'Plomberie',
+        lines: [line('Douche à l’italienne', '1', 250_000, 180_000)],
+      },
     ],
   });
   await call(r, 'POST', `/quotes/${quote.id}/send`, { email });
@@ -82,7 +94,10 @@ async function signedProject(page: Page, email: string) {
   return { projectId };
 }
 
-test('P5 : avenant envoyé, question du client, réponse, validation ; cockpit en direct', async ({ page, browser }) => {
+test('P5 : avenant envoyé, question du client, réponse, validation ; cockpit en direct', async ({
+  page,
+  browser,
+}) => {
   test.setTimeout(180_000);
   await signup(page, { name: 'Sophie Chantier' });
   const email = uniqueEmail('dupont-p5');
@@ -122,7 +137,9 @@ test('P5 : avenant envoyé, question du client, réponse, validation ; cockpit e
   await drawer.getByLabel('Description pour le client').fill('Niche carrelée dans la douche.');
   await drawer.getByRole('button', { name: 'Ligne libre' }).click();
   await drawer.getByRole('combobox', { name: 'Poste de la ligne 1' }).selectOption({ label: 'Carrelage' });
-  await drawer.getByRole('textbox', { name: 'Désignation de la ligne 1' }).fill('Niche murale carrelée 60×30');
+  await drawer
+    .getByRole('textbox', { name: 'Désignation de la ligne 1' })
+    .fill('Niche murale carrelée 60×30');
   await drawer.getByRole('textbox', { name: 'Prix unitaire HTVA de la ligne 1' }).fill('1250');
   await drawer.getByRole('textbox', { name: 'Coût unitaire de la ligne 1' }).fill('900');
   await drawer.getByRole('textbox', { name: 'Prix unitaire HTVA de la ligne 1' }).press('Tab');
@@ -138,7 +155,11 @@ test('P5 : avenant envoyé, question du client, réponse, validation ; cockpit e
   // P5.2 — M. Dupont reçoit l'avenant sur son téléphone, carte « À valider », et pose une question.
   const mail = await lastEmailTo(email, /avenant n°1/);
   const link = /https?:\/\/[^\s"<>]+\/p\/[^\s"<>]+/.exec(mail.text)![0];
-  const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  const phone = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    isMobile: true,
+  });
   const client = await phone.newPage();
   await client.goto(new URL(link).pathname);
   const card = client.getByTestId('portal-change-order');
