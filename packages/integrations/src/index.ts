@@ -18,3 +18,5 @@ export type * from './onss/types';
 export { MockAttendanceRegistry } from './onss/mock';
 export type * from './payments/types';
 export { MockPaymentLinkProvider } from './payments/mock';
+export type * from './onss/thirty-bis';
+export { MockThirtyBisChecker, mockThirtyBisDebts } from './onss/thirty-bis-mock';

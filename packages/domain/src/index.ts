@@ -20,3 +20,4 @@ export * from './field';
 export * from './planning';
 export * from './purchasing';
 export * from './invoicing';
+export * from './subcontracting';

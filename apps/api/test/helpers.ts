@@ -3,6 +3,7 @@ import { testDatabaseUrls } from '@batimint/db/testing';
 import {
   MemoryStorage,
   MockAttendanceRegistry,
+  MockThirtyBisChecker,
   MockPaymentLinkProvider,
   MockAiAssistant,
   MockMailer,
@@ -50,6 +51,7 @@ export async function createTestApp(): Promise<TestApp> {
       peppol: new MockPeppolProvider(),
       ai: new MockAiAssistant(),
       attendance: new MockAttendanceRegistry(),
+      thirtyBis: new MockThirtyBisChecker(),
       payments: new MockPaymentLinkProvider(),
     },
     cipher: new FieldCipher(config.FIELD_ENCRYPTION_KEY),

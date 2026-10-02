@@ -13,3 +13,4 @@ export * from './portal';
 export * from './projects';
 export * from './cipher';
 export * from './invoicing';
+export * from './subcontracting';

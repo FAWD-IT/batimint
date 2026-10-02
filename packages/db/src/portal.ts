@@ -15,10 +15,11 @@ export async function createPortalToken(
   tx: Tx,
   input: {
     tenantId: string;
-    kind: 'quote' | 'project';
+    kind: 'quote' | 'project' | 'subcontractor';
     quoteId?: string | null;
     projectId?: string | null;
     customerId?: string | null;
+    supplierId?: string | null;
     email?: string | null;
     createdBy?: string | null;
     expiresAt?: Date;
@@ -32,6 +33,7 @@ export async function createPortalToken(
       quoteId: input.quoteId ?? null,
       projectId: input.projectId ?? null,
       customerId: input.customerId ?? null,
+      supplierId: input.supplierId ?? null,
       email: input.email ?? null,
       tokenHash: hashPortalToken(token),
       createdBy: input.createdBy ?? null,
@@ -43,4 +45,9 @@ export async function createPortalToken(
 
 export function portalUrl(appUrl: string, token: string): string {
   return `${appUrl.replace(/\/$/, '')}/p/${encodeURIComponent(token)}`;
+}
+
+/** Portail sous-traitant (03 §9) : missions, documents, dépôt de facture. */
+export function subcontractorPortalUrl(appUrl: string, token: string): string {
+  return `${appUrl.replace(/\/$/, '')}/s/${encodeURIComponent(token)}`;
 }

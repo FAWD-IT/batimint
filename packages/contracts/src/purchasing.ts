@@ -3,6 +3,7 @@
  */
 import { z } from 'zod';
 import { CentsSchema, DecimalString, Uuid } from './common';
+import { ThirtyBisCheckSchema } from './subcontracting';
 
 const IsoDay = z.iso.date();
 const optText = (max: number) => z.string().trim().max(max).nullable().optional();
@@ -188,6 +189,20 @@ export const SupplierInvoiceSchema = z.object({
   ),
   documentUrl: z.string().nullable(),
   receivedAt: z.string(),
+  /** Contrat de sous-traitance (P9) et contrôle 30bis avant paiement (05 §7). */
+  subcontract: z.object({ id: Uuid, number: z.string() }).nullable(),
+  isSubcontractor: z.boolean(),
+  thirtyBis: z
+    .object({
+      check: ThirtyBisCheckSchema.nullable(),
+      social: CentsSchema,
+      tax: CentsSchema,
+      payableToSubcontractor: CentsSchema,
+      appliedAt: z.string().nullable(),
+      transferDocumentUrl: z.string().nullable(),
+      blockedReason: z.string().nullable(),
+    })
+    .nullable(),
 });
 export type SupplierInvoiceDto = z.infer<typeof SupplierInvoiceSchema>;
 

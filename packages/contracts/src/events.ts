@@ -132,6 +132,47 @@ export const EventPayloads = {
     automatic: z.boolean(),
   }),
   'supplier_invoice.to_allocate.v1': z.object({ invoiceId: Uuid }),
+  /** Sous-traitant avec dettes au moment du paiement : retenue 30bis à appliquer (05 §7). */
+  'supplier_invoice.blocked_thirty_bis.v1': z.object({
+    invoiceId: Uuid,
+    checkId: Uuid,
+    social: z.string(),
+    tax: z.string(),
+  }),
+  'supplier_invoice.withholding_applied.v1': z.object({
+    invoiceId: Uuid,
+    checkId: Uuid,
+    social: z.string(),
+    tax: z.string(),
+  }),
+  /** Contrat de sous-traitance conclu, modifié ou clôturé (engagé du poste, fil du chantier). */
+  'subcontract.created.v1': z.object({ subcontractId: Uuid, projectId: Uuid, checkId: Uuid.nullable() }),
+  'subcontract.updated.v1': z.object({
+    subcontractId: Uuid,
+    projectId: Uuid,
+    status: z.enum(['active', 'completed', 'cancelled']),
+  }),
+  /** Consultation 30bis enregistrée (création, réception de facture, paiement, manuelle). */
+  'thirty_bis.checked.v1': z.object({
+    checkId: Uuid,
+    supplierId: Uuid,
+    hasDebt: z.boolean(),
+    context: z.enum(['contract', 'invoice_received', 'payment', 'manual']),
+  }),
+  /** Document déposé par le sous-traitant sur son portail. */
+  'subcontractor.document_uploaded.v1': z.object({ supplierId: Uuid, documentId: Uuid, kind: z.string() }),
+  /** Accès au portail sous-traitant demandé : le worker crée le lien et l'envoie par e-mail. */
+  'subcontractor.invited.v1': z.object({
+    supplierId: Uuid,
+    email: z.string(),
+    subcontractId: Uuid.nullable(),
+  }),
+  /** Contrôle quotidien des échéances des documents des sous-traitants. */
+  'subcontractor.document_expiring.v1': z.object({
+    supplierId: Uuid,
+    documentId: Uuid,
+    state: z.enum(['expiring', 'expired']),
+  }),
   /** Facture ou note de crédit émise (numéro définitif) : envoi Peppol ou e-mail, timeline. */
   'invoice.issued.v1': z.object({
     invoiceId: Uuid,

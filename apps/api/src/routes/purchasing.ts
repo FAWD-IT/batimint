@@ -21,6 +21,7 @@ import { emitEvent, nextSequenceValue, type Tx, withSystem, withTenant } from '@
 import { buildSimpleUbl, parseUbl, renderPurchaseOrderPdf, UblError } from '@batimint/documents';
 import {
   assertTransition,
+  canTransition,
   dec,
   formatDocumentNumber,
   lineTotal,
@@ -43,6 +44,7 @@ import {
   poDto,
 } from '../services/purchasing';
 import { addressLines } from '../services/quotes';
+import { storeTransferDocument, thirtyBisPaymentGate } from '../services/subcontracting';
 
 const MAX_UPLOAD = 15 * 1024 * 1024;
 
@@ -660,15 +662,47 @@ export const purchasingRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async 
           );
         }
         const now = new Date();
+        // Sous-traitant : consultation 30bis avant la mise à payer et avant le paiement (05 §7).
+        const gate =
+          to === 'to_pay' || to === 'paid'
+            ? await thirtyBisPaymentGate(deps, tx, i.id, { userId: auth.userId, label: actor.label ?? null })
+            : null;
+        const target = gate && !gate.ok ? 'blocked' : to;
+        if (target !== to && target !== i.status && !canTransition(SupplierInvoiceStatus, i.status, target))
+          throw conflict(
+            'invalid_transition',
+            'Ce changement de statut n’est pas possible pour cette facture.',
+          );
         await tx.supplierInvoice.update({
           where: { id: i.id },
           data: {
-            status: to,
-            ...(to === 'validated' ? { validatedAt: now, validatedBy: auth.userId } : {}),
-            ...(to === 'paid' ? { paidAt: now } : {}),
+            status: target,
+            ...(target === 'validated' ? { validatedAt: now, validatedBy: auth.userId } : {}),
+            ...(target === 'paid' ? { paidAt: now } : {}),
+            ...(gate && !gate.ok ? { blockedReason: gate.reason } : {}),
+            ...(target === 'validated' ? { blockedReason: null } : {}),
           },
         });
-        await audit(`supplier_invoice.${to}`, 'supplier_invoice', i.id, { from: i.status });
+        await audit(`supplier_invoice.${target}`, 'supplier_invoice', i.id, {
+          from: i.status,
+          ...(gate
+            ? { thirtyBisCheckId: gate.checkId, social: String(gate.social), tax: String(gate.tax) }
+            : {}),
+        });
+        if (gate && !gate.ok)
+          await emitEvent(tx, {
+            tenantId: auth.tenantId,
+            type: 'supplier_invoice.blocked_thirty_bis.v1',
+            aggregateType: 'supplier_invoice',
+            aggregateId: i.id,
+            payload: {
+              invoiceId: i.id,
+              checkId: gate.checkId,
+              social: gate.social.toString(),
+              tax: gate.tax.toString(),
+            },
+            actor,
+          });
         await emitEvent(tx, {
           tenantId: auth.tenantId,
           type: 'project.updated.v1',
@@ -682,6 +716,96 @@ export const purchasingRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async 
           await tx.supplierInvoice.findUniqueOrThrow({ where: { id: i.id }, include: INVOICE_INCLUDE }),
         );
       }),
+  );
+
+  app.post(
+    '/supplier-invoices/:id/withholding',
+    {
+      schema: {
+        tags: ['achats'],
+        summary: 'Appliquer la retenue 30bis et mettre la facture à payer (document de versement)',
+        params: z.object({ id: z.uuid() }),
+        response: { 200: SupplierInvoiceSchema },
+      },
+    },
+    (req) =>
+      inTenant(deps, req, 'supplier_invoices.allocate', async ({ tx, auth, actor, audit }) => {
+        const i = await tx.supplierInvoice.findUnique({ where: { id: req.params.id } });
+        if (!i) throw notFound('Cette facture');
+        if (i.status !== 'blocked')
+          throw conflict('not_blocked', 'Cette facture n’attend pas de retenue 30bis.');
+        // Consultation du jour : la retenue se calcule sur la situation au moment du paiement.
+        const gate = await thirtyBisPaymentGate(deps, tx, i.id, {
+          userId: auth.userId,
+          label: actor.label ?? null,
+        });
+        if (!gate) throw conflict('not_subcontractor', 'Cette facture ne vient pas d’un sous-traitant.');
+        if (gate.ok && gate.social + gate.tax === 0n) {
+          await tx.supplierInvoice.update({
+            where: { id: i.id },
+            data: { status: 'to_pay', blockedReason: null },
+          });
+          await audit('supplier_invoice.to_pay', 'supplier_invoice', i.id, {
+            thirtyBisCheckId: gate.checkId,
+          });
+        } else {
+          await tx.supplierInvoice.update({
+            where: { id: i.id },
+            data: { withholdingAppliedAt: new Date(), blockedReason: null },
+          });
+          const doc = await storeTransferDocument(deps, tx, i.id);
+          await tx.supplierInvoice.update({
+            where: { id: i.id },
+            data: { status: 'to_pay', transferDocKey: doc.key, transferDocSha256: doc.sha256 },
+          });
+          await audit('supplier_invoice.withholding_applied', 'supplier_invoice', i.id, {
+            thirtyBisCheckId: gate.checkId,
+            social: gate.social.toString(),
+            tax: gate.tax.toString(),
+            sha256: doc.sha256,
+          });
+          await emitEvent(tx, {
+            tenantId: auth.tenantId,
+            type: 'supplier_invoice.withholding_applied.v1',
+            aggregateType: 'supplier_invoice',
+            aggregateId: i.id,
+            payload: {
+              invoiceId: i.id,
+              checkId: gate.checkId,
+              social: gate.social.toString(),
+              tax: gate.tax.toString(),
+            },
+            actor,
+          });
+        }
+        return invoiceDto(
+          tx,
+          await tx.supplierInvoice.findUniqueOrThrow({ where: { id: i.id }, include: INVOICE_INCLUDE }),
+        );
+      }),
+  );
+
+  app.get(
+    '/supplier-invoices/:id/transfer-document',
+    {
+      schema: {
+        tags: ['achats'],
+        summary: 'Document de versement de la retenue 30bis (PDF)',
+        params: z.object({ id: z.uuid() }),
+      },
+    },
+    async (req, reply) => {
+      const key = await inTenant(deps, req, 'supplier_invoices.read', async ({ tx }) => {
+        const i = await tx.supplierInvoice.findUnique({ where: { id: req.params.id } });
+        if (!i?.transferDocKey) throw notFound('Ce document de versement');
+        return i.transferDocKey;
+      });
+      const file = await deps.integrations.storage.get('legal', key);
+      return reply
+        .header('content-type', 'application/pdf')
+        .header('content-disposition', `inline; filename="retenue-30bis.pdf"`)
+        .send(file);
+    },
   );
 
   app.post(

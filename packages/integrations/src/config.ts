@@ -11,6 +11,8 @@ import { S3Storage } from './storage/s3';
 import type { ObjectStorage } from './storage/types';
 import { MockAttendanceRegistry } from './onss/mock';
 import type { AttendanceRegistry } from './onss/types';
+import type { ThirtyBisChecker } from './onss/thirty-bis';
+import { MockThirtyBisChecker } from './onss/thirty-bis-mock';
 import { MockPaymentLinkProvider } from './payments/mock';
 import type { PaymentLinkProvider } from './payments/types';
 import { MockPeppolProvider } from './peppol/mock';
@@ -28,6 +30,7 @@ export interface Integrations {
   peppol: PeppolProvider;
   ai: AiAssistant;
   attendance: AttendanceRegistry;
+  thirtyBis: ThirtyBisChecker;
   payments: PaymentLinkProvider;
 }
 
@@ -36,6 +39,13 @@ export function createAttendanceRegistry(env: Env = process.env): AttendanceRegi
   if (provider !== 'mock')
     throw new Error(`ONSS_PROVIDER=${provider} n'est pas encore disponible : utilisez « mock ».`);
   return new MockAttendanceRegistry();
+}
+
+export function createThirtyBisChecker(env: Env = process.env): ThirtyBisChecker {
+  const provider = env['THIRTY_BIS_PROVIDER'] ?? 'mock';
+  if (provider !== 'mock')
+    throw new Error(`THIRTY_BIS_PROVIDER=${provider} n'est pas encore disponible : utilisez « mock ».`);
+  return new MockThirtyBisChecker();
 }
 
 export function createPaymentLinkProvider(env: Env = process.env): PaymentLinkProvider {
@@ -101,6 +111,7 @@ export function createIntegrations(env: Env = process.env): Integrations {
     peppol: createPeppolProvider(env),
     ai: createAiAssistant(env),
     attendance: createAttendanceRegistry(env),
+    thirtyBis: createThirtyBisChecker(env),
     payments: createPaymentLinkProvider(env),
   };
 }
@@ -114,6 +125,7 @@ export function createMockIntegrations(overrides: Partial<Integrations> = {}): I
     peppol: new MockPeppolProvider(),
     ai: new MockAiAssistant(),
     attendance: new MockAttendanceRegistry(),
+    thirtyBis: new MockThirtyBisChecker(),
     payments: new MockPaymentLinkProvider(),
     ...overrides,
   };

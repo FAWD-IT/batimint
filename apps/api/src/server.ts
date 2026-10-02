@@ -32,6 +32,8 @@ import { notificationRoutes } from './routes/notifications';
 import { peopleRoutes } from './routes/people';
 import { portalRoutes } from './routes/portal';
 import { portalProjectRoutes } from './routes/portal-projects';
+import { portalSubcontractorRoutes } from './routes/portal-subcontractor';
+import { subcontractingRoutes } from './routes/subcontracting';
 import { profileRoutes } from './routes/profile';
 import { quoteRoutes } from './routes/quotes';
 import { projectRoutes } from './routes/projects';
@@ -144,6 +146,8 @@ export async function buildServer(deps: AppDeps, options: BuildOptions = {}): Pr
       await v1.register(paymentWebhookRoutes, { deps });
       await v1.register(portalRoutes, { deps });
       await v1.register(portalProjectRoutes, { deps });
+      await v1.register(subcontractingRoutes, { deps });
+      await v1.register(portalSubcontractorRoutes, { deps });
       v1.get('/openapi.json', { schema: { hide: true }, config: { rateLimit: false } }, async () =>
         app.swagger(),
       );

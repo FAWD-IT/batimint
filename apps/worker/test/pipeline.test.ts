@@ -25,7 +25,7 @@ import { loadDotEnv } from '../src/env';
 import { OutboxRelay } from '../src/relay';
 import { runConsumer } from '../src/runner';
 import type { WorkerDeps } from '../src/consumer';
-import { runDunning, runPeppolDelivery } from '../src/schedules';
+import { runDunning, runPeppolDelivery, runSubcontractorDocumentAlerts } from '../src/schedules';
 
 loadDotEnv();
 const urls = testDatabaseUrls('worker');
@@ -1509,5 +1509,231 @@ describe('facturation : envoi, livraison Peppol, paiements, états, relances (02
       ),
     );
     expect(notif.link).toBe(`/facturation/${draft.id}`);
+  });
+});
+
+describe('M9 — sous-traitance', () => {
+  async function contract(enterpriseNumber: string, amount: bigint) {
+    return withTenant(prisma, tenantId, userId, async (tx) => {
+      const customer = await tx.customer.create({
+        data: { tenantId, kind: 'individual', displayName: 'Jean Sous-traité' },
+      });
+      const project = await tx.project.create({
+        data: {
+          tenantId,
+          number: `CH-${uuidv7().slice(-6)}`,
+          name: 'Rénovation sous-traitée',
+          customerId: customer.id,
+          status: 'in_progress',
+          contractAmount: 5_000_000n,
+        },
+      });
+      const post = await tx.budgetLine.create({
+        data: {
+          tenantId,
+          projectId: project.id,
+          position: 0,
+          label: 'Électricité',
+          budgetedCost: 2_000_000n,
+        },
+      });
+      const supplier = await tx.supplier.create({
+        data: {
+          tenantId,
+          name: `Électro ${uuidv7().slice(-4)}`,
+          enterpriseNumber,
+          email: `st-${uuidv7().slice(-6)}@example.be`,
+          isSubcontractor: true,
+        },
+      });
+      const sc = await tx.subcontract.create({
+        data: {
+          id: uuidv7(),
+          tenantId,
+          number: `ST2026-${uuidv7().slice(-3)}`,
+          projectId: project.id,
+          budgetLineId: post.id,
+          supplierId: supplier.id,
+          title: 'Électricité complète',
+          amount,
+        },
+      });
+      await emitEvent(tx, {
+        tenantId,
+        type: 'subcontract.created.v1',
+        aggregateType: 'subcontract',
+        aggregateId: sc.id,
+        payload: { subcontractId: sc.id, projectId: project.id, checkId: null },
+      });
+      return { project, post, supplier, sc };
+    });
+  }
+
+  async function portalInvoice(supplierId: string, subcontractId: string, net: bigint) {
+    return withTenant(prisma, tenantId, userId, async (tx) => {
+      const inv = await tx.supplierInvoice.create({
+        data: {
+          id: uuidv7(),
+          tenantId,
+          source: 'upload',
+          supplierId,
+          supplierName: 'Électro',
+          subcontractId,
+          number: 'F-2026-12',
+          totalNet: net,
+          totalVat: (net * 21n) / 100n,
+          totalGross: net + (net * 21n) / 100n,
+          extraction: {},
+        },
+      });
+      await emitEvent(tx, {
+        tenantId,
+        type: 'supplier_invoice.received.v1',
+        aggregateType: 'supplier_invoice',
+        aggregateId: inv.id,
+        payload: { invoiceId: inv.id, source: 'upload' },
+      });
+      return inv;
+    });
+  }
+
+  it('contrat : engagé sur le poste et fil ; facture du sous-traitant imputée au poste, 30bis à la réception', async () => {
+    const { project, post, supplier, sc } = await contract('0456789034', 1_240_000n);
+    const commitment = await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.projectCost.findFirst({ where: { projectId: project.id, category: 'subcontract' } }),
+      ),
+    );
+    expect(commitment).toMatchObject({ amount: 1_240_000n, budgetLineId: post.id });
+    const entry = await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.timelineEntry.findFirst({ where: { projectId: project.id, type: 'subcontract.created' } }),
+      ),
+    );
+    expect(entry.title).toBe(`Contrat de sous-traitance ${sc.number} avec ${supplier.name}`);
+
+    const inv = await portalInvoice(supplier.id, sc.id, 372_000n);
+    const done = await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.supplierInvoice.findFirst({
+          where: { id: inv.id, status: 'allocated', thirtyBisCheckId: { not: null } },
+          include: { allocations: true },
+        }),
+      ),
+    );
+    expect(done).toMatchObject({ matchMethod: 'subcontract', projectId: project.id, withholdingSocial: 0n });
+    expect(done.allocations).toEqual([expect.objectContaining({ budgetLineId: post.id, amount: 372_000n })]);
+    const check = await withTenant(prisma, tenantId, userId, (tx) =>
+      tx.thirtyBisCheck.findUniqueOrThrow({ where: { id: done.thirtyBisCheckId! } }),
+    );
+    expect(check).toMatchObject({ context: 'invoice_received', hasSocialDebt: false });
+    expect(check.proofSha256).toMatch(/^[0-9a-f]{64}$/);
+    // L'engagé du contrat diminue de ce qui est facturé.
+    await waitFor(() =>
+      withTenant(prisma, tenantId, userId, async (tx) =>
+        (await tx.projectCost.findFirst({ where: { projectId: project.id, category: 'subcontract' } }))
+          ?.amount === 868_000n
+          ? true
+          : null,
+      ),
+    );
+  });
+
+  it('dette à la réception : retenue calculée ; au paiement : alerte au bureau et fil', async () => {
+    const { project, supplier, sc } = await contract('0712349984', 2_000_000n);
+    const inv = await portalInvoice(supplier.id, sc.id, 1_000_000n);
+    const done = await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.supplierInvoice.findFirst({ where: { id: inv.id, thirtyBisCheckId: { not: null } } }),
+      ),
+    );
+    expect(done).toMatchObject({
+      withholdingSocial: 350_000n,
+      withholdingTax: 0n,
+      withholdingAppliedAt: null,
+    });
+    await withTenant(prisma, tenantId, userId, async (tx) => {
+      await tx.supplierInvoice.update({ where: { id: inv.id }, data: { status: 'blocked' } });
+      await emitEvent(tx, {
+        tenantId,
+        type: 'supplier_invoice.blocked_thirty_bis.v1',
+        aggregateType: 'supplier_invoice',
+        aggregateId: inv.id,
+        payload: { invoiceId: inv.id, checkId: done.thirtyBisCheckId!, social: '350000', tax: '0' },
+      });
+    });
+    const notif = await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.notification.findFirst({
+          where: { userId, type: 'supplier_invoice.blocked_thirty_bis', link: { contains: inv.id } },
+        }),
+      ),
+    );
+    expect(notif.body).toMatch(/Dette sociale : retenue de 3\s500,00\s€/);
+    const entry = await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.timelineEntry.findFirst({
+          where: { projectId: project.id, type: 'supplier_invoice.blocked_thirty_bis' },
+        }),
+      ),
+    );
+    expect(entry.title).toMatch(/bloqué : dette sociale/);
+  });
+
+  it('invitation : un lien /s/ par e-mail ; documents : une alerte par état, e-mail au sous-traitant', async () => {
+    const { supplier, sc } = await contract('0456789034', 500_000n);
+    await withTenant(prisma, tenantId, userId, (tx) =>
+      emitEvent(tx, {
+        tenantId,
+        type: 'subcontractor.invited.v1',
+        aggregateType: 'supplier',
+        aggregateId: supplier.id,
+        payload: { supplierId: supplier.id, email: supplier.email!, subcontractId: sc.id },
+      }),
+    );
+    const mail = await waitFor(() => bgMailer.sent.find((m) => m.to === supplier.email));
+    expect(mail.subject).toContain(sc.number);
+    expect(mail.text).toContain('https://app.test/s/');
+    const token = /\/s\/([^\s]+)/.exec(mail.text)![1]!;
+    const stored = await withSystem(prisma, (tx) =>
+      tx.portalToken.findFirst({ where: { supplierId: supplier.id, kind: 'subcontractor' } }),
+    );
+    expect(stored?.tokenHash).not.toBe(token);
+
+    const docId = uuidv7();
+    await withTenant(prisma, tenantId, userId, (tx) =>
+      tx.subcontractorDocument.create({
+        data: {
+          id: docId,
+          tenantId,
+          supplierId: supplier.id,
+          kind: 'rc_insurance',
+          expiresOn: new Date(`${addDays(brusselsDate(new Date()), 10)}T00:00:00Z`),
+          fileKey: 'x',
+          fileName: 'rc.pdf',
+          contentType: 'application/pdf',
+          size: 1,
+          sha256: 'x',
+        },
+      }),
+    );
+    expect((await runSubcontractorDocumentAlerts(deps)).alerts).toBeGreaterThanOrEqual(1);
+    expect((await runSubcontractorDocumentAlerts(deps)).alerts, 'une seule alerte par état').toBe(0);
+    const notif = await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.notification.findFirst({
+          where: { userId, type: 'subcontractor.document_expiring', link: `/sous-traitance/${supplier.id}` },
+        }),
+      ),
+    );
+    expect(notif.title).toMatch(/Assurance responsabilité civile de .* expire le/);
+    const renew = await waitFor(() =>
+      bgMailer.sent.find((m) => m.to === supplier.email && /à renouveler/.test(m.subject)),
+    );
+    expect(renew.text).toContain('https://app.test/s/');
+    // Expiré plus tard : nouvelle alerte (nouvel état).
+    expect(
+      (await runSubcontractorDocumentAlerts(deps, new Date(Date.now() + 20 * 86_400_000))).alerts,
+    ).toBeGreaterThanOrEqual(1);
   });
 });

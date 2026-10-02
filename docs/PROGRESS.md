@@ -3,12 +3,12 @@
 Ce fichier est le point de reprise entre sessions cloud. Une nouvelle session doit pouvoir reprendre le travail en ne lisant que lui et `CLAUDE.md`.
 
 ## Jalon en cours
-**M8 — Facturation et encaissement** — livré (domaine, documents validés Peppol, API, worker, écrans, portail, seed, E2E P7/P8 verts en local), en attente de la CI. M7 ✅ validé (CI run 35 : checks + E2E sur les images de production).
+**M9 — Sous-traitance et conformité** — en cours (domaine, base, adaptateur 30bis, API, worker écrits ; écrans, seed et E2E P9 à faire). M8 ✅ validé (CI run 43 : checks + E2E sur les images de production).
 
 (L'étiquette `m0-done` existe localement mais le push de tags est refusé par la politique de la session : seule la branche est poussée.)
 
 ## Prochaine action
-Vérifier la CI du push M8 ; si verte, marquer M8 ✅ et démarrer M9 (sous-traitance et conformité : sous-traitants, documents, contrats, 30bis mock aux deux chemins, portail sous-traitant `/s/[token]`, Check In and Out, déclaration de travaux ; parcours P9 ; contrôle 30bis avant « à payer » des factures fournisseurs de sous-traitants reporté de M7).
+M9 : tests d'intégration API (30bis aux deux chemins, portail sous-traitant), tests worker, écrans `/sous-traitance`, onglet chantier, portail `/s/[token]`, seed, E2E P9, ADR 0018.
 
 ## Relancer l'environnement
 ```bash
@@ -109,7 +109,7 @@ docker compose -f docker-compose.coolify.yml -f docker/docker-compose.sandbox.ym
 - Tests : 6 intégration API, 2 worker ; E2E P6 (BC depuis le devis, envoi, facture Peppol imputée seule avec écart, timeline, validation, « À imputer » ventilée sur deux chantiers, dépôt PDF extrait et rapproché, comptable en lecture) + téléphone.
 - Report : contrôle 30bis avant « à payer » (P6.4) → M9 avec la sous-traitance.
 
-### M8 — Facturation et encaissement (en attente CI)
+### M8 — Facturation et encaissement ✅ (CI run 43)
 - Domaine (`invoicing.ts`) : états d'avancement (cumul en %, en quantité ou en €, pré-rempli par les tâches, jamais sous le déjà facturé), TVA par poste au prorata, déduction de l'acompte au prorata (solde sur la finale), retenue de garantie, solde et statut de paiement, notes de crédit (totale/partielle, plafonnées), QR EPC v002, relances B2B/B2C (calendrier, indemnité, intérêts, frais plafonnés), délai d'émission, révision de prix ; 18 tests.
 - Base : facture enrichie (parties figées, ventilation TVA, mentions, retenue, communication structurée, documents + empreintes, acheminement, paiements), états d'avancement + lignes, paiements, liens de paiement, étapes de relance ; RLS ; **déclencheur d'immuabilité** des factures émises (ADR 0017).
 - Documents : PDF facture / note de crédit (QR EPC, communication structurée, retenue, mentions) ; UBL Peppol BIS 3 (factures et notes de crédit) **validé par les règles officielles EN 16931 + Peppol** dans les tests ; écran = UBL sur 1 000 factures aléatoires.

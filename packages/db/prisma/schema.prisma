@@ -128,6 +128,9 @@ model Tenant {
   dailyReports         DailyReport[]
   scheduleSlots        ScheduleSlot[]
   calendarFeeds        CalendarFeed[]
+  subcontracts         Subcontract[]
+  thirtyBisChecks      ThirtyBisCheck[]
+  subcontractorDocs    SubcontractorDocument[]
 
   @@map("tenants")
 }
@@ -749,10 +752,13 @@ model Supplier {
   updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
   createdBy        String?   @map("created_by") @db.Uuid
 
-  tenant Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  items  Item[]
-  prices SupplierPrice[]
-  orders PurchaseOrder[]
+  tenant       Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  items        Item[]
+  prices       SupplierPrice[]
+  orders       PurchaseOrder[]
+  subcontracts Subcontract[]
+  documents    SubcontractorDocument[]
+  checks       ThirtyBisCheck[]
 
   @@index([tenantId, name])
   @@map("suppliers")
@@ -1063,11 +1069,12 @@ model VatCertificate {
 model PortalToken {
   id         String    @id @default(uuid(7)) @db.Uuid
   tenantId   String    @map("tenant_id") @db.Uuid
-  /// `quote` (un devis) ou `project` (un chantier).
+  /// `quote` (un devis), `project` (un chantier) ou `subcontractor` (portail sous-traitant).
   kind       String
   quoteId    String?   @map("quote_id") @db.Uuid
   projectId  String?   @map("project_id") @db.Uuid
   customerId String?   @map("customer_id") @db.Uuid
+  supplierId String?   @map("supplier_id") @db.Uuid
   email      String?
   tokenHash  String    @unique @map("token_hash")
   expiresAt  DateTime  @map("expires_at") @db.Timestamptz(3)
@@ -1081,6 +1088,7 @@ model PortalToken {
 
   @@index([tenantId, quoteId])
   @@index([tenantId, projectId])
+  @@index([tenantId, supplierId])
   @@map("portal_tokens")
 }
 
@@ -1121,6 +1129,9 @@ model Project {
   arrivalNotifiedOn    DateTime?     @map("arrival_notified_on") @db.Date
   /// Check In and Out at Work imposé manuellement (sinon déduit du montant, 05 §8).
   checkInOutForced     Boolean       @default(false) @map("check_in_out_forced")
+  /// Déclaration de travaux ONSS (art. 30bis §7) : date et référence une fois déclarée.
+  worksDeclaredAt      DateTime?     @map("works_declared_at") @db.Timestamptz(3)
+  worksDeclarationRef  String?       @map("works_declaration_ref")
   createdAt            DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt            DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
   createdBy            String?       @map("created_by") @db.Uuid
@@ -1133,6 +1144,7 @@ model Project {
   tasks          Task[]
   invoices       Invoice[]
   statements     ProgressStatement[]
+  subcontracts   Subcontract[]
   changeOrders   ChangeOrder[]
   costs          ProjectCost[]
   purchaseOrders PurchaseOrder[]
@@ -1947,53 +1959,66 @@ enum SupplierInvoiceState {
 
 /// Facture fournisseur reçue (Peppol, dépôt ou e-mail) ; le document source est conservé.
 model SupplierInvoice {
-  id              String                @id @db.Uuid
-  tenantId        String                @map("tenant_id") @db.Uuid
-  source          SupplierInvoiceSource
+  id                   String                @id @db.Uuid
+  tenantId             String                @map("tenant_id") @db.Uuid
+  source               SupplierInvoiceSource
   /// Identifiant du document chez le fournisseur d'accès Peppol (déduplication).
-  externalId      String?               @map("external_id")
-  supplierId      String?               @map("supplier_id") @db.Uuid
-  supplierName    String                @map("supplier_name")
-  supplierVat     String?               @map("supplier_vat")
-  number          String?
-  issueDate       DateTime?             @map("issue_date") @db.Date
-  dueDate         DateTime?             @map("due_date") @db.Date
-  currency        String                @default("EUR")
-  totalNet        BigInt                @default(0) @map("total_net")
-  totalVat        BigInt                @default(0) @map("total_vat")
-  totalGross      BigInt                @default(0) @map("total_gross")
-  orderReference  String?               @map("order_reference")
-  deliveryAddress String?               @map("delivery_address")
-  notes           String?
-  status          SupplierInvoiceState  @default(received)
+  externalId           String?               @map("external_id")
+  supplierId           String?               @map("supplier_id") @db.Uuid
+  supplierName         String                @map("supplier_name")
+  supplierVat          String?               @map("supplier_vat")
+  number               String?
+  issueDate            DateTime?             @map("issue_date") @db.Date
+  dueDate              DateTime?             @map("due_date") @db.Date
+  currency             String                @default("EUR")
+  totalNet             BigInt                @default(0) @map("total_net")
+  totalVat             BigInt                @default(0) @map("total_vat")
+  totalGross           BigInt                @default(0) @map("total_gross")
+  orderReference       String?               @map("order_reference")
+  deliveryAddress      String?               @map("delivery_address")
+  notes                String?
+  status               SupplierInvoiceState  @default(received)
   /// `purchase_order`, `project_reference`, `address`, `ai`, `manual`.
-  matchMethod     String?               @map("match_method")
-  matchConfidence Decimal?              @map("match_confidence") @db.Decimal(4, 3)
-  purchaseOrderId String?               @map("purchase_order_id") @db.Uuid
-  projectId       String?               @map("project_id") @db.Uuid
+  matchMethod          String?               @map("match_method")
+  matchConfidence      Decimal?              @map("match_confidence") @db.Decimal(4, 3)
+  purchaseOrderId      String?               @map("purchase_order_id") @db.Uuid
+  projectId            String?               @map("project_id") @db.Uuid
   /// Suggestions classées pour la boîte « À imputer ».
-  suggestions     Json                  @default("[]")
+  suggestions          Json                  @default("[]")
   /// Écarts avec le bon de commande.
-  discrepancies   Json                  @default("[]")
-  documentKey     String?               @map("document_key")
-  documentType    String?               @map("document_type")
-  extraction      Json?
-  receivedAt      DateTime              @default(now()) @map("received_at") @db.Timestamptz(3)
-  allocatedAt     DateTime?             @map("allocated_at") @db.Timestamptz(3)
-  allocatedBy     String?               @map("allocated_by") @db.Uuid
-  validatedAt     DateTime?             @map("validated_at") @db.Timestamptz(3)
-  validatedBy     String?               @map("validated_by") @db.Uuid
-  paidAt          DateTime?             @map("paid_at") @db.Timestamptz(3)
-  createdAt       DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt       DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
+  discrepancies        Json                  @default("[]")
+  documentKey          String?               @map("document_key")
+  documentType         String?               @map("document_type")
+  extraction           Json?
+  /// Contrat de sous-traitance auquel la facture se rapporte (P9).
+  subcontractId        String?               @map("subcontract_id") @db.Uuid
+  /// Dernière consultation 30bis (réception, mise à payer, paiement) et retenues calculées.
+  thirtyBisCheckId     String?               @map("thirty_bis_check_id") @db.Uuid
+  withholdingSocial    BigInt                @default(0) @map("withholding_social")
+  withholdingTax       BigInt                @default(0) @map("withholding_tax")
+  /// Retenue acceptée : le paiement normal est remplacé par le versement aux administrations.
+  withholdingAppliedAt DateTime?             @map("withholding_applied_at") @db.Timestamptz(3)
+  transferDocKey       String?               @map("transfer_doc_key")
+  transferDocSha256    String?               @map("transfer_doc_sha256")
+  blockedReason        String?               @map("blocked_reason")
+  receivedAt           DateTime              @default(now()) @map("received_at") @db.Timestamptz(3)
+  allocatedAt          DateTime?             @map("allocated_at") @db.Timestamptz(3)
+  allocatedBy          String?               @map("allocated_by") @db.Uuid
+  validatedAt          DateTime?             @map("validated_at") @db.Timestamptz(3)
+  validatedBy          String?               @map("validated_by") @db.Uuid
+  paidAt               DateTime?             @map("paid_at") @db.Timestamptz(3)
+  createdAt            DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   tenant      Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   lines       SupplierInvoiceLine[]
   allocations CostAllocation[]
+  subcontract Subcontract?          @relation(fields: [subcontractId], references: [id], onDelete: SetNull)
 
   @@unique([tenantId, externalId])
   @@index([tenantId, status])
   @@index([tenantId, supplierId])
+  @@index([tenantId, subcontractId])
   @@map("supplier_invoices")
 }
 
@@ -2033,4 +2058,110 @@ model CostAllocation {
   @@index([tenantId, invoiceId])
   @@index([tenantId, projectId])
   @@map("cost_allocations")
+}
+
+enum SubcontractState {
+  active
+  completed
+  cancelled
+}
+
+/// Contrat de sous-traitance sur un poste du chantier (03 §9, P9) : montant HTVA, échéancier,
+/// contrôle 30bis à la création ; le montant entre dans l'engagé du poste.
+model Subcontract {
+  id              String           @id @db.Uuid
+  tenantId        String           @map("tenant_id") @db.Uuid
+  number          String
+  projectId       String           @map("project_id") @db.Uuid
+  budgetLineId    String?          @map("budget_line_id") @db.Uuid
+  supplierId      String           @map("supplier_id") @db.Uuid
+  title           String
+  scope           String?
+  /// Montant HTVA en centimes.
+  amount          BigInt
+  startDate       DateTime?        @map("start_date") @db.Date
+  endDate         DateTime?        @map("end_date") @db.Date
+  status          SubcontractState @default(active)
+  /// Échéancier : [{ label, percent, amount, dueOn }].
+  installments    Json             @default("[]")
+  /// Consultation 30bis faite à la création du contrat.
+  creationCheckId String?          @map("creation_check_id") @db.Uuid
+  pdfKey          String?          @map("pdf_key")
+  pdfSha256       String?          @map("pdf_sha256")
+  completedAt     DateTime?        @map("completed_at") @db.Timestamptz(3)
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdBy       String?          @map("created_by") @db.Uuid
+
+  tenant   Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  project  Project           @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  supplier Supplier          @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  invoices SupplierInvoice[]
+  checks   ThirtyBisCheck[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId, projectId])
+  @@index([tenantId, supplierId])
+  @@map("subcontracts")
+}
+
+/// Preuve d'une consultation 30bis (05 §7) : horodatage, résultat, référence du service et
+/// document de preuve conservé dans le compartiment légal. Jamais modifiée.
+model ThirtyBisCheck {
+  id                String   @id @default(uuid(7)) @db.Uuid
+  tenantId          String   @map("tenant_id") @db.Uuid
+  supplierId        String?  @map("supplier_id") @db.Uuid
+  subcontractId     String?  @map("subcontract_id") @db.Uuid
+  supplierInvoiceId String?  @map("supplier_invoice_id") @db.Uuid
+  /// `contract`, `invoice_received`, `payment`, `manual`.
+  context           String
+  enterpriseNumber  String   @map("enterprise_number")
+  hasSocialDebt     Boolean  @map("has_social_debt")
+  hasTaxDebt        Boolean  @map("has_tax_debt")
+  socialDebtAmount  BigInt?  @map("social_debt_amount")
+  taxDebtAmount     BigInt?  @map("tax_debt_amount")
+  provider          String
+  reference         String
+  response          Json     @default("{}")
+  proofKey          String?  @map("proof_key")
+  proofSha256       String?  @map("proof_sha256")
+  checkedAt         DateTime @map("checked_at") @db.Timestamptz(3)
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  createdBy         String?  @map("created_by") @db.Uuid
+
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  supplier    Supplier?    @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  subcontract Subcontract? @relation(fields: [subcontractId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, supplierId, checkedAt])
+  @@index([tenantId, supplierInvoiceId])
+  @@map("thirty_bis_checks")
+}
+
+/// Document obligatoire d'un sous-traitant (assurance RC, attestations…) avec son échéance.
+model SubcontractorDocument {
+  id          String    @id @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  supplierId  String    @map("supplier_id") @db.Uuid
+  /// `rc_insurance`, `social_certificate`, `tax_certificate`, `access_certificate`, `other`.
+  kind        String
+  label       String?
+  expiresOn   DateTime? @map("expires_on") @db.Date
+  fileKey     String    @map("file_key")
+  fileName    String    @map("file_name")
+  contentType String    @map("content_type")
+  size        Int
+  sha256      String
+  /// `office` (déposé au bureau) ou `portal` (déposé par le sous-traitant).
+  source      String    @default("office")
+  /// Dernière alerte d'échéance envoyée (`expiring`, `expired`) : une seule alerte par état.
+  alertState  String?   @map("alert_state")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  createdBy   String?   @map("created_by") @db.Uuid
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, supplierId])
+  @@map("subcontractor_documents")
 }

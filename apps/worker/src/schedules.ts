@@ -7,6 +7,7 @@ import { emitEvent, withSystem } from '@batimint/db';
 import {
   addDays,
   brusselsDate,
+  documentCompliance,
   dueDunningStep,
   invoiceBalance,
   isQuoteExpired,
@@ -24,6 +25,7 @@ export const ARRIVAL_NOTICE_QUEUE = 'schedule.arrival-notice';
 export const DAY_AHEAD_QUEUE = 'schedule.planning-day-ahead';
 export const DUNNING_QUEUE = 'schedule.invoice-dunning';
 export const PEPPOL_DELIVERY_QUEUE = 'schedule.peppol-delivery';
+export const SUBCONTRACTOR_DOCUMENTS_QUEUE = 'schedule.subcontractor-documents';
 
 /** Une date de début n'est annoncée au client qu'une fois stable (glisser-déposer successifs). */
 export const ARRIVAL_SETTLE_MS = 10 * 60_000;
@@ -249,6 +251,51 @@ export async function runPeppolDelivery(deps: WorkerDeps) {
   });
 }
 
+/**
+ * Échéances des documents des sous-traitants (03 §9) : une alerte quand le document en vigueur
+ * expire dans 30 jours, une autre quand il a expiré ; jamais deux fois pour le même état.
+ */
+export async function runSubcontractorDocumentAlerts(deps: WorkerDeps, now: Date = new Date()) {
+  const today = brusselsDate(now);
+  return withSystem(deps.prisma, async (tx) => {
+    const docs = await tx.subcontractorDocument.findMany({
+      where: { supplier: { archivedAt: null } },
+      select: { id: true, tenantId: true, supplierId: true, kind: true, expiresOn: true, alertState: true },
+    });
+    const bySupplier = new Map<string, typeof docs>();
+    for (const d of docs) bySupplier.set(d.supplierId, [...(bySupplier.get(d.supplierId) ?? []), d]);
+    let alerts = 0;
+    for (const list of bySupplier.values()) {
+      const kinds = [...new Set(list.map((d) => d.kind))] as never[];
+      const { requirements } = documentCompliance(
+        list.map((d) => ({
+          id: d.id,
+          kind: d.kind as never,
+          expiresOn: d.expiresOn ? iso(d.expiresOn) : null,
+        })),
+        today,
+        kinds,
+      );
+      for (const r of requirements) {
+        if (r.status !== 'expiring' && r.status !== 'expired') continue;
+        const d = list.find((x) => x.id === r.documentId)!;
+        if (d.alertState === r.status) continue;
+        await tx.subcontractorDocument.update({ where: { id: d.id }, data: { alertState: r.status } });
+        await emitEvent(tx, {
+          tenantId: d.tenantId,
+          type: 'subcontractor.document_expiring.v1',
+          aggregateType: 'supplier',
+          aggregateId: d.supplierId,
+          payload: { supplierId: d.supplierId, documentId: d.id, state: r.status },
+          actor: { type: 'system', label: 'Batimint' },
+        });
+        alerts++;
+      }
+    }
+    return { alerts };
+  });
+}
+
 export async function registerSchedules(
   boss: PgBoss,
   deps: WorkerDeps,
@@ -283,5 +330,11 @@ export async function registerSchedules(
   await boss.work(PEPPOL_DELIVERY_QUEUE, async () => {
     const r = await runPeppolDelivery(deps);
     if (r.updated) logger.info(r, 'factures : livraisons Peppol');
+  });
+  await boss.createQueue(SUBCONTRACTOR_DOCUMENTS_QUEUE, { retryLimit: 2 }).catch(() => undefined);
+  await boss.schedule(SUBCONTRACTOR_DOCUMENTS_QUEUE, '30 7 * * *', {}, { tz: 'Europe/Brussels' });
+  await boss.work(SUBCONTRACTOR_DOCUMENTS_QUEUE, async () => {
+    const r = await runSubcontractorDocumentAlerts(deps);
+    if (r.alerts) logger.info(r, 'sous-traitants : documents à renouveler');
   });
 }

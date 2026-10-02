@@ -125,6 +125,14 @@ export const TenantSettingsSchema = z
     progressApprovalB2C: z.boolean().default(true),
     progressApprovalB2B: z.boolean().default(false),
     clockInToleranceMeters: z.number().int().min(50).max(5000).default(300),
+    /** Retenue 30bis (05 §7) [à valider] : % du HTVA pour dettes sociales et fiscales. */
+    thirtyBisSocialPercent: DecimalString.default('35'),
+    thirtyBisTaxPercent: DecimalString.default('15'),
+    /** Documents exigés des sous-traitants (03 §9). */
+    requiredSubcontractorDocuments: z
+      .array(z.enum(['rc_insurance', 'social_certificate', 'tax_certificate', 'access_certificate']))
+      .max(4)
+      .default(['rc_insurance', 'social_certificate', 'tax_certificate']),
     numbering: NumberingSchema.default(DEFAULT_NUMBER_PATTERNS),
   })
   .meta({ id: 'TenantSettings' });

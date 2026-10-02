@@ -21,6 +21,7 @@ import {
 import { buildEmail } from '@batimint/integrations';
 import type { Consumer, ConsumerContext } from '../consumer';
 import { notify, office } from './shared';
+import { allocateToSubcontract, thirtyBisAtReception } from './subcontracting';
 
 const SYSTEM = { type: 'system' as const, label: 'Batimint' };
 const SOURCE_LABEL = { peppol: 'reçue via Peppol', upload: 'déposée', email: 'reçue par e-mail' } as const;
@@ -43,12 +44,12 @@ async function publish(ctx: ConsumerContext, projectIds: string[], topics: strin
 }
 
 /** Ligne du grand livre, mise à jour en place, et événement de coût (dérive, compta). */
-async function upsertCost(
+export async function upsertCost(
   ctx: ConsumerContext,
   c: {
     projectId: string;
     budgetLineId: string | null;
-    category: 'purchase_order' | 'supplier_invoice';
+    category: 'purchase_order' | 'supplier_invoice' | 'subcontract';
     sourceType: string;
     sourceId: string;
     label: string;
@@ -295,6 +296,11 @@ export const supplierInvoiceMatching: Consumer = {
     const found = await tx.supplierInvoice.findUnique({ where: { id: p.invoiceId } });
     if (!found || found.status !== 'received') return;
     const invoice = await extractIfNeeded(ctx, found.id);
+    // Sous-traitant : imputée au poste du contrat ; consultation 30bis à la réception (05 §7).
+    if (await allocateToSubcontract(ctx, invoice)) {
+      await thirtyBisAtReception(ctx, invoice.id);
+      return;
+    }
     const lines = invoice.lines.map((l) => ({
       description: l.description,
       supplierCode: l.supplierCode,
@@ -400,6 +406,7 @@ export const supplierInvoiceMatching: Consumer = {
         payload: { invoiceId: invoice.id, projectIds: [match.projectId], automatic: true },
         actor: SYSTEM,
       });
+      await thirtyBisAtReception(ctx, invoice.id);
       return;
     }
 
@@ -433,6 +440,7 @@ export const supplierInvoiceMatching: Consumer = {
       payload: { invoiceId: invoice.id },
       actor: SYSTEM,
     });
+    await thirtyBisAtReception(ctx, invoice.id);
   },
 };
 

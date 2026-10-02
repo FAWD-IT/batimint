@@ -12,6 +12,7 @@ import { emitEvent, type EventActor, type Tx } from '@batimint/db';
 import type { ParsedUbl } from '@batimint/documents';
 import { groupBySupplier, lineTotal, normalizeRef } from '@batimint/domain';
 import { iso, isoDate } from '../lib/tenant';
+import { invoiceThirtyBis } from './subcontracting';
 
 type PoRow = Awaited<ReturnType<Tx['purchaseOrder']['findUniqueOrThrow']>> & {
   lines: Awaited<ReturnType<Tx['purchaseOrderLine']['findUniqueOrThrow']>>[];
@@ -223,6 +224,9 @@ export async function ingestSupplierInvoice(
     document: { key: string; contentType: string } | null;
     fallbackName?: string;
     actor: EventActor;
+    /** Dépôt par le sous-traitant sur son portail : émetteur et contrat connus. */
+    supplierId?: string | null;
+    subcontractId?: string | null;
   },
 ) {
   if (input.externalId) {
@@ -231,13 +235,15 @@ export async function ingestSupplierInvoice(
   }
   const u = input.ubl;
   const sign = u?.kind === 'credit_note' ? -1n : 1n;
-  const supplier = u
-    ? await findSupplier(
-        tx,
-        u.supplier.vatNumber,
-        u.supplier.endpointScheme === '0208' ? u.supplier.endpointId : null,
-      )
-    : null;
+  const supplier = input.supplierId
+    ? await tx.supplier.findUnique({ where: { id: input.supplierId } })
+    : u
+      ? await findSupplier(
+          tx,
+          u.supplier.vatNumber,
+          u.supplier.endpointScheme === '0208' ? u.supplier.endpointId : null,
+        )
+      : null;
   const invoice = await tx.supplierInvoice.create({
     data: {
       id: input.id,
@@ -259,6 +265,7 @@ export async function ingestSupplierInvoice(
       notes: [u?.buyerReference, ...(u?.notes ?? [])].filter(Boolean).join('\n') || null,
       documentKey: input.document?.key ?? null,
       documentType: input.document?.contentType ?? null,
+      subcontractId: input.subcontractId ?? null,
       lines: u
         ? {
             create: u.lines.map((l, position) => ({
@@ -381,5 +388,6 @@ export async function invoiceDto(tx: Tx, i: InvoiceRow): Promise<SupplierInvoice
     })),
     documentUrl: i.documentKey ? `/api/v1/supplier-invoices/${i.id}/document` : null,
     receivedAt: i.receivedAt.toISOString(),
+    ...(await invoiceThirtyBis(tx, i)),
   };
 }

@@ -141,6 +141,19 @@ export const SupplierInvoiceStatus = defineMachine({
 });
 export type SupplierInvoiceStatus = (typeof SupplierInvoiceStatus.states)[number];
 
+export const SubcontractStatus = defineMachine({
+  name: 'subcontract',
+  states: ['active', 'completed', 'cancelled'] as const,
+  initial: 'active',
+  transitions: {
+    active: ['completed', 'cancelled'],
+    completed: ['active'],
+    cancelled: [],
+  },
+  terminal: ['cancelled'],
+});
+export type SubcontractStatus = (typeof SubcontractStatus.states)[number];
+
 export const TimeEntryStatus = defineMachine({
   name: 'time_entry',
   states: ['recorded', 'synced', 'validated', 'transmitted'] as const,
@@ -162,5 +175,6 @@ export const ALL_MACHINES = [
   ProgressStatementStatus,
   InvoiceStatus,
   SupplierInvoiceStatus,
+  SubcontractStatus,
   TimeEntryStatus,
 ] as const;
