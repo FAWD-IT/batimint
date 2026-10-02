@@ -86,10 +86,9 @@ export function PortalProject({ token, initial }: { token: string; initial: Port
           </p>
         ) : null}
         <h1 className="text-[28px] leading-[1.15] font-bold tracking-[-0.025em]">
-          {data.headline?.title ??
-            (p.status === 'preparation' && p.startDate
-              ? t('startHeadline', { date: dayFr(p.startDate) })
-              : t(`status.${p.status}`))}
+          {p.status === 'preparation' && p.startDate
+            ? t('startHeadline', { date: dayFr(p.startDate) })
+            : (data.headline?.title ?? t(`status.${p.status}`))}
         </h1>
         <StepBar
           label={t('steps.label')}

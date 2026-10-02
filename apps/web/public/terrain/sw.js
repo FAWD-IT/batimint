@@ -4,10 +4,10 @@
  * - fichiers /_next/static (noms versionnés) : cache d'abord ;
  * - API : jamais mise en cache ici (la journée et la file hors ligne vivent dans IndexedDB).
  */
-const VERSION = 'terrain-v1';
+const VERSION = 'terrain-v2';
 const PAGES = `${VERSION}-pages`;
 const STATIC = `${VERSION}-static`;
-const SHELL = ['/terrain', '/terrain/heures', '/terrain/profil'];
+const SHELL = ['/terrain', '/terrain/planning', '/terrain/heures', '/terrain/profil'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

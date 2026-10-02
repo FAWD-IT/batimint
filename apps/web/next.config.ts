@@ -17,6 +17,8 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: root,
   transpilePackages: ['@batimint/ui', '@batimint/contracts', '@batimint/domain', 'geist'],
   poweredByHeader: false,
+  // L'indicateur de développement recouvre la barre d'onglets du terrain (coin bas gauche).
+  devIndicators: false,
   // Le flux SSE transite par le proxy /api/v1 : pas de compression qui bufferiserait.
   compress: false,
   async headers() {

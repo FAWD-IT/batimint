@@ -98,7 +98,8 @@
     "projects": "Chantiers",
     "shortcut": "⌘K",
     "noActiveProjects": "Aucun chantier en cours",
-    "field": "Vue terrain"
+    "field": "Vue terrain",
+    "planning": "Planning"
   },
   "notifications": {
     "title": "Notifications",
@@ -1985,7 +1986,8 @@
       "label": "Navigation terrain",
       "today": "Aujourd'hui",
       "hours": "Heures",
-      "profile": "Profil"
+      "profile": "Profil",
+      "planning": "Planning"
     },
     "sync": {
       "upToDate": "À jour",
@@ -2174,6 +2176,102 @@
       "recording": "Enregistrement… {seconds} s",
       "micDenied": "Micro inaccessible : autorise-le dans le navigateur, ou envoie un fichier audio.",
       "uploadAudio": "Envoyer un fichier audio"
+    },
+    "planning": {
+      "title": "Mon planning",
+      "emptyTitle": "Rien de planifié pour l'instant",
+      "empty": "Ton planning des deux prochaines semaines s'affichera ici dès que le bureau t'aura affecté.",
+      "half": {
+        "day": "journée",
+        "am": "matin",
+        "pm": "après-midi"
+      }
+    }
+  },
+  "planning": {
+    "title": "Planning",
+    "subtitle": "Glissez les tâches sur une équipe ou une personne ; les conflits sont signalés.",
+    "new": "Nouvelle affectation",
+    "previous": "Période précédente",
+    "next": "Période suivante",
+    "today": "Aujourd'hui",
+    "weekOf": "Semaine du {from} au {to}",
+    "zoomLabel": "Échelle",
+    "zoom": {
+      "week": "Semaine",
+      "month": "Mois"
+    },
+    "groupLabel": "Regrouper par",
+    "group": {
+      "teams": "Équipes",
+      "people": "Personnes",
+      "projects": "Chantiers"
+    },
+    "gridLabel": "Planning des affectations",
+    "rowCells": "Affectations de {name}",
+    "half": {
+      "am": "matin",
+      "pm": "après-midi"
+    },
+    "range": "du {start} au {end}, {days} j",
+    "teamSlot": "affectation de l'équipe",
+    "hasConflict": "conflit",
+    "absence": "absent du {from} au {to}",
+    "conflict": {
+      "absence": "{name} est en congé {day} {half}.",
+      "double": "{name} est sur deux chantiers {day} {half}."
+    },
+    "conflictsTitle": "{n, plural, one {# conflit à régler} other {# conflits à régler}}",
+    "conflictToast": "Affectation enregistrée, avec un conflit",
+    "created": "Affectation ajoutée",
+    "updated": "Planning mis à jour",
+    "deleted": "Affectation retirée",
+    "announce": "Affectation du {start} au {end}.",
+    "dropOnResource": "Déposez la tâche sur une équipe ou une personne.",
+    "noPeopleTitle": "Personne à planifier",
+    "noPeople": "Ajoutez vos équipes et vos ouvriers dans « Équipes » pour commencer le planning.",
+    "unplanned": "À planifier ({n})",
+    "unplannedHint": "Glissez une tâche sur la grille, ou utilisez +.",
+    "unplannedReadonly": "Tâches des chantiers sans affectation.",
+    "allPlanned": "Toutes les tâches sont planifiées.",
+    "unplannedList": "Tâches à planifier",
+    "planTask": "Planifier « {task} »",
+    "emptyPeriod": "Rien de planifié sur cette période.",
+    "dialog": {
+      "newTitle": "Nouvelle affectation",
+      "editTitle": "Modifier l'affectation",
+      "project": "Chantier",
+      "resource": "Équipe ou personne",
+      "team": "Équipe : {name}",
+      "task": "Tâche",
+      "noTask": "Pas de tâche précise",
+      "choose": "Choisir…",
+      "start": "Début",
+      "startHalf": "Début (demi-journée)",
+      "end": "Fin",
+      "endHalf": "Fin (demi-journée)",
+      "am": "Matin",
+      "pm": "Après-midi",
+      "note": "Note",
+      "delete": "Retirer",
+      "required": "Choisissez un chantier et une équipe ou une personne.",
+      "range": "La fin doit suivre le début."
+    },
+    "ical": {
+      "button": "Lien iCal",
+      "title": "Abonnement au planning",
+      "description": "Collez ce lien dans Google Agenda, Outlook ou le calendrier de votre téléphone : il se met à jour tout seul.",
+      "link": "Lien d'abonnement",
+      "open": "Ouvrir dans mon agenda",
+      "secret": "Ce lien est personnel. En créer un nouveau désactive l'ancien."
+    },
+    "icalTu": {
+      "button": "Ajouter à mon agenda",
+      "title": "Ton planning dans ton agenda",
+      "description": "Colle ce lien dans Google Agenda, Outlook ou le calendrier de ton téléphone : il se met à jour tout seul.",
+      "link": "Lien d'abonnement",
+      "open": "Ouvrir dans mon agenda",
+      "secret": "Ce lien est personnel. En créer un nouveau désactive l'ancien."
     }
   }
 }

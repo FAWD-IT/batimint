@@ -8,6 +8,7 @@ import { type FormEvent, useState } from 'react';
 import { MoneyInput } from '@/components/MoneyInput';
 import { api } from '@/lib/api';
 import { useApiMutation } from '@/lib/hooks';
+import { CalendarLinkButton } from '@/components/planning/CalendarLinkButton';
 import { useCan } from '@/lib/session';
 import { useErrorMessage } from '@/lib/use-error-message';
 import type { Team } from './PeopleView';
@@ -101,6 +102,11 @@ export function EmployeeDrawer({
       closeLabel={tc('close')}
       footer={
         <>
+          {employee && can('planning.write') ? (
+            <span className="mr-auto">
+              <CalendarLinkButton employeeId={employee.id} variant="ghost" />
+            </span>
+          ) : null}
           <Button variant="secondary" onClick={onClose}>
             {tc('cancel')}
           </Button>

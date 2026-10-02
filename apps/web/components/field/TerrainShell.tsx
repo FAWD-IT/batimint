@@ -1,7 +1,7 @@
 'use client';
 
 import { cn } from '@batimint/ui';
-import { Clock3, House, UserRound } from 'lucide-react';
+import { CalendarDays, Clock3, House, UserRound } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -18,6 +18,12 @@ export function TerrainShell({ children }: { children: ReactNode }) {
       label: t('today'),
       icon: House,
       active: pathname === '/terrain' || pathname === '/terrain/rapport',
+    },
+    {
+      href: '/terrain/planning',
+      label: t('planning'),
+      icon: CalendarDays,
+      active: pathname.startsWith('/terrain/planning'),
     },
     {
       href: '/terrain/heures',
@@ -50,7 +56,7 @@ export function TerrainShell({ children }: { children: ReactNode }) {
         aria-label={t('label')}
         className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface pb-[max(16px,env(safe-area-inset-bottom))]"
       >
-        <ul className="mx-auto grid max-w-[520px] grid-cols-3 px-2 pt-2">
+        <ul className="mx-auto grid max-w-[520px] grid-cols-4 px-2 pt-2">
           {items.map((it) => (
             <li key={it.href}>
               <Link

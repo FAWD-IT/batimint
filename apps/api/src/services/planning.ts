@@ -145,6 +145,16 @@ export async function loadPlanning(tx: Tx, from: string, to: string): Promise<Pl
     select: { taskId: true },
   });
   const plannedTaskIds = new Set(planned.map((p) => p.taskId!));
+  // Un chantier affecté en bloc (sans tâche précise) a toutes ses tâches planifiées.
+  const wholeProjects = new Set(
+    (
+      await tx.scheduleSlot.findMany({
+        where: { taskId: null },
+        select: { projectId: true },
+        distinct: ['projectId'],
+      })
+    ).map((s) => s.projectId),
+  );
   const taskRows = await tx.task.findMany({
     where: {
       projectId: { in: projects.filter((p) => p.status !== 'suspended').map((p) => p.id) },
@@ -203,7 +213,7 @@ export async function loadPlanning(tx: Tx, from: string, to: string): Promise<Pl
     })),
     conflicts: await conflictsBetween(tx, from, to),
     unplannedTasks: taskRows
-      .filter((t) => !plannedTaskIds.has(t.id))
+      .filter((t) => !plannedTaskIds.has(t.id) && !wholeProjects.has(t.projectId))
       .sort(
         (a, b) =>
           (a.budgetLine?.position ?? 999) - (b.budgetLine?.position ?? 999) || a.position - b.position,

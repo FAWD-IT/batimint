@@ -7,6 +7,7 @@ import { createPrismaClient, withSystem } from '../src/index';
 import { brusselsDate } from '@batimint/domain';
 import { seedCrm } from './seed-crm';
 import { seedField } from './seed-field';
+import { seedPlanning } from './seed-planning';
 import { seedProjects } from './seed-projects';
 import { seedQuotes } from './seed-quotes';
 import { loadEnv } from './env';
@@ -243,6 +244,7 @@ async function main(): Promise<void> {
         await seedQuotes(tx, tenant.id, users.get('sophie@renov-habitat.be') ?? null);
         await seedProjects(tx, tenant.id, users);
         await seedField(tx, tenant.id, users, brusselsDate(new Date()));
+        await seedPlanning(tx, tenant.id, users, brusselsDate(new Date()));
       },
       { timeoutMs: 120_000 },
     );
