@@ -17,6 +17,7 @@ import { TasksTab } from '@/components/projects/TasksTab';
 import { PurchasesTab } from '@/components/purchasing/PurchasesTab';
 import { BillingTab } from '@/components/billing/BillingTab';
 import { SubcontractingTab } from '@/components/subcontracting/SubcontractingTab';
+import { ReceptionTab } from '@/components/receptions/ReceptionTab';
 import { ProjectTimeline } from '@/components/projects/Timeline';
 import { ApiError } from '@/lib/api';
 import { useApi } from '@/lib/hooks';
@@ -32,6 +33,7 @@ type Tab =
   | 'changeOrders'
   | 'purchases'
   | 'subcontracting'
+  | 'reception'
   | 'billing'
   | 'budget';
 const TAB_PARAM: Record<Tab, string> = {
@@ -42,6 +44,7 @@ const TAB_PARAM: Record<Tab, string> = {
   changeOrders: 'avenants',
   purchases: 'achats',
   subcontracting: 'sous-traitance',
+  reception: 'reception',
   billing: 'facturation',
   budget: 'budget',
 };
@@ -135,6 +138,7 @@ export function ProjectCockpit({ id }: { id: string }) {
       ? [{ value: 'subcontracting' as const, label: t('tabs.subcontracting') }]
       : []),
     ...(can('invoices.read') ? [{ value: 'billing' as const, label: t('tabs.billing') }] : []),
+    { value: 'reception' as const, label: t('tabs.reception') },
     ...(p.financials ? [{ value: 'budget' as const, label: t('tabs.budget') }] : []),
   ];
 
@@ -167,6 +171,8 @@ export function ProjectCockpit({ id }: { id: string }) {
           <PurchasesTab project={p} />
         ) : tab === 'subcontracting' ? (
           <SubcontractingTab project={p} />
+        ) : tab === 'reception' ? (
+          <ReceptionTab project={p} />
         ) : tab === 'billing' ? (
           <BillingTab project={p} />
         ) : (

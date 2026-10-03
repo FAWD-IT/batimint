@@ -404,6 +404,15 @@ export const fieldRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (app,
             clockTeam: can(auth.role, 'time.clock_team'),
             validate: can(auth.role, 'time.validate'),
             workOrders: can(auth.role, 'work_orders.create'),
+            reception:
+              can(auth.role, 'receptions.manage') &&
+              Boolean(project && ['in_progress', 'suspended'].includes(project.status)) &&
+              !(project
+                ? await tx.reception.findFirst({
+                    where: { projectId: project.id, kind: 'provisional', status: 'signed' },
+                    select: { id: true },
+                  })
+                : null),
           },
         };
       }),

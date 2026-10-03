@@ -133,7 +133,7 @@ async function portalProjectDto(deps: AppDeps, tx: Tx, projectId: string, token:
   }
   const documents: {
     id: string;
-    kind: 'quote' | 'change_order' | 'attachment' | 'invoice';
+    kind: 'quote' | 'change_order' | 'attachment' | 'invoice' | 'reception';
     title: string;
     date: string | null;
     href: string;
@@ -153,6 +153,19 @@ async function portalProjectDto(deps: AppDeps, tx: Tx, projectId: string, token:
       title: `Avenant n°${co.ordinal} signé${co.number ? ` (${co.number})` : ''}`,
       date: iso(co.signedAt),
       href: `${base}/change-orders/${co.id}/pdf`,
+    });
+  // Procès-verbaux de réception signés (P10).
+  for (const rc of await tx.reception.findMany({
+    where: { projectId: p.id, status: 'signed' },
+    orderBy: { signedAt: 'asc' },
+  }))
+    documents.push({
+      id: rc.id,
+      kind: 'reception',
+      title:
+        `${rc.kind === 'provisional' ? 'Réception provisoire' : 'Réception définitive'} ${rc.number ?? ''}`.trim(),
+      date: iso(rc.signedAt),
+      href: `${base}/receptions/${rc.id}/pdf`,
     });
   const docs = await tx.attachment.findMany({
     where: { ownerType: 'project', ownerId: p.id, kind: 'document', visibleToClient: true },
@@ -441,6 +454,24 @@ export const portalProjectRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = asy
       return reply
         .header('content-type', 'application/pdf')
         .header('content-disposition', `inline; filename="${name}"`)
+        .header('cache-control', 'private, no-store')
+        .send(pdf);
+    },
+  );
+
+  app.get(
+    '/portal/projects/:token/receptions/:id/pdf',
+    { schema: { tags: ['portail'], summary: 'PV de réception signé', params: coParams, hide: true } },
+    async (req, reply) => {
+      const t = await resolveProjectToken(deps, req.params.token);
+      const rc = await withTenant(deps.prisma, t.tenantId, null, (tx) =>
+        tx.reception.findFirst({ where: { id: req.params.id, projectId: t.projectId, status: 'signed' } }),
+      );
+      if (!rc?.pdfKey) throw portalNotFound();
+      const pdf = Buffer.from(await deps.integrations.storage.get('legal', rc.pdfKey));
+      return reply
+        .header('content-type', 'application/pdf')
+        .header('content-disposition', `inline; filename="${rc.number}.pdf"`)
         .header('cache-control', 'private, no-store')
         .send(pdf);
     },

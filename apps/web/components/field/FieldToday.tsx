@@ -15,6 +15,7 @@ import {
 } from '@batimint/ui';
 import {
   Camera,
+  ClipboardCheck,
   ClipboardList,
   HardHat,
   MapPin,
@@ -23,6 +24,7 @@ import {
   Phone,
   TriangleAlert,
 } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -36,6 +38,7 @@ import { currentPosition, useField } from './FieldProvider';
 import { IssueSheet } from './IssueSheet';
 import { clockTime, duration, SyncPill, TEAM_COLORS, useFieldToday, usePhotoCapture } from './shared';
 import { WorkOrderSheet } from './WorkOrderSheet';
+import { ReceptionSheet } from '@/components/receptions/ReceptionSheet';
 
 type Today = FieldTodayDto & { fromCache?: string };
 type Status = 'todo' | 'in_progress' | 'done';
@@ -178,6 +181,8 @@ function Day({
   const photo = usePhotoCapture();
   const [issueOpen, setIssueOpen] = useState(false);
   const [workOrderOpen, setWorkOrderOpen] = useState(false);
+  const [receptionOpen, setReceptionOpen] = useState(false);
+  const queryClient = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
   const project = data.project;
   const me = data.employee;
@@ -397,7 +402,12 @@ function Day({
         </p>
       ) : null}
 
-      <div className={cn('grid gap-2.5', data.can.workOrders ? 'grid-cols-3' : 'grid-cols-2')}>
+      <div
+        className={cn(
+          'grid gap-2.5',
+          data.can.workOrders && !data.can.reception ? 'grid-cols-3' : 'grid-cols-2',
+        )}
+      >
         <ActionTile
           icon={<Camera aria-hidden className="size-6" />}
           label={t('actions.photo')}
@@ -413,6 +423,13 @@ function Day({
             icon={<PenLine aria-hidden className="size-6" />}
             label={t('actions.sign')}
             onClick={() => setWorkOrderOpen(true)}
+          />
+        ) : null}
+        {data.can.reception ? (
+          <ActionTile
+            icon={<ClipboardCheck aria-hidden className="size-6" />}
+            label={t('actions.reception')}
+            onClick={() => setReceptionOpen(true)}
           />
         ) : null}
       </div>
@@ -551,6 +568,20 @@ function Day({
         tasks={data.tasks}
         queuePhotos={photo.queueFiles}
       />
+      {data.can.reception && receptionOpen ? (
+        <ReceptionSheet
+          kind="provisional"
+          projectId={project.id}
+          customerName={project.customerName}
+          posts={[]}
+          online={f.online}
+          onClose={() => setReceptionOpen(false)}
+          onSigned={() => {
+            setReceptionOpen(false);
+            void queryClient.invalidateQueries({ queryKey: ['field', 'today'] });
+          }}
+        />
+      ) : null}
       {data.can.workOrders && workOrderOpen ? (
         <WorkOrderSheet
           open

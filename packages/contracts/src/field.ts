@@ -66,7 +66,13 @@ export const FieldTodaySchema = z.object({
   openIssues: z.number().int(),
   draftWorkOrders: z.number().int(),
   toleranceMeters: z.number().int(),
-  can: z.object({ clockTeam: z.boolean(), validate: z.boolean(), workOrders: z.boolean() }),
+  can: z.object({
+    clockTeam: z.boolean(),
+    validate: z.boolean(),
+    workOrders: z.boolean(),
+    /** Réception provisoire à faire signer sur le chantier (P10.1). */
+    reception: z.boolean(),
+  }),
 });
 export type FieldTodayDto = z.infer<typeof FieldTodaySchema>;
 

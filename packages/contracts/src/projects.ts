@@ -561,7 +561,7 @@ export const PortalProjectSchema = z.object({
   documents: z.array(
     z.object({
       id: z.string(),
-      kind: z.enum(['quote', 'change_order', 'attachment', 'invoice']),
+      kind: z.enum(['quote', 'change_order', 'attachment', 'invoice', 'reception']),
       title: z.string(),
       date: z.string().nullable(),
       href: z.string(),
