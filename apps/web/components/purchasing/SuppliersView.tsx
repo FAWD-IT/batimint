@@ -137,10 +137,13 @@ export function SupplierDialog({
   supplier,
   onClose,
   onCreated,
+  subcontractor = false,
 }: {
   supplier: SupplierDto | null;
   onClose: () => void;
   onCreated?: (s: SupplierDto) => void;
+  /** Création depuis la sous-traitance : coché d'office. */
+  subcontractor?: boolean;
 }) {
   const t = useTranslations('purchasing.suppliers');
   const tc = useTranslations('common');
@@ -155,7 +158,7 @@ export function SupplierDialog({
     city: supplier?.city ?? '',
     iban: supplier?.iban ? formatIban(supplier.iban) : '',
     paymentTermsDays: String(supplier?.paymentTermsDays ?? 30),
-    isSubcontractor: supplier?.isSubcontractor ?? false,
+    isSubcontractor: supplier?.isSubcontractor ?? subcontractor,
   });
   const [error, setError] = useState<string | null>(null);
   const set = (k: keyof typeof form) => (e: { target: { value: string } }) =>
@@ -179,7 +182,7 @@ export function SupplierDialog({
       },
     }),
     {
-      invalidate: [['suppliers']],
+      invalidate: [['suppliers'], ['subcontractors']],
       successMessage: supplier ? t('updated') : t('created'),
       onSuccess: (s) => {
         onCreated?.(s);

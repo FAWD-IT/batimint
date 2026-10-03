@@ -14,6 +14,7 @@ import {
   Sun,
   Users,
   FileText,
+  Handshake,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -28,6 +29,7 @@ export interface NavItem {
     | 'customers'
     | 'quotes'
     | 'purchasing'
+    | 'subcontracting'
     | 'billing'
     | 'library'
     | 'teams'
@@ -49,6 +51,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: '/devis', labelKey: 'quotes', icon: FileText, permission: 'quotes.read' },
   { href: '/facturation', labelKey: 'billing', icon: Receipt, permission: 'invoices.read' },
   { href: '/achats', labelKey: 'purchasing', icon: ShoppingCart, permission: 'purchases.read' },
+  { href: '/sous-traitance', labelKey: 'subcontracting', icon: Handshake, permission: 'subcontracting.read' },
   { href: '/clients', labelKey: 'customers', icon: Users, permission: 'customers.read' },
   { href: '/bibliotheque', labelKey: 'library', icon: BookOpen, permission: 'library.read' },
   { href: '/equipes', labelKey: 'teams', icon: HardHat, permission: 'employees.read' },

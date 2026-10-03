@@ -26,6 +26,7 @@ import { MoneyInput } from '@/components/MoneyInput';
 import { useApi, useApiMutation } from '@/lib/hooks';
 import { useCan } from '@/lib/session';
 import { useErrorMessage } from '@/lib/use-error-message';
+import { ThirtyBisPanel } from '@/components/subcontracting/ThirtyBisPanel';
 import { formatDay, INVOICE_STATUS_TONES } from './status';
 
 const ALLOCATABLE = new Set(['received', 'to_allocate', 'allocated']);
@@ -88,10 +89,16 @@ function InvoiceBody({ invoice: i }: { invoice: SupplierInvoiceDto }) {
     (b) => ({ path: `/supplier-invoices/${i.id}/status`, body: b }),
     {
       invalidate,
-      successMessage: (_r, v) => t(`statusChanged.${v.to}`),
+      successMessage: (r) => t(`statusChanged.${r.status}`),
       onSuccess: setDetail,
     },
   );
+  // Retenue 30bis : le paiement normal est remplacé par le versement aux administrations.
+  const withholding = useApiMutation<void, SupplierInvoiceDto>(
+    () => ({ path: `/supplier-invoices/${i.id}/withholding`, method: 'POST' }),
+    { invalidate, successMessage: t('withholdingApplied'), onSuccess: setDetail },
+  );
+  const thirtyBisBlocked = i.status === 'blocked' && Boolean(i.thirtyBis?.blockedReason);
 
   return (
     <div className="flex flex-col gap-6">
@@ -107,6 +114,8 @@ function InvoiceBody({ invoice: i }: { invoice: SupplierInvoiceDto }) {
         <Amount label={t('vat')} cents={i.totalVat} />
         <Amount label={t('gross')} cents={i.totalGross} />
       </Card>
+
+      <ThirtyBisPanel invoice={i} />
 
       {i.notes ? (
         <p className="rounded-[12px] bg-line-soft/60 px-4 py-3 text-[14px] whitespace-pre-line">
@@ -269,11 +278,31 @@ function InvoiceBody({ invoice: i }: { invoice: SupplierInvoiceDto }) {
       </section>
 
       {can('supplier_invoices.allocate') ? (
-        <StatusActions
-          status={i.status}
-          pending={status.isPending ? (status.variables?.to ?? null) : null}
-          onChange={(to) => status.mutate({ to })}
-        />
+        thirtyBisBlocked ? (
+          <div className="flex flex-wrap justify-end gap-2 border-t border-line-soft pt-4">
+            <Button
+              variant="secondary"
+              loading={status.isPending}
+              disabled={withholding.isPending}
+              onClick={() => status.mutate({ to: 'to_pay' })}
+            >
+              {t('actions.recheck')}
+            </Button>
+            <Button
+              loading={withholding.isPending}
+              disabled={status.isPending}
+              onClick={() => withholding.mutate()}
+            >
+              {t('actions.applyWithholding')}
+            </Button>
+          </div>
+        ) : (
+          <StatusActions
+            status={i.status}
+            pending={status.isPending ? (status.variables?.to ?? null) : null}
+            onChange={(to) => status.mutate({ to })}
+          />
+        )
       ) : null}
     </div>
   );

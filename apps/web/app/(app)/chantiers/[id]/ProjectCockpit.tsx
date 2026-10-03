@@ -16,6 +16,7 @@ import { TabPanel, Tabs } from '@/components/projects/Tabs';
 import { TasksTab } from '@/components/projects/TasksTab';
 import { PurchasesTab } from '@/components/purchasing/PurchasesTab';
 import { BillingTab } from '@/components/billing/BillingTab';
+import { SubcontractingTab } from '@/components/subcontracting/SubcontractingTab';
 import { ProjectTimeline } from '@/components/projects/Timeline';
 import { ApiError } from '@/lib/api';
 import { useApi } from '@/lib/hooks';
@@ -23,7 +24,16 @@ import { useRealtime } from '@/lib/realtime';
 import { useCan } from '@/lib/session';
 import { useErrorMessage } from '@/lib/use-error-message';
 
-type Tab = 'overview' | 'tasks' | 'field' | 'media' | 'changeOrders' | 'purchases' | 'billing' | 'budget';
+type Tab =
+  | 'overview'
+  | 'tasks'
+  | 'field'
+  | 'media'
+  | 'changeOrders'
+  | 'purchases'
+  | 'subcontracting'
+  | 'billing'
+  | 'budget';
 const TAB_PARAM: Record<Tab, string> = {
   overview: '',
   tasks: 'taches',
@@ -31,6 +41,7 @@ const TAB_PARAM: Record<Tab, string> = {
   media: 'photos',
   changeOrders: 'avenants',
   purchases: 'achats',
+  subcontracting: 'sous-traitance',
   billing: 'facturation',
   budget: 'budget',
 };
@@ -120,6 +131,9 @@ export function ProjectCockpit({ id }: { id: string }) {
     { value: 'media' as const, label: t('tabs.media'), count: p.counts.photos + p.counts.documents },
     { value: 'changeOrders' as const, label: t('tabs.changeOrders'), count: p.counts.changeOrders },
     ...(can('purchases.read') ? [{ value: 'purchases' as const, label: t('tabs.purchases') }] : []),
+    ...(can('subcontracting.read')
+      ? [{ value: 'subcontracting' as const, label: t('tabs.subcontracting') }]
+      : []),
     ...(can('invoices.read') ? [{ value: 'billing' as const, label: t('tabs.billing') }] : []),
     ...(p.financials ? [{ value: 'budget' as const, label: t('tabs.budget') }] : []),
   ];
@@ -151,6 +165,8 @@ export function ProjectCockpit({ id }: { id: string }) {
           <ChangeOrdersTab projectId={p.id} onOpen={(coId) => openCo(coId)} onNew={() => openCo(null)} />
         ) : tab === 'purchases' ? (
           <PurchasesTab project={p} />
+        ) : tab === 'subcontracting' ? (
+          <SubcontractingTab project={p} />
         ) : tab === 'billing' ? (
           <BillingTab project={p} />
         ) : (

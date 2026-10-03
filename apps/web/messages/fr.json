@@ -101,7 +101,8 @@
     "field": "Vue terrain",
     "planning": "Planning",
     "purchasing": "Achats",
-    "billing": "Facturation"
+    "billing": "Facturation",
+    "subcontracting": "Sous-traitance"
   },
   "notifications": {
     "title": "Notifications",
@@ -1532,7 +1533,8 @@
       "budget": "Budget",
       "field": "Terrain",
       "purchases": "Achats",
-      "billing": "Facturation"
+      "billing": "Facturation",
+      "subcontracting": "Sous-traitance"
     },
     "timeline": {
       "title": "Fil du chantier",
@@ -2419,7 +2421,9 @@
         "to_pay": "Mettre à payer",
         "blocked": "Bloquer",
         "paid": "Marquer payée",
-        "unblock": "Débloquer et mettre à payer"
+        "unblock": "Débloquer et mettre à payer",
+        "recheck": "Consulter à nouveau",
+        "applyWithholding": "Appliquer la retenue et mettre à payer"
       },
       "discrepancy": {
         "title": "Écarts avec le bon de commande",
@@ -2445,7 +2449,8 @@
         "save": "Enregistrer l’imputation",
         "saved": "Imputation enregistrée"
       },
-      "notes": "Remarque du fournisseur"
+      "notes": "Remarque du fournisseur",
+      "withholdingApplied": "Retenue appliquée : facture à payer, document de versement prêt"
     },
     "orders": {
       "title": "Bons de commande",
@@ -2914,5 +2919,299 @@
     "cancel": "Annuler et revenir",
     "error": "Paiement impossible pour le moment.",
     "errorTitle": "Lien de paiement indisponible"
+  },
+  "subcontracting": {
+    "title": "Sous-traitance",
+    "detailTitle": "Sous-traitant",
+    "summary": "{n, plural, =0 {Aucun sous-traitant} one {# sous-traitant, en règle} other {# sous-traitants, tous en règle}}",
+    "summaryIssues": "{n, plural, one {# sous-traitant} other {# sous-traitants}} · {issues, plural, one {# à mettre en règle} other {# à mettre en règle}}",
+    "add": "Ajouter un sous-traitant",
+    "emptyTitle": "Aucun sous-traitant",
+    "empty": "Ajoutez vos sous-traitants pour suivre leurs documents, consulter leurs dettes (30bis) et leur confier des contrats.",
+    "contractsEmptyTitle": "Aucun contrat en cours",
+    "contractsEmpty": "Les contrats de sous-traitance se concluent depuis un chantier ou une fiche sous-traitant.",
+    "views": {
+      "label": "Affichage",
+      "subcontractors": "Sous-traitants",
+      "contracts": "Contrats en cours"
+    },
+    "columns": {
+      "compliance": "Documents",
+      "thirtyBis": "30bis",
+      "contracts": "Contrats"
+    },
+    "noEnterpriseNumber": "Numéro d’entreprise manquant",
+    "activeContracts": "{n, plural, one {# contrat} other {# contrats}}",
+    "notFound": "Sous-traitant introuvable",
+    "backToList": "Retour aux sous-traitants",
+    "checkNow": "Consulter les dettes (30bis)",
+    "checkDebt": "Dette constatée : une retenue s’appliquera aux paiements",
+    "checkClear": "Aucune dette sociale ni fiscale",
+    "invite": "Envoyer l’accès au portail",
+    "reinvite": "Renvoyer l’accès au portail",
+    "enterpriseNumberMissing": "Ajoutez le numéro d’entreprise de ce sous-traitant (fiche fournisseur) : sans lui, impossible de consulter ses dettes ni de conclure un contrat.",
+    "contracts": "Contrats",
+    "noContracts": "Aucun contrat pour l’instant.",
+    "thirtyBis": {
+      "never": "30bis : pas encore consulté",
+      "bothDebts": "Dettes sociales et fiscales",
+      "socialDebt": "Dette sociale",
+      "taxDebt": "Dette fiscale",
+      "clear": "Aucune dette",
+      "title": "Consultations 30bis",
+      "explain": "Avant de conclure un contrat et avant chaque paiement, Batimint consulte les dettes sociales (ONSS) et fiscales (SPF Finances) du sous-traitant et conserve la preuve.",
+      "none": "Aucune consultation pour l’instant.",
+      "context": {
+        "contract": "Conclusion du contrat",
+        "invoice_received": "Réception d’une facture",
+        "payment": "Avant paiement",
+        "manual": "Consultation manuelle"
+      },
+      "proofOf": "Preuve de la consultation du {date}"
+    },
+    "compliance": {
+      "issues": "{n, plural, one {# document à fournir} other {# documents à fournir}}",
+      "expiring": "{n, plural, one {# document bientôt expiré} other {# documents bientôt expirés}}",
+      "ok": "Documents en règle"
+    },
+    "documentKinds": {
+      "rc_insurance": "Assurance responsabilité civile",
+      "social_certificate": "Attestation ONSS",
+      "tax_certificate": "Attestation SPF Finances",
+      "access_certificate": "Accès à la profession",
+      "other": "Autre document"
+    },
+    "documentStatus": {
+      "valid": "Valide",
+      "expiring": "Expire bientôt",
+      "expired": "Expiré",
+      "missing": "Manquant"
+    },
+    "documents": {
+      "title": "Documents obligatoires",
+      "missing": "Pas encore fourni",
+      "until": "Valable jusqu’au {date}",
+      "noExpiry": "Sans échéance",
+      "add": "Déposer",
+      "all": "Documents déposés",
+      "document": "Document",
+      "expiresOn": "Valable jusqu’au",
+      "fromPortal": "déposé par le sous-traitant",
+      "remove": "Retirer {name}",
+      "addOther": "Déposer un document",
+      "removed": "Document retiré",
+      "removeTitle": "Retirer ce document ?",
+      "removeDescription": "Il ne comptera plus dans la conformité du sous-traitant. Le retrait est inscrit au journal d’audit.",
+      "removeConfirm": "Retirer",
+      "uploadTitle": "Déposer un document",
+      "uploadDescription": "Assurance, attestation ONSS ou SPF Finances : indiquez la date d’échéance pour être alerté avant qu’elle ne passe.",
+      "portalTitle": "Déposer un document",
+      "portalDescription": "Indiquez la date jusqu’à laquelle le document est valable : nous vous préviendrons avant son échéance.",
+      "send": "Envoyer",
+      "kind": "Type de document",
+      "expiresOnHint": "La date d’échéance indiquée sur le document.",
+      "file": "Fichier",
+      "fileHint": "PDF ou photo, 15 Mo au maximum.",
+      "errors": {
+        "file": "Choisissez le fichier à envoyer.",
+        "tooLarge": "Le fichier dépasse 15 Mo.",
+        "expiry": "Indiquez la date d’échéance du document."
+      }
+    },
+    "contract": {
+      "new": "Nouveau contrat",
+      "newTitle": "Nouveau contrat de sous-traitance",
+      "newDescription": "Sur un poste du chantier, avec un échéancier. Les dettes du sous-traitant sont consultées à l’enregistrement.",
+      "create": "Conclure le contrat",
+      "created": "Contrat {number} conclu",
+      "drawerTitle": "Contrat de sous-traitance",
+      "project": "Chantier",
+      "chooseProject": "Choisissez un chantier",
+      "subcontractor": "Sous-traitant",
+      "subcontractorHint": "Un fournisseur choisi ici devient sous-traitant.",
+      "chooseSubcontractor": "Choisissez un sous-traitant",
+      "subcontractors": "Sous-traitants",
+      "otherSuppliers": "Autres fournisseurs",
+      "post": "Poste du chantier",
+      "noPost": "Sans poste",
+      "title": "Objet",
+      "titlePlaceholder": "Électricité complète",
+      "scope": "Description des travaux",
+      "amount": "Montant HTVA",
+      "startDate": "Début",
+      "endDate": "Fin",
+      "installments": "Échéancier",
+      "installment": "Versement",
+      "installmentLabel": "Versement {n}",
+      "percent": "%",
+      "dueOn": "Échéance",
+      "removeInstallment": "Retirer le versement {n}",
+      "addInstallment": "Ajouter un versement",
+      "installmentsTotal": "Total : {n} % · {amount}",
+      "thirtyBisTitle": "Contrôle 30bis",
+      "thirtyBisNotice": "À l’enregistrement, Batimint consulte les dettes sociales et fiscales du sous-traitant. En cas de dette, une retenue sera calculée à chaque paiement.",
+      "defaultInstallments": {
+        "start": "Au démarrage",
+        "end": "À la réception"
+      },
+      "errors": {
+        "project": "Choisissez le chantier.",
+        "supplier": "Choisissez le sous-traitant.",
+        "title": "Indiquez l’objet du contrat.",
+        "amount": "Indiquez le montant HTVA.",
+        "dates": "La fin des travaux précède leur début.",
+        "installments": "L’échéancier totalise {n} % : il doit faire 100 %."
+      },
+      "status": {
+        "label": "Statut",
+        "active": "En cours",
+        "completed": "Clôturé",
+        "cancelled": "Annulé"
+      },
+      "statusChanged": {
+        "active": "Contrat rouvert",
+        "completed": "Contrat clôturé",
+        "cancelled": "Contrat annulé"
+      },
+      "invited": "Accès au portail envoyé à {email}",
+      "postLabel": "Poste {post}",
+      "period": "Du {start} au {end}",
+      "noDates": "Dates à convenir",
+      "invoiced": "Facturé",
+      "remaining": "Reste à facturer",
+      "thirtyBis": "Dettes sociales et fiscales (30bis)",
+      "checkedAt": "consulté le {at}",
+      "proof": "Preuve",
+      "debtNotice": "Dette constatée à la conclusion : chaque paiement est précédé d’une nouvelle consultation et la retenue légale est versée aux administrations.",
+      "withheld": "Retenues 30bis versées sur ce contrat : {amount}",
+      "openSubcontractor": "Voir la fiche du sous-traitant",
+      "invoices": "Factures du sous-traitant",
+      "noInvoices": "Aucune facture reçue pour ce contrat.",
+      "noNumber": "Sans numéro",
+      "invoiceWithheld": "dont {amount} retenus (30bis)",
+      "pdf": "Contrat (PDF)",
+      "invite": "Envoyer l’accès au portail",
+      "cancel": "Annuler le contrat",
+      "complete": "Clôturer",
+      "reopen": "Rouvrir",
+      "cancelTitle": "Annuler ce contrat ?",
+      "cancelDescription": "Son montant sort de l’engagé du chantier. Le numéro reste attribué.",
+      "completeTitle": "Clôturer ce contrat ?",
+      "completeDescription": "Ce qui n’a pas été facturé sort de l’engagé du chantier.",
+      "notFound": "Contrat introuvable",
+      "invoicedOf": "Facturé sur {amount}",
+      "number": "Contrat",
+      "invoicedShort": "{amount} facturés",
+      "otherSupplier": "fournisseur"
+    },
+    "tab": {
+      "title": "Contrats de sous-traitance",
+      "emptyTitle": "Aucun sous-traitant sur ce chantier",
+      "empty": "Confiez un poste à un sous-traitant : le contrat, le contrôle 30bis et l’engagé du poste suivent."
+    },
+    "works": {
+      "title": "Déclaration de travaux (ONSS)",
+      "saved": "Déclaration enregistrée",
+      "declared": "Déclarée · {ref} · {date}",
+      "required": "Probablement requise",
+      "notRequired": "Pas requise a priori",
+      "why": "Ce chantier {reasons} : la déclaration de travaux est probablement requise. Reprenez les données ci-dessous sur le site de l’ONSS, puis notez la référence obtenue.",
+      "reasons": {
+        "amount": "atteint 30 000 € HTVA",
+        "subcontractor": "fait intervenir un sous-traitant"
+      },
+      "and": " et ",
+      "site": "Chantier",
+      "address": "Adresse",
+      "period": "Période",
+      "amount": "Montant HTVA",
+      "principal": "Maître d’ouvrage",
+      "contractor": "Entrepreneur",
+      "subcontractors": "Sous-traitants",
+      "reference": "Référence de la déclaration",
+      "referenceHint": "Le numéro communiqué par l’ONSS.",
+      "declaredOn": "Déclarée le",
+      "save": "Enregistrer"
+    },
+    "invoice": {
+      "title": "Contrôle 30bis",
+      "contract": "contrat {number}",
+      "checked": {
+        "contract": "Consulté à la conclusion du contrat, le {at}",
+        "invoice_received": "Consulté à la réception de la facture, le {at}",
+        "payment": "Consulté avant paiement, le {at}",
+        "manual": "Consulté le {at}"
+      },
+      "proof": "Preuve",
+      "notChecked": "Pas encore consulté : la consultation se fait à la mise à payer.",
+      "social": "À verser à l’ONSS",
+      "tax": "À verser au SPF Finances",
+      "payable": "À payer au sous-traitant",
+      "blockedTitle": "Paiement bloqué",
+      "blockedHelp": "Appliquez la retenue : la facture passe à payer pour le solde et le document de versement est généré.",
+      "applied": "Retenue appliquée : {amount}",
+      "transferDocument": "Document de versement",
+      "atPayment": "Retenue indicative : elle sera confirmée par la consultation faite au moment du paiement.",
+      "openSubcontractor": "Voir la fiche du sous-traitant"
+    }
+  },
+  "portalSubcontractor": {
+    "pageTitle": "Votre espace sous-traitant",
+    "errors": {
+      "generic": "Votre espace n’a pas pu être chargé. Réessayez dans un instant.",
+      "title": "Lien non valable"
+    },
+    "subtitle": "Espace sous-traitant · {name}",
+    "hello": "Bonjour {name}",
+    "intro": "Retrouvez ici les missions que {tenant} vous confie, déposez vos documents et vos factures, et suivez leur paiement.",
+    "documentsToProvide": "{n, plural, one {# document à fournir ou à renouveler} other {# documents à fournir ou à renouveler}}",
+    "documentsHelp": "Sans documents à jour, vos paiements peuvent être retardés. Déposez-les ci-dessous en indiquant leur date d’échéance.",
+    "missions": "Vos missions",
+    "noMissions": "Aucune mission pour l’instant.",
+    "missionStatus": {
+      "active": "En cours",
+      "completed": "Terminée",
+      "cancelled": "Annulée"
+    },
+    "dates": "Dates",
+    "datesToConfirm": "À convenir",
+    "amount": "Montant HTVA",
+    "invoiced": "Déjà facturé",
+    "number": "Contrat",
+    "contract": "Voir le contrat",
+    "sendInvoice": "Déposer une facture",
+    "documents": "Vos documents",
+    "missing": "À fournir",
+    "until": "Valable jusqu’au {date}",
+    "noExpiry": "Sans échéance",
+    "uploadKind": "Déposer : {kind}",
+    "upload": "Déposer",
+    "uploadOther": "Déposer un autre document",
+    "invoices": "Vos factures",
+    "noInvoices": "Vous n’avez pas encore déposé de facture. Utilisez « Déposer une facture » sur la mission concernée.",
+    "noInvoicesNoMission": "Aucune facture.",
+    "invoiceNoNumber": "Facture",
+    "receivedOn": "Reçue le {date}",
+    "paidOn": "payée le {date}",
+    "withheld": "dont {amount} versés aux administrations (retenue 30bis)",
+    "invoiceState": {
+      "received": "Reçue",
+      "processing": "En traitement",
+      "approved": "Approuvée, à payer",
+      "paid": "Payée"
+    },
+    "invoiceDialog": {
+      "title": "Déposer une facture",
+      "description": "Votre facture en PDF, ou au format UBL (Peppol). Elle sera imputée à la mission choisie.",
+      "send": "Envoyer la facture",
+      "sent": "Facture reçue, merci",
+      "mission": "Mission",
+      "file": "Fichier de la facture",
+      "fileHint": "PDF, XML UBL ou photo, 15 Mo au maximum.",
+      "errors": {
+        "file": "Choisissez le fichier de votre facture.",
+        "tooLarge": "Le fichier dépasse 15 Mo."
+      }
+    }
   }
 }
