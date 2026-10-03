@@ -3,12 +3,12 @@
 Ce fichier est le point de reprise entre sessions cloud. Une nouvelle session doit pouvoir reprendre le travail en ne lisant que lui et `CLAUDE.md`.
 
 ## Jalon en cours
-**M10 — Réception, stock, matériel** — en cours. M9 ✅ validé (CI run 46 : checks + E2E sur les images de production).
+**M11 — Pilotage et compta** — en cours. M10 ✅ validé (CI run 56 : checks + E2E sur les images de production ; 29 parcours E2E verts en local).
 
 (L'étiquette `m0-done` existe localement mais le push de tags est refusé par la politique de la session : seule la branche est poussée.)
 
 ## Prochaine action
-M10 (réception provisoire et définitive, réserves → tâches, facture finale, libération de retenue, rapport de rentabilité, stock, matériel ; parcours P10 et P13).
+M11 : Aujourd'hui (qui est où, ce qui a bougé, alertes), tableau de bord, rapports, trésorerie à 90 jours, exports CSV/Excel, synchro Chift (mock) avec statut par document, rôle Comptable ; parcours P11 et P12.
 
 ## Relancer l'environnement
 ```bash
@@ -119,13 +119,14 @@ docker compose -f docker-compose.coolify.yml -f docker/docker-compose.sandbox.ym
 - Seed : Dupont facturé par 3 états approuvés (2026-116 à 118, payables à réception, 118 échue de 3 jours, rappel n°1) ; toutes les factures émises comme l'application ; numérotation continue 2026-099 → 118.
 - Tests : 11 intégration API (dont 100 émissions concurrentes), 5 worker, 18 domaine, 7 documents ; E2E P7 (acompte, paiement partiel, état approuvé sur le portail, facture avec acompte déduit, paiement en ligne) + P8 sur téléphone.
 
-### M10 — Réception, stock, matériel (en validation CI)
+### M10 — Réception, stock, matériel ✅ (CI run 56)
 - Domaine (`reception.ts`, `stock.ts`) : réception définitive prévue, freins à la réception, facture finale prête, libération de retenue, retenue encore due, rapport de rentabilité et suggestions de prix (écart > 10 %) ; CMP (entrée, sortie, inventaire), besoins de réapprovisionnement, seuils, jours ouvrés d'usage du matériel, état des entretiens (14 j), prochaine échéance ; 16 tests.
 - Base : PV et réserves (**PV signé immuable**, PDF rendu une fois après coup), emplacements, niveaux, mouvements, matériel, affectations, entretiens ; dates de réception du chantier ; libération de retenue sur les factures ; CMP de l'article ; BC vers un emplacement ; RLS (ADR 0019).
 - API : réception (brouillon, réserves avec photos, signature, PDF, levée, facture finale, clôture, rentabilité, ajustement des prix) ; stock (emplacements, articles, seuils, mouvements idempotents, réapprovisionnement → BC brouillon, réception du BC → entrée en stock) ; matériel (fiche, affectation sans chevauchement, retour, entretiens) ; sortie de stock dans la file terrain hors ligne.
 - Worker : réserves → tâches, tâche faite → réserve levée → facture finale, libération de retenue (avis + e-mail), clôture ; coûts stock et matériel imputés au poste, alerte de seuil, recalcul quotidien du matériel et alertes d'entretien (06:15).
 - Web : onglet « Réception » du cockpit (étapes, PV, réserves, facture finale, définitive, clôture, rentabilité), tuile « Réception » et tuile « Matériaux » de la vue terrain, module « Stock » (emplacements, articles au CMP, mouvements, réapprovisionnement), module « Matériel » (liste, fiche, affectation, retour, entretiens).
 - Seed : dépôt de Gosselies et camionnette de Karim (entrées à deux prix, transferts, sorties vers trois chantiers, 2 articles sous le seuil), 4 matériels (mini-pelle et échafaudage affectés, contrôle SECT bientôt dû, contrôle d'échafaudage en retard), PV provisoire signé avec réserve ouverte (maison 1960) et sans réserve (salle communale).
+- Correctif CI : `pnpm format:check` doit passer avant chaque push (les runs 49 à 54 échouaient sur le format).
 - Tests : 9 + 10 intégration API, 4 worker, 16 domaine ; E2E P10 (réception au téléphone → facture finale → définitive → clôture) et P13 (CMP, seuil, sortie depuis la camionnette au téléphone, BC de réapprovisionnement, matériel affecté, entretien).
 
 ### M9 — Sous-traitance et conformité ✅ (CI run 46)
@@ -142,7 +143,7 @@ docker compose -f docker-compose.coolify.yml -f docker/docker-compose.sandbox.ym
 - Correctif : une rafale d'émissions de factures attend son tour sur le verrou de numérotation (60 s) au lieu d'échouer après 10 s.
 
 ## Reste à faire
-M10 → M13 selon `docs/11-plan-de-livraison.md`.
+M11 → M13 selon `docs/11-plan-de-livraison.md`.
 
 ## Écarts avec la spécification
 - Nouveau paquet `packages/documents` (PDF) en plus de la liste de `CLAUDE.md` (ADR 0012).
