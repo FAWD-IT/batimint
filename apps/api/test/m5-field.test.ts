@@ -182,7 +182,7 @@ describe('M5 — terrain', () => {
     expect(d.clock.status).toBe('out');
     expect(d.tasks.map((x: { title: string }) => x.title)).toEqual(['Pose faïence murale']);
     expect(d.team.map((p: { name: string }) => p.name).sort()).toEqual(['Karim Benali', 'Luca Rossi']);
-    expect(d.can).toEqual({ clockTeam: false, validate: false, workOrders: false });
+    expect(d.can).toEqual({ clockTeam: false, validate: false, workOrders: false, reception: false, stock: false });
     expect(JSON.stringify(d)).not.toMatch(/amount|cost|price/i);
   });
 
