@@ -17,6 +17,7 @@ import { useNewParam } from '@/lib/use-new-param';
 import { BillingNav } from './BillingNav';
 import { InvoiceTable } from './InvoiceTable';
 import { NewInvoiceDialog } from './NewInvoiceDialog';
+import { ExportButtons } from '@/components/ExportButtons';
 
 type View = 'open' | 'overdue' | 'draft' | 'paid' | 'all';
 const VIEWS: View[] = ['open', 'overdue', 'draft', 'paid', 'all'];
@@ -62,11 +63,14 @@ export function BillingView() {
       <PageHeader
         title={t('title')}
         actions={
-          can('invoices.write') ? (
-            <Button icon={<Plus aria-hidden className="size-4" />} onClick={() => setCreating(true)}>
-              {t('new')}
-            </Button>
-          ) : null
+          <div className="flex flex-wrap items-center gap-2">
+            <ExportButtons list="invoices" />
+            {can('invoices.write') ? (
+              <Button icon={<Plus aria-hidden className="size-4" />} onClick={() => setCreating(true)}>
+                {t('new')}
+              </Button>
+            ) : null}
+          </div>
         }
       />
       <BillingNav />

@@ -3,12 +3,12 @@
 Ce fichier est le point de reprise entre sessions cloud. Une nouvelle session doit pouvoir reprendre le travail en ne lisant que lui et `CLAUDE.md`.
 
 ## Jalon en cours
-**M11 — Pilotage et compta** — en cours. M10 ✅ validé (CI run 56 : checks + E2E sur les images de production ; 29 parcours E2E verts en local).
+**M11 — Pilotage et compta** — en validation CI. M10 ✅ validé (CI run 56).
 
 (L'étiquette `m0-done` existe localement mais le push de tags est refusé par la politique de la session : seule la branche est poussée.)
 
 ## Prochaine action
-M11 : Aujourd'hui (qui est où, ce qui a bougé, alertes), tableau de bord, rapports, trésorerie à 90 jours, exports CSV/Excel, synchro Chift (mock) avec statut par document, rôle Comptable ; parcours P11 et P12.
+Valider M11 en CI, puis M12 (intégrations réelles : getpeppr sandbox, Chift, Mollie test, Anthropic, SMTP ; `pnpm integrations:smoke`).
 
 ## Relancer l'environnement
 ```bash
@@ -119,6 +119,17 @@ docker compose -f docker-compose.coolify.yml -f docker/docker-compose.sandbox.ym
 - Seed : Dupont facturé par 3 états approuvés (2026-116 à 118, payables à réception, 118 échue de 3 jours, rappel n°1) ; toutes les factures émises comme l'application ; numérotation continue 2026-099 → 118.
 - Tests : 11 intégration API (dont 100 émissions concurrentes), 5 worker, 18 domaine, 7 documents ; E2E P7 (acompte, paiement partiel, état approuvé sur le portail, facture avec acompte déduit, paiement en ligne) + P8 sur téléphone.
 
+### M11 — Pilotage et comptabilité (en validation CI)
+- Domaine : périodes, transformation des devis, carnet de commandes, marges groupées, heures contre planning, trésorerie à 90 jours (masse salariale estimée) ; écritures de vente, note de crédit, achat (autoliquidation), paiement (retenue 30bis), codes et grilles TVA belges, PCMN par défaut ; 15 tests (ADR 0020).
+- Intégration : `AccountingSync` (Chift) + mock « WinBooks (simulation) » aux erreurs lisibles ; `ACCOUNTING_PROVIDER`.
+- Base : `accounting_syncs` (statut par document, écriture envoyée, tentatives, erreur) avec RLS ; solde bancaire en paramètre du tenant.
+- API : `/today`, `/dashboard` (période, équipe, responsable), `/reports/*` (rentabilité par chantier/client/type de travaux, heures, devis, carnet, trésorerie) et leurs exports CSV/Excel, `/exports/:list` (10 listes), `/accounting` (connexion, paramétrage, documents, relance, exports par période dont ZIP UBL et documents d'achat).
+- Worker : synchro à l'émission, à l'imputation, au paiement reçu ou envoyé ; reprise ; notification d'erreur au bureau et au comptable.
+- Web : carte des chantiers actifs (`/chantiers/carte`, géocodage `Geocoder` mock), « Aujourd'hui » (chiffres du mois, alertes triées, qui est où, ce qui a bougé), « Pilotage » (indicateurs, facturé/encaissé par mois, trésorerie hebdomadaire, marge par chantier), « Rapports », « Comptabilité » (statuts, écritures, relance, exports, paramétrage), boutons d'export CSV/Excel sur les listes. Jetons `--chart-1/2` validés (daltonisme, contraste, clair/sombre).
+- Seed : comptabilité connectée, 140 documents synchronisés, une facture refusée (TVA invalide de la Quincaillerie Delvaux), solde bancaire ; numéros d'entreprise du seed corrigés (BCE 0/1).
+- Correctif : rafraîchissement de secours (15 s) de la page Comptabilité si un message temps réel est perdu.
+- Tests : 9 intégration API, 3 worker, 15 domaine, 3 intégrations ; E2E P11 (Aujourd'hui, tableau de bord, filtres, solde bancaire, rapports, export CSV, carte, mobile) et P12 (compte inexistant → erreur lisible → correction → relance, achat synchronisé, la comptable lit l'écriture et exporte, sans réglage).
+
 ### M10 — Réception, stock, matériel ✅ (CI run 56)
 - Domaine (`reception.ts`, `stock.ts`) : réception définitive prévue, freins à la réception, facture finale prête, libération de retenue, retenue encore due, rapport de rentabilité et suggestions de prix (écart > 10 %) ; CMP (entrée, sortie, inventaire), besoins de réapprovisionnement, seuils, jours ouvrés d'usage du matériel, état des entretiens (14 j), prochaine échéance ; 16 tests.
 - Base : PV et réserves (**PV signé immuable**, PDF rendu une fois après coup), emplacements, niveaux, mouvements, matériel, affectations, entretiens ; dates de réception du chantier ; libération de retenue sur les factures ; CMP de l'article ; BC vers un emplacement ; RLS (ADR 0019).
@@ -143,7 +154,7 @@ docker compose -f docker-compose.coolify.yml -f docker/docker-compose.sandbox.ym
 - Correctif : une rafale d'émissions de factures attend son tour sur le verrou de numérotation (60 s) au lieu d'échouer après 10 s.
 
 ## Reste à faire
-M11 → M13 selon `docs/11-plan-de-livraison.md`.
+M12 → M13 selon `docs/11-plan-de-livraison.md`.
 
 ## Écarts avec la spécification
 - Nouveau paquet `packages/documents` (PDF) en plus de la liste de `CLAUDE.md` (ADR 0012).
@@ -155,7 +166,7 @@ M11 → M13 selon `docs/11-plan-de-livraison.md`.
 - Cockpit : le bouton « Facturer l'avancement » de la maquette arrive avec M8 ; « Nouvel avenant » tient sa place d'action principale d'ici là. « Relancer » une facture échue arrive aussi avec M8.
 - Seed Dupont : engagé ≈ 19 000 € au lieu des 21 160 € de la maquette (incompatible avec 21,8 % de marge estimée selon l'ADR 0004)  ; le seed ne dépose pas encore de photos de chantier dans le stockage (à ajouter, M13 seed de démo).
 - La numérotation des factures du seed reprend à 2026-100 (« ancien logiciel ») pour que la facture Dupont porte le n° 2026-118.
-- Vue carte des chantiers actifs (03 §5) : reportée à M11 (pilotage), avec le géocodage des adresses.
+- Vue carte des chantiers actifs (03 §5) : livrée au M11 sans fond de carte externe (plan + villes de repère), positions approchées par le code postal tant qu'un géocodeur réel n'est pas branché (ADR 0020).
 - Vue terrain : onglets Aujourd'hui, Planning, Heures, Profil (la maquette n'en montre que trois) ; la carte du chantier est un lien d'itinéraire (pas de tuiles cartographiques externes). La signature d'un bon de régie demande du réseau (PDF signé produit par le serveur) — ADR 0014.
 
 ## Dette technique connue
@@ -178,6 +189,8 @@ M11 → M13 selon `docs/11-plan-de-livraison.md`.
 - Communication structurée placée dans le champ « non structuré » du QR EPC (+++…+++) (`05` §5)
 - Accès logiciel aux services web ONSS (Check In and Out, 30bis) (`07`)
 - Régime intracommunautaire pour un client assujetti étranger (proposé automatiquement, `domain/vat.ts`)
+- Comptes PCMN, journaux et codes TVA par défaut de la synchro comptable, grilles de la déclaration TVA (`domain/accounting.ts`, ADR 0020)
+- Masse salariale estimée (coût horaire employeur × 38 h × 52 / 12) dans la trésorerie prévisionnelle (`domain/reporting.ts`)
 
 ## Améliorations repérées en jouant les parcours
 - M4 · Sophie · cockpit : un retard de chantier proposait « Revoir les dates » sans action → bouton retiré tant qu'il ne mène nulle part.

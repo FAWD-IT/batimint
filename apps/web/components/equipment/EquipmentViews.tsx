@@ -33,6 +33,7 @@ import {
   MaintenanceDoneDialog,
   ReturnDialog,
 } from './EquipmentDialogs';
+import { ExportButtons } from '@/components/ExportButtons';
 
 /** Matériel (03 §11, P13) : affectation en cours, prochain entretien, coût d'usage journalier. */
 export function EquipmentListView() {
@@ -60,11 +61,14 @@ export function EquipmentListView() {
             : undefined
         }
         actions={
-          can('equipment.write') ? (
-            <Button icon={<Plus aria-hidden className="size-4" />} onClick={() => setCreating(true)}>
-              {t('new')}
-            </Button>
-          ) : null
+          <div className="flex flex-wrap items-center gap-2">
+            <ExportButtons list="equipment" />
+            {can('equipment.write') ? (
+              <Button icon={<Plus aria-hidden className="size-4" />} onClick={() => setCreating(true)}>
+                {t('new')}
+              </Button>
+            ) : null}
+          </div>
         }
       />
       {list.error ? (

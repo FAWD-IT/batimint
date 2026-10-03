@@ -17,7 +17,7 @@ import {
   Td,
   Th,
 } from '@batimint/ui';
-import { Building2 } from 'lucide-react';
+import { Building2, MapPinned } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
@@ -27,6 +27,7 @@ import { useApi } from '@/lib/hooks';
 import { useCan } from '@/lib/session';
 import { useDebounced } from '@/lib/use-debounced';
 import { useErrorMessage } from '@/lib/use-error-message';
+import { ExportButtons } from '@/components/ExportButtons';
 
 type View = 'active' | 'preparation' | 'finished' | 'all';
 
@@ -53,7 +54,18 @@ export function ProjectsView() {
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6">
-      <PageHeader title={t('title')} />
+      <PageHeader
+        title={t('title')}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href="/chantiers/carte" className={buttonClasses('secondary', 'sm', 'gap-1.5')}>
+              <MapPinned aria-hidden className="size-4" />
+              {t('map.open')}
+            </Link>
+            <ExportButtons list="projects" />
+          </div>
+        }
+      />
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
         <SearchInput
           label={t('search')}

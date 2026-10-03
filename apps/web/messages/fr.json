@@ -104,7 +104,9 @@
     "billing": "Facturation",
     "subcontracting": "Sous-traitance",
     "stock": "Stock",
-    "equipment": "Matériel"
+    "equipment": "Matériel",
+    "dashboard": "Pilotage",
+    "accounting": "Comptabilité"
   },
   "notifications": {
     "title": "Notifications",
@@ -181,7 +183,38 @@
       "library": "Créer ou importer la bibliothèque de prix",
       "peppol": "Activer Peppol",
       "team": "Inviter l'équipe"
-    }
+    },
+    "figures": {
+      "label": "Ce mois-ci",
+      "invoiced": "Facturé ce mois",
+      "collected": "Encaissé ce mois",
+      "overdue": "Échu",
+      "orderBook": "Carnet de commandes"
+    },
+    "alerts": {
+      "title": "Alertes",
+      "none": "Aucune alerte : tout est sous contrôle.",
+      "count": "{n, plural, one {# alerte} other {# alertes}}"
+    },
+    "severity": {
+      "crit": "Urgent",
+      "warn": "À surveiller",
+      "info": "Info"
+    },
+    "sites": {
+      "title": "Qui est où",
+      "empty": "Personne n’est planifié ni pointé aujourd’hui.",
+      "summary": "{present} sur place · {expected} attendu{expected, plural, one {} other {s}}",
+      "onSite": "Sur place depuis {time}",
+      "expected": "Attendu",
+      "left": "Parti"
+    },
+    "changes": {
+      "title": "Ce qui a bougé depuis hier",
+      "empty": "Rien de neuf depuis hier.",
+      "seeAll": "Ouvrir le chantier"
+    },
+    "seeDashboard": "Voir le tableau de bord"
   },
   "settings": {
     "title": "Paramètres",
@@ -1783,6 +1816,19 @@
       "pdf": "PDF signé",
       "voiceNote": "Note vocale du signalement",
       "transcribing": "Transcription en cours…"
+    },
+    "map": {
+      "open": "Carte",
+      "title": "Carte des chantiers",
+      "description": "Les chantiers actifs et qui y est en ce moment.",
+      "emptyTitle": "Aucun chantier actif",
+      "empty": "Les chantiers en préparation, en cours ou en réception apparaîtront ici.",
+      "caption": "Positions d’après l’adresse du chantier ; sans adresse précise, la position est approchée par le code postal. Aucun fond de carte externe n’est chargé.",
+      "list": "Chantiers actifs",
+      "present": "{n, plural, one {# sur place} other {# sur place}}",
+      "approximate": "Position approchée (code postal)",
+      "unplaced": "Adresse à compléter pour la carte",
+      "noAddress": "Sans adresse"
     }
   },
   "changeOrders": {
@@ -3577,5 +3623,271 @@
       "item": "Choisis un article.",
       "quantity": "Indique une quantité positive."
     }
+  },
+  "dashboard": {
+    "title": "Pilotage",
+    "description": "Chiffres recalculés en direct depuis vos factures, achats, pointages et chantiers.",
+    "filters": {
+      "label": "Filtres",
+      "period": "Période",
+      "month": "Mois",
+      "quarter": "Trimestre",
+      "year": "Année",
+      "custom": "Personnalisée",
+      "from": "Du",
+      "to": "Au",
+      "team": "Équipe",
+      "allTeams": "Toutes les équipes",
+      "manager": "Responsable",
+      "allManagers": "Tous les responsables",
+      "scopeHint": "L’équipe et le responsable filtrent les chiffres des chantiers ; devis et trésorerie restent ceux de l’entreprise."
+    },
+    "kpis": {
+      "invoiced": "CA facturé HTVA",
+      "collected": "Encaissé",
+      "outstanding": "Encours clients",
+      "overdue": "dont échu {amount}",
+      "orderBook": "Carnet de commandes",
+      "marginRate": "Marge moyenne des chantiers en cours",
+      "quotes": "Transformation des devis",
+      "quotesDetail": "{signed} signé{signed, plural, one {} other {s}} sur {decided} décidé{decided, plural, one {} other {s}} · {open} en attente",
+      "noRate": "—"
+    },
+    "months": {
+      "title": "Facturé et encaissé par mois",
+      "invoiced": "Facturé HTVA",
+      "collected": "Encaissé",
+      "table": "Tableau des montants par mois",
+      "month": "Mois"
+    },
+    "cash": {
+      "title": "Trésorerie à 90 jours",
+      "subtitle": "Solde prévu en fin de semaine",
+      "subtitleNoBalance": "Flux nets cumulés en fin de semaine (indiquez votre solde bancaire pour un solde prévu)",
+      "in": "Entrées",
+      "out": "Sorties",
+      "net": "Net",
+      "lowest": "Point bas : {amount} la semaine du {date}",
+      "overdueIn": "{amount} de factures échues attendues dès maintenant",
+      "payroll": "Salaires estimés : {amount} par mois",
+      "week": "Semaine du {date}",
+      "balance": "Solde",
+      "setBalance": "Solde bancaire",
+      "balanceTitle": "Solde bancaire actuel",
+      "balanceDescription": "Le point de départ de la prévision. Mettez-le à jour quand vous consultez votre banque.",
+      "amount": "Solde",
+      "on": "Au",
+      "save": "Enregistrer",
+      "saved": "Solde enregistré",
+      "balanceOn": "Solde de {amount} au {date}",
+      "details": "Voir le détail",
+      "table": "Tableau de la trésorerie par semaine"
+    },
+    "projects": {
+      "title": "Marge par chantier",
+      "empty": "Aucun chantier en cours sur ce filtre.",
+      "project": "Chantier",
+      "sold": "Vendu",
+      "projected": "Coût projeté",
+      "margin": "Marge",
+      "progress": "Avancement",
+      "drifting": "Dérive"
+    },
+    "reports": "Rapports et exports"
+  },
+  "reports": {
+    "title": "Rapports",
+    "back": "Pilotage",
+    "tabs": {
+      "label": "Rapport",
+      "profitability": "Rentabilité",
+      "hours": "Heures",
+      "quotes": "Devis",
+      "orderBook": "Carnet de commandes",
+      "cash": "Trésorerie"
+    },
+    "groupBy": "Regrouper par",
+    "by": {
+      "project": "Chantier",
+      "customer": "Client",
+      "trade": "Type de travaux",
+      "person": "Personne"
+    },
+    "export": "Exporter",
+    "csv": "CSV",
+    "xlsx": "Excel",
+    "empty": "Aucune donnée sur cette période.",
+    "total": "Total",
+    "cols": {
+      "count": "Chantiers",
+      "sold": "Vendu HTVA",
+      "cost": "Coût projeté",
+      "margin": "Marge",
+      "marginRate": "Marge %",
+      "actual": "Réel",
+      "planned": "Prévu",
+      "variance": "Écart",
+      "ratio": "Réel / prévu",
+      "number": "Numéro",
+      "title": "Objet",
+      "customer": "Client",
+      "sentAt": "Envoyé le",
+      "status": "Statut",
+      "amount": "Montant HTVA",
+      "contract": "Contrat",
+      "invoiced": "Facturé",
+      "remaining": "Reste à facturer",
+      "endDate": "Fin prévue",
+      "date": "Date prévue",
+      "kind": "Type",
+      "label": "Libellé",
+      "in": "Entrée",
+      "out": "Sortie"
+    },
+    "quoteStatus": {
+      "sent": "En attente",
+      "signed": "Signé",
+      "refused": "Refusé",
+      "expired": "Expiré",
+      "draft": "Brouillon"
+    },
+    "cashKinds": {
+      "receivable": "Facture client",
+      "retention": "Retenue de garantie",
+      "planned_billing": "Facturation prévue",
+      "payable": "Facture fournisseur",
+      "subcontract": "Sous-traitance",
+      "payroll": "Salaires"
+    },
+    "overdue": "En retard",
+    "hoursValue": "{h} h",
+    "conversion": "{signed} signés sur {sent} envoyés · taux {rate}"
+  },
+  "accounting": {
+    "title": "Comptabilité",
+    "description": "Ventes, achats et paiements envoyés au logiciel de votre comptable via Chift.",
+    "connection": {
+      "title": "Connexion comptable",
+      "notConnected": "Non connectée",
+      "notConnectedText": "Connectez le logiciel de votre comptable : les documents de l’exercice partent automatiquement, puis chaque facture, achat et paiement au fil de l’eau.",
+      "connect": "Connecter la comptabilité",
+      "connected": "Connectée à {software}",
+      "since": "depuis le {date}",
+      "pending": "Autorisation en attente",
+      "error": "Erreur de connexion",
+      "askAdmin": "Demandez à l’administrateur de connecter la comptabilité.",
+      "connectedToast": "Comptabilité connectée : les documents de l’exercice partent."
+    },
+    "counts": {
+      "waiting": "En attente",
+      "pending": "En cours",
+      "synced": "Synchronisés",
+      "error": "En erreur"
+    },
+    "filters": {
+      "label": "Statut",
+      "all": "Tous",
+      "error": "En erreur",
+      "waiting": "En attente",
+      "synced": "Synchronisés"
+    },
+    "retryAll": "Tout relancer",
+    "retry": "Relancer",
+    "retried": "{n, plural, =0 {Rien à relancer} one {# document relancé} other {# documents relancés}}",
+    "empty": "Aucun document synchronisé pour l’instant.",
+    "emptyFiltered": "Aucun document dans cet état.",
+    "types": {
+      "invoice": "Vente",
+      "supplier_invoice": "Achat",
+      "payment": "Encaissement",
+      "supplier_payment": "Paiement fournisseur"
+    },
+    "status": {
+      "waiting": "En attente",
+      "pending": "En cours",
+      "synced": "Synchronisé",
+      "error": "Erreur"
+    },
+    "cols": {
+      "date": "Date",
+      "type": "Type",
+      "number": "Pièce",
+      "partner": "Partenaire",
+      "amount": "Montant",
+      "status": "Statut"
+    },
+    "entry": {
+      "show": "Écriture de {number}",
+      "journal": "Journal {journal}",
+      "account": "Compte",
+      "label": "Libellé",
+      "debit": "Débit",
+      "credit": "Crédit",
+      "vat": "Code TVA",
+      "grid": "Grille",
+      "none": "L’écriture sera construite à l’envoi.",
+      "attempts": "{n, plural, one {# tentative} other {# tentatives}}",
+      "external": "Pièce {id}"
+    },
+    "exports": {
+      "title": "Exports par période",
+      "description": "Pour votre comptable : ventes, achats et paiements, UBL des factures émises et documents d’achat.",
+      "from": "Du",
+      "to": "Au",
+      "sales": "Ventes",
+      "purchases": "Achats",
+      "payments": "Paiements",
+      "salesUbl": "UBL des ventes (ZIP)",
+      "purchasesDocuments": "Documents d’achat (ZIP)"
+    },
+    "mapping": {
+      "title": "Paramétrage",
+      "description": "Comptes, journaux et codes TVA du logiciel comptable. Les valeurs par défaut suivent le PCMN belge [à valider avec votre comptable].",
+      "accounts": "Comptes",
+      "journals": "Journaux",
+      "salesVat": "Codes TVA des ventes",
+      "purchaseVat": "Codes TVA des achats",
+      "save": "Enregistrer le paramétrage",
+      "saved": "Paramétrage enregistré",
+      "notConnected": "Connectez d’abord la comptabilité pour choisir parmi ses comptes et codes.",
+      "fields": {
+        "customers": "Clients",
+        "suppliers": "Fournisseurs",
+        "sales": "Ventes (travaux)",
+        "purchasesMaterials": "Achats de matériaux",
+        "purchasesSubcontracting": "Sous-traitance",
+        "vatDue": "TVA à payer",
+        "vatDeductible": "TVA à récupérer",
+        "bank": "Banque",
+        "withholding": "Retenues 30bis",
+        "salesJournal": "Ventes",
+        "creditNotes": "Notes de crédit",
+        "purchasesJournal": "Achats",
+        "bankJournal": "Banque",
+        "standard_21": "21 %",
+        "intermediate_12": "12 %",
+        "reduced_6": "6 %",
+        "zero": "0 %",
+        "reverse_charge": "Autoliquidation (cocontractant)",
+        "exempt": "Exempté",
+        "intra_community": "Intracommunautaire",
+        "export": "Exportation"
+      },
+      "purchaseFields": {
+        "21": "21 %",
+        "12": "12 %",
+        "6": "6 %",
+        "0": "0 %",
+        "reverse_charge": "Autoliquidation",
+        "intra_community": "Intracommunautaire"
+      }
+    },
+    "more": "Afficher plus ({n} restants)"
+  },
+  "exports": {
+    "button": "Exporter",
+    "csv": "Exporter en CSV",
+    "xlsx": "Exporter en Excel",
+    "label": "Exporter la liste"
   }
 }

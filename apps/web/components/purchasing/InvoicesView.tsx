@@ -29,6 +29,7 @@ import { useRelativeTime } from '@/lib/use-relative-time';
 import { InvoiceDrawer } from './InvoiceDrawer';
 import { PurchasingNav } from './PurchasingNav';
 import { INVOICE_STATUS_TONES } from './status';
+import { ExportButtons } from '@/components/ExportButtons';
 
 type View = 'inbox' | 'allocated' | 'to_pay' | 'all';
 const VIEWS: View[] = ['inbox', 'allocated', 'to_pay', 'all'];
@@ -97,26 +98,29 @@ export function InvoicesView() {
       <PageHeader
         title={t('title')}
         actions={
-          can('supplier_invoices.allocate') ? (
-            <>
-              <input
-                ref={fileRef}
-                type="file"
-                className="sr-only"
-                tabIndex={-1}
-                aria-hidden
-                accept="application/pdf,image/*,.xml,application/xml,text/xml"
-                onChange={(e) => void onFile(e.target.files?.[0])}
-              />
-              <Button
-                icon={<Upload aria-hidden className="size-4" />}
-                loading={uploading}
-                onClick={() => fileRef.current?.click()}
-              >
-                {t('upload.button')}
-              </Button>
-            </>
-          ) : null
+          <div className="flex flex-wrap items-center gap-2">
+            <ExportButtons list="supplier-invoices" />
+            {can('supplier_invoices.allocate') ? (
+              <>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  className="sr-only"
+                  tabIndex={-1}
+                  aria-hidden
+                  accept="application/pdf,image/*,.xml,application/xml,text/xml"
+                  onChange={(e) => void onFile(e.target.files?.[0])}
+                />
+                <Button
+                  icon={<Upload aria-hidden className="size-4" />}
+                  loading={uploading}
+                  onClick={() => fileRef.current?.click()}
+                >
+                  {t('upload.button')}
+                </Button>
+              </>
+            ) : null}
+          </div>
         }
       />
       <PurchasingNav inboxCount={counts?.inbox} />

@@ -7,11 +7,16 @@ import { api, type ApiOptions } from './api';
 import { useErrorMessage } from './use-error-message';
 
 /** Lecture d'une ressource de l'API ; la clé commence par le « sujet » temps réel. */
-export function useApi<T>(key: QueryKey, path: string | null, options: { enabled?: boolean } = {}) {
+export function useApi<T>(
+  key: QueryKey,
+  path: string | null,
+  options: { enabled?: boolean; refetchInterval?: number } = {},
+) {
   return useQuery({
     queryKey: key,
     queryFn: ({ signal }) => api<T>(path!, { signal }),
     enabled: path !== null && (options.enabled ?? true),
+    ...(options.refetchInterval ? { refetchInterval: options.refetchInterval } : {}),
   });
 }
 

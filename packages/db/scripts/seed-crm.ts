@@ -10,9 +10,12 @@ import type { Tx } from '../src/client';
 
 type Stage = 'new' | 'visit_planned' | 'quoting' | 'sent' | 'won' | 'lost';
 
-/** Numéro d'entreprise belge valide (modulo 97) à partir d'une base de 8 chiffres. */
+/**
+ * Numéro d'entreprise belge valide à partir d'une base : il commence par 0 ou 1 (BCE) et ses deux
+ * derniers chiffres sont le contrôle modulo 97.
+ */
 function enterpriseNumber(base: number): string {
-  const b = String(base).padStart(8, '0');
+  const b = String(base % 20_000_000).padStart(8, '0');
   const check = 97 - (Number(b) % 97);
   return `${b}${String(check).padStart(2, '0')}`;
 }

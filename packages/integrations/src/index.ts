@@ -22,3 +22,5 @@ export type * from './onss/thirty-bis';
 export { MockThirtyBisChecker, mockThirtyBisDebts } from './onss/thirty-bis-mock';
 export type * from './accounting/types';
 export { MockAccountingSync } from './accounting/mock';
+export type * from './geo/types';
+export { MockGeocoder } from './geo/mock';

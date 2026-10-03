@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { type AccountingEntry, DEFAULT_ACCOUNTING_MAPPING, saleEntry } from '@batimint/domain';
-import { createIntegrations, MemoryStorage, MockAccountingSync, MockMailer, MockVatValidator } from './index';
+import {
+  createIntegrations,
+  MemoryStorage,
+  MockAccountingSync,
+  MockGeocoder,
+  MockMailer,
+  MockVatValidator,
+} from './index';
 
 describe('intégrations mock (règle n°5 : tout tourne sans clé)', () => {
   it('sélectionne les mocks sans configuration', () => {
@@ -209,5 +216,19 @@ describe('comptabilité simulée (Chift)', () => {
         entry({ partner: { name: 'Gilson SA', vatNumber: 'BE0456789000', enterpriseNumber: null } }),
       ),
     ).rejects.toThrow(/numéro de TVA BE0456789000 de « Gilson SA » est invalide/);
+  });
+});
+
+describe('géocodage simulé', () => {
+  it('position stable par code postal, province correcte, hors Belgique inconnu', async () => {
+    const g = new MockGeocoder();
+    const jumet = await g.geocode({ street: 'Rue de la Station 42', postalCode: '6040', city: 'Jumet' });
+    expect(jumet).toMatchObject({ precision: 'locality' });
+    expect(Math.abs(jumet!.latitude - 50.41)).toBeLessThan(0.15);
+    expect(await g.geocode({ street: 'x', postalCode: '6040', city: 'Jumet' })).toEqual(jumet);
+    const liege = await g.geocode({ street: 'x', postalCode: '4000', city: 'Liège' });
+    expect(liege!.longitude).toBeGreaterThan(5.3);
+    expect(await g.geocode({ street: 'x', postalCode: '75001', city: 'Paris', country: 'FR' })).toBeNull();
+    expect(createIntegrations({}).geocoder.provider).toBe('mock');
   });
 });

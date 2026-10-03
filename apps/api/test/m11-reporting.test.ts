@@ -365,6 +365,35 @@ describe('M11 — pilotage', () => {
   });
 });
 
+describe('M11 — carte des chantiers', () => {
+  it('chantiers actifs placés (code postal), personnes sur place, villes de repère', async () => {
+    await withSystem(t.prisma, async (tx) => {
+      const site = await tx.site.create({
+        data: {
+          tenantId,
+          customerId: ids.lemaire,
+          street: 'Rue de la Station 4',
+          postalCode: '6041',
+          city: 'Gosselies',
+        },
+      });
+      await tx.project.update({ where: { id: ids.projectB }, data: { siteId: site.id } });
+    });
+    const res = await inject('GET', '/v1/projects/map');
+    expect(res.statusCode).toBe(200);
+    const b = res.json().items.find((i: { project: { id: string } }) => i.project.id === ids.projectB);
+    expect(b).toMatchObject({
+      approximate: true,
+      present: 1,
+      address: 'Rue de la Station 4, 6041 Gosselies',
+    });
+    expect(b.latitude).toBeGreaterThan(50.2);
+    const a = res.json().items.find((i: { project: { id: string } }) => i.project.id === ids.projectA);
+    expect(a).toMatchObject({ latitude: null, address: null });
+    expect(res.json().references.map((r: { name: string }) => r.name)).toContain('Charleroi');
+  });
+});
+
 describe('M11 — comptabilité', () => {
   it('non connectée, puis connexion : rattrapage des documents de l’exercice en attente', async () => {
     let o = (await inject('GET', '/v1/accounting')).json() as AccountingOverviewDto;

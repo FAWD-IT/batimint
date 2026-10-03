@@ -2,6 +2,8 @@
  * Sélection des implémentations par variables d'environnement (mock par défaut, règle n°5).
  */
 import { MockAccountingSync } from './accounting/mock';
+import { MockGeocoder } from './geo/mock';
+import type { Geocoder } from './geo/types';
 import type { AccountingSync } from './accounting/types';
 import { MockAiAssistant } from './ai/mock';
 import type { AiAssistant } from './ai/types';
@@ -35,6 +37,14 @@ export interface Integrations {
   thirtyBis: ThirtyBisChecker;
   payments: PaymentLinkProvider;
   accounting: AccountingSync;
+  geocoder: Geocoder;
+}
+
+export function createGeocoder(env: Env = process.env): Geocoder {
+  const provider = env['GEOCODER_PROVIDER'] ?? 'mock';
+  if (provider !== 'mock')
+    throw new Error(`GEOCODER_PROVIDER=${provider} n'est pas encore disponible : utilisez « mock ».`);
+  return new MockGeocoder();
 }
 
 export function createAccountingSync(env: Env = process.env): AccountingSync {
@@ -124,6 +134,7 @@ export function createIntegrations(env: Env = process.env): Integrations {
     thirtyBis: createThirtyBisChecker(env),
     payments: createPaymentLinkProvider(env),
     accounting: createAccountingSync(env),
+    geocoder: createGeocoder(env),
   };
 }
 
@@ -139,6 +150,7 @@ export function createMockIntegrations(overrides: Partial<Integrations> = {}): I
     thirtyBis: new MockThirtyBisChecker(),
     payments: new MockPaymentLinkProvider(),
     accounting: new MockAccountingSync(),
+    geocoder: new MockGeocoder(),
     ...overrides,
   };
 }

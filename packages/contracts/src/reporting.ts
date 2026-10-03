@@ -258,3 +258,23 @@ export const EXPORT_LISTS = [
 export const ExportListSchema = z.enum(EXPORT_LISTS);
 export type ExportList = z.infer<typeof ExportListSchema>;
 export const ExportFormatSchema = z.enum(['csv', 'xlsx']);
+
+/** Vue carte des chantiers actifs (03 §5) : position du site, précise ou approximative. */
+export const ProjectMapSchema = z.object({
+  items: z.array(
+    z.object({
+      project: ProjectRef,
+      status: z.string(),
+      customer: z.string(),
+      address: z.string().nullable(),
+      latitude: z.number().nullable(),
+      longitude: z.number().nullable(),
+      /** Position déduite du code postal (non utilisée pour le contrôle de présence). */
+      approximate: z.boolean(),
+      present: z.number().int(),
+    }),
+  ),
+  /** Villes de repère pour s'orienter sans fond de carte. */
+  references: z.array(z.object({ name: z.string(), latitude: z.number(), longitude: z.number() })),
+});
+export type ProjectMapDto = z.infer<typeof ProjectMapSchema>;

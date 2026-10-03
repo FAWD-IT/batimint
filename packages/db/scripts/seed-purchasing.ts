@@ -387,7 +387,8 @@ export async function seedPurchasing(tx: Tx, tenantId: string, users: Map<string
         allocatedAt: at,
         validatedAt: c.status === 'allocated' ? null : new Date(at.getTime() + 86_400_000),
         validatedBy: c.status === 'allocated' ? null : sophie,
-        paidAt: c.status === 'paid' ? date(addDays(c.on, 25)) : null,
+        // Payée à 25 jours, jamais dans le futur (chantiers terminés récemment).
+        paidAt: c.status === 'paid' ? date([addDays(c.on, 25), addDays(today, -1)].sort()[0]!) : null,
         createdAt: at,
         lines: {
           create: c.lines.map((l, position) => ({

@@ -12,6 +12,7 @@ import {
   OrderBookReportSchema,
   parseTenantSettings,
   ProfitabilityReportSchema,
+  ProjectMapSchema,
   QuotesReportSchema,
   ReportFiltersSchema,
   TodaySchema,
@@ -76,6 +77,81 @@ export const reportRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (app
           can: (a) => can(auth.role, a as Parameters<typeof can>[1]),
         }),
       ),
+  );
+
+  app.get(
+    '/projects/map',
+    {
+      schema: {
+        tags: ['pilotage'],
+        summary: 'Carte des chantiers actifs (position du site, précise ou approximative)',
+        response: { 200: ProjectMapSchema },
+      },
+    },
+    (req) =>
+      inTenant(deps, req, 'projects.read', async ({ tx }) => {
+        const projects = await tx.project.findMany({
+          where: { status: { in: ['preparation', 'in_progress', 'suspended', 'provisional_acceptance'] } },
+          include: { site: true, customer: { select: { displayName: true } } },
+          orderBy: { number: 'asc' },
+        });
+        const today = brusselsDate(new Date());
+        const open = await tx.timeEntry.findMany({
+          where: { day: new Date(`${today}T00:00:00Z`), projectId: { in: projects.map((p) => p.id) } },
+          orderBy: { at: 'asc' },
+          select: { projectId: true, employeeId: true, kind: true },
+        });
+        const lastKind = new Map<string, string>();
+        for (const e of open) lastKind.set(`${e.projectId}|${e.employeeId}`, e.kind);
+        const items = [];
+        for (const p of projects) {
+          const s = p.site;
+          let position: { latitude: number; longitude: number; approximate: boolean } | null =
+            s?.latitude && s.longitude
+              ? { latitude: Number(s.latitude), longitude: Number(s.longitude), approximate: false }
+              : null;
+          if (!position && s) {
+            const g = await deps.integrations.geocoder
+              .geocode({
+                street: s.street,
+                postalCode: s.postalCode,
+                city: s.city,
+                country: s.country ?? 'BE',
+              })
+              .catch(() => null);
+            if (g)
+              position = {
+                latitude: g.latitude,
+                longitude: g.longitude,
+                approximate: g.precision !== 'address',
+              };
+          }
+          items.push({
+            project: { id: p.id, number: p.number, name: p.name },
+            status: p.status,
+            customer: p.customer.displayName,
+            address: s ? `${s.street}, ${s.postalCode} ${s.city}` : null,
+            latitude: position?.latitude ?? null,
+            longitude: position?.longitude ?? null,
+            approximate: position?.approximate ?? false,
+            present: [...lastKind].filter(([k, v]) => k.startsWith(`${p.id}|`) && v === 'in').length,
+          });
+        }
+        return {
+          items,
+          references: [
+            { name: 'Bruxelles', latitude: 50.8466, longitude: 4.3528 },
+            { name: 'Anvers', latitude: 51.2194, longitude: 4.4025 },
+            { name: 'Gand', latitude: 51.0543, longitude: 3.7174 },
+            { name: 'Liège', latitude: 50.6326, longitude: 5.5797 },
+            { name: 'Namur', latitude: 50.4669, longitude: 4.8675 },
+            { name: 'Charleroi', latitude: 50.4108, longitude: 4.4446 },
+            { name: 'Mons', latitude: 50.4542, longitude: 3.9567 },
+            { name: 'Wavre', latitude: 50.7172, longitude: 4.6013 },
+            { name: 'Arlon', latitude: 49.6833, longitude: 5.8167 },
+          ],
+        };
+      }),
   );
 
   app.get(

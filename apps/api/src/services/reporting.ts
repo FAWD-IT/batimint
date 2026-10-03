@@ -17,6 +17,7 @@ import { parseTenantSettings } from '@batimint/contracts';
 import { loadProjectNumbers, type Tx } from '@batimint/db';
 import {
   addDays,
+  addMonths,
   brusselsDate,
   brusselsMidnight,
   type CashFlowItem,
@@ -60,6 +61,15 @@ const scopeWhere = (s: ProjectScope) => ({
 });
 
 const name = (u: { name: string } | null | undefined) => u?.name ?? null;
+const frDate = (d: IsoDate | null) =>
+  d
+    ? new Intl.DateTimeFormat('fr-BE', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+        timeZone: 'UTC',
+      }).format(day(d))
+    : '';
 
 /** Marges des chantiers (vendu, coût projeté à terminaison, facturé, dérive). */
 export async function projectMargins(
@@ -427,13 +437,18 @@ export async function buildDashboard(
   const soldActive = active.reduce((s, p) => s + p.sold, 0);
   const marginActive = active.reduce((s, p) => s + p.margin, 0);
   const quotes = quoteConversion(await quoteRows(tx, period));
-  // Mois de la période (au plus 12, les plus récents).
+  // Mois du graphique : ceux de la période, et au moins les six derniers jusqu'à sa fin.
   const months: string[] = [];
-  for (let m = period.from.slice(0, 7); m <= period.to.slice(0, 7) && months.length < 24;) {
+  const firstMonth = [
+    period.from.slice(0, 7),
+    addMonths(`${period.to.slice(0, 7)}-01`, -5).slice(0, 7),
+  ].sort()[0]!;
+  for (let m = firstMonth; m <= period.to.slice(0, 7) && months.length < 24;) {
     months.push(m);
     const [y, mo] = m.split('-').map(Number) as [number, number];
     m = mo === 12 ? `${y + 1}-01` : `${y}-${String(mo + 1).padStart(2, '0')}`;
   }
+  const chart = await invoicedAndCollected(tx, { from: `${months[0]}-01`, to: period.to }, scope);
   const cash = await buildCashForecast(tx, tenantId, today);
   const { items: _items, ...cashSummary } = cash;
   const users = await tx.membership.findMany({
@@ -457,11 +472,13 @@ export async function buildDashboard(
       month: m,
       invoiced: Number(
         sumCents(
-          invoices.filter((i) => iso(i.issueDate)!.startsWith(m)).map((i) => signed(i.type, i.totalNet)),
+          chart.invoices
+            .filter((i) => iso(i.issueDate)!.startsWith(m))
+            .map((i) => signed(i.type, i.totalNet)),
         ),
       ),
       collected: Number(
-        sumCents(payments.filter((p) => iso(p.receivedOn)!.startsWith(m)).map((p) => p.amount)),
+        sumCents(chart.payments.filter((p) => iso(p.receivedOn)!.startsWith(m)).map((p) => p.amount)),
       ),
     })),
     projects: active.sort((a, b) => b.sold - a.sold),
@@ -704,7 +721,7 @@ export async function buildToday(
 
   // Ce qui a bougé depuis hier : le fil de tous les chantiers.
   const timeline = await tx.timelineEntry.findMany({
-    where: { occurredAt: { gte: since }, projectId: { not: null } },
+    where: { occurredAt: { gte: since, lte: now }, projectId: { not: null } },
     orderBy: { occurredAt: 'desc' },
     take: 40,
   });
@@ -758,7 +775,7 @@ export async function buildToday(
         kind: 'project_late',
         severity: 'warn',
         title: `En retard : ${p.name}`,
-        detail: `Fin prévue le ${iso(p.endDate)}`,
+        detail: `Fin prévue le ${frDate(iso(p.endDate))}`,
         link: `/chantiers/${p.id}`,
         amount: null,
       });
@@ -777,7 +794,7 @@ export async function buildToday(
           .slice(0, 3)
           .map((i) => `${i.number} · ${i.customer.displayName}`)
           .join(' ; '),
-        link: '/facturation?vue=echues',
+        link: '/facturation?vue=overdue',
         amount: Number(sumCents(overdue.map((i) => balanceOf(i)))),
       });
   }
@@ -792,7 +809,7 @@ export async function buildToday(
         kind: 'subcontractor_document',
         severity: d.alertState === 'expired' ? 'crit' : 'warn',
         title: `${d.alertState === 'expired' ? 'Document expiré' : 'Document à renouveler'} : ${d.supplier.name}`,
-        detail: d.expiresOn ? `Échéance ${iso(d.expiresOn)}` : null,
+        detail: d.expiresOn ? `Échéance le ${frDate(iso(d.expiresOn))}` : null,
         link: `/sous-traitance/${d.supplier.id}`,
         amount: null,
       });
@@ -851,7 +868,7 @@ export async function buildToday(
         kind: 'maintenance_due',
         severity: s === 'overdue' ? 'crit' : 'warn',
         title: `${s === 'overdue' ? 'Entretien en retard' : 'Entretien à prévoir'} : ${m.equipment.name}`,
-        detail: `${m.label} · ${iso(m.dueOn)}`,
+        detail: `${m.label} · ${frDate(iso(m.dueOn))}`,
         link: `/materiel/${m.equipment.id}`,
         amount: null,
       });

@@ -25,6 +25,7 @@ import { useRelativeTime } from '@/lib/use-relative-time';
 import { OrderDrawer } from './OrderDrawer';
 import { PurchasingNav } from './PurchasingNav';
 import { ORDER_STATUS_TONES } from './status';
+import { ExportButtons } from '@/components/ExportButtons';
 
 type Filter = 'open' | 'received' | 'all';
 const FILTERS: Filter[] = ['open', 'received', 'all'];
@@ -61,7 +62,7 @@ export function OrdersView() {
   const items = list.data?.items ?? [];
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6">
-      <PageHeader title={t('title')} />
+      <PageHeader title={t('title')} actions={<ExportButtons list="purchase-orders" />} />
       <PurchasingNav />
       <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
         <Segmented<Filter>

@@ -26,6 +26,7 @@ import { useCan } from '@/lib/session';
 import { useDebounced } from '@/lib/use-debounced';
 import { useErrorMessage } from '@/lib/use-error-message';
 import { useNewParam } from '@/lib/use-new-param';
+import { ExportButtons } from '@/components/ExportButtons';
 
 type StatusFilter = 'all' | 'prospect' | 'customer';
 
@@ -61,11 +62,14 @@ export function CustomersView() {
         title={t('title')}
         description={list.data ? t('count', { count: list.data.total }) : undefined}
         actions={
-          canWrite ? (
-            <Button icon={<Plus aria-hidden className="size-4" />} onClick={() => setCreating(true)}>
-              {t('new')}
-            </Button>
-          ) : null
+          <div className="flex flex-wrap items-center gap-2">
+            <ExportButtons list="customers" />
+            {canWrite ? (
+              <Button icon={<Plus aria-hidden className="size-4" />} onClick={() => setCreating(true)}>
+                {t('new')}
+              </Button>
+            ) : null}
+          </div>
         }
       />
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">

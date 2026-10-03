@@ -39,6 +39,7 @@ import {
   STOCK_INVALIDATE,
   ThresholdDialog,
 } from './StockDialogs';
+import { ExportButtons } from '@/components/ExportButtons';
 
 type Tab = 'items' | 'movements' | 'reorder';
 const TAB_PARAM: Record<Tab, string | null> = { items: null, movements: 'mouvements', reorder: 'reappro' };
@@ -124,25 +125,28 @@ export function StockView() {
         title={t('title')}
         description={locations.data ? t('summary', { value: formatEuros(BigInt(value)), low }) : undefined}
         actions={
-          writable ? (
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="secondary"
-                icon={<Plus aria-hidden className="size-4" />}
-                onClick={() => setAddingLocation(true)}
-              >
-                {t('newLocation')}
-              </Button>
-              {locs.length ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <ExportButtons list="stock" />
+            {writable ? (
+              <div className="flex flex-wrap gap-2">
                 <Button
-                  icon={<ArrowLeftRight aria-hidden className="size-4" />}
-                  onClick={() => setMoving({})}
+                  variant="secondary"
+                  icon={<Plus aria-hidden className="size-4" />}
+                  onClick={() => setAddingLocation(true)}
                 >
-                  {t('newMovement')}
+                  {t('newLocation')}
                 </Button>
-              ) : null}
-            </div>
-          ) : null
+                {locs.length ? (
+                  <Button
+                    icon={<ArrowLeftRight aria-hidden className="size-4" />}
+                    onClick={() => setMoving({})}
+                  >
+                    {t('newMovement')}
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
         }
       />
       {failed ? (

@@ -17,6 +17,8 @@ import {
   Handshake,
   Boxes,
   Wrench,
+  BarChart3,
+  Calculator,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -33,6 +35,8 @@ export interface NavItem {
     | 'purchasing'
     | 'subcontracting'
     | 'stock'
+    | 'dashboard'
+    | 'accounting'
     | 'equipment'
     | 'billing'
     | 'library'
@@ -47,6 +51,7 @@ export interface NavItem {
 /** N'apparaissent que les modules livrés : aucun lien ne mène à un écran vide. */
 export const NAV_ITEMS: NavItem[] = [
   { href: '/aujourdhui', labelKey: 'today', icon: Sun },
+  { href: '/pilotage', labelKey: 'dashboard', icon: BarChart3, permission: 'reports.read' },
   { href: '/chantiers', labelKey: 'projects', icon: Building2, permission: 'projects.read' },
   { href: '/planning', labelKey: 'planning', icon: CalendarDays, permission: 'planning.read' },
   // Vue terrain (mobile) : le chef y pointe son équipe et valide les heures.
@@ -54,6 +59,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: '/opportunites', labelKey: 'pipeline', icon: Briefcase, permission: 'leads.read' },
   { href: '/devis', labelKey: 'quotes', icon: FileText, permission: 'quotes.read' },
   { href: '/facturation', labelKey: 'billing', icon: Receipt, permission: 'invoices.read' },
+  { href: '/comptabilite', labelKey: 'accounting', icon: Calculator, permission: 'accounting.read' },
   { href: '/achats', labelKey: 'purchasing', icon: ShoppingCart, permission: 'purchases.read' },
   { href: '/sous-traitance', labelKey: 'subcontracting', icon: Handshake, permission: 'subcontracting.read' },
   { href: '/stock', labelKey: 'stock', icon: Boxes, permission: 'stock.read' },

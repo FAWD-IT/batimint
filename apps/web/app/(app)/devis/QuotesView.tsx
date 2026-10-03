@@ -27,6 +27,7 @@ import { useDebounced } from '@/lib/use-debounced';
 import { useErrorMessage } from '@/lib/use-error-message';
 import { useRelativeTime } from '@/lib/use-relative-time';
 import { useNewParam } from '@/lib/use-new-param';
+import { ExportButtons } from '@/components/ExportButtons';
 
 type Filter = 'all' | 'draft' | 'sent' | 'signed' | 'lost' | 'templates';
 const FILTER_STATUS: Record<Filter, string | null> = {
@@ -67,11 +68,14 @@ export function QuotesView() {
       <PageHeader
         title={t('title')}
         actions={
-          can('quotes.write') ? (
-            <Button icon={<Plus aria-hidden className="size-4" />} onClick={() => setCreating(true)}>
-              {t('new.title')}
-            </Button>
-          ) : null
+          <div className="flex flex-wrap items-center gap-2">
+            <ExportButtons list="quotes" />
+            {can('quotes.write') ? (
+              <Button icon={<Plus aria-hidden className="size-4" />} onClick={() => setCreating(true)}>
+                {t('new.title')}
+              </Button>
+            ) : null}
+          </div>
         }
       />
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
