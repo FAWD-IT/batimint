@@ -155,7 +155,9 @@ export function SubcontractorView({ id }: { id: string }) {
                     {r.status === 'missing'
                       ? t('documents.missing')
                       : r.expiresOn
-                        ? t('documents.until', { date: formatDay(r.expiresOn) })
+                        ? t(r.status === 'expired' ? 'documents.expiredOn' : 'documents.until', {
+                            date: formatDay(r.expiresOn),
+                          })
                         : t('documents.noExpiry')}
                   </span>
                 </span>

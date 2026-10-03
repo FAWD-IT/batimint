@@ -2394,7 +2394,8 @@
       "match": {
         "purchase_order": "Imputée automatiquement à {project} grâce au bon de commande {order}.",
         "project_reference": "Imputée automatiquement à {project} grâce à la référence du chantier.",
-        "address": "Imputée automatiquement à {project} grâce à l’adresse de livraison."
+        "address": "Imputée automatiquement à {project} grâce à l’adresse de livraison.",
+        "subcontract": "Imputée automatiquement à {project} grâce au contrat de sous-traitance."
       },
       "allocations": "Imputation",
       "noPost": "Sans poste",
@@ -3016,7 +3017,8 @@
         "file": "Choisissez le fichier à envoyer.",
         "tooLarge": "Le fichier dépasse 15 Mo.",
         "expiry": "Indiquez la date d’échéance du document."
-      }
+      },
+      "expiredOn": "Expiré depuis le {date}"
     },
     "contract": {
       "new": "Nouveau contrat",
@@ -3210,8 +3212,15 @@
       "fileHint": "PDF, XML UBL ou photo, 15 Mo au maximum.",
       "errors": {
         "file": "Choisissez le fichier de votre facture.",
-        "tooLarge": "Le fichier dépasse 15 Mo."
-      }
-    }
+        "tooLarge": "Le fichier dépasse 15 Mo.",
+        "number": "Indiquez le numéro de votre facture.",
+        "amount": "Indiquez le montant HTVA de votre facture."
+      },
+      "number": "Numéro de la facture",
+      "net": "Montant HTVA",
+      "vat": "TVA",
+      "vatHint": "0 € en autoliquidation (TVA due par l’entrepreneur)."
+    },
+    "expiredOn": "Expiré depuis le {date}"
   }
 }

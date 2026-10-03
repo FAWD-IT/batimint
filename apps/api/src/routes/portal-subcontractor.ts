@@ -236,6 +236,8 @@ export const portalSubcontractorRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }>
         tx.subcontractorDocument.findFirst({ where: { id: req.params.id, supplierId: t.supplierId } }),
       );
       if (!d) throw portalNotFound();
+      if (!(await deps.integrations.storage.exists('legal', d.fileKey)))
+        throw new AppError(404, 'file_unavailable', 'Le fichier de ce document n’est pas disponible.');
       const file = await deps.integrations.storage.get('legal', d.fileKey);
       return reply
         .header('content-type', d.contentType)
@@ -278,7 +280,14 @@ export const portalSubcontractorRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }>
         tags: ['portail'],
         summary: 'Déposer une facture (PDF ou UBL) pour une mission',
         params: tokenParams,
-        querystring: z.object({ id: z.uuid().optional(), subcontractId: z.uuid() }),
+        querystring: z.object({
+          id: z.uuid().optional(),
+          subcontractId: z.uuid(),
+          /** Dépôt d'un PDF : numéro et montants (en centimes) indiqués par le sous-traitant. */
+          number: z.string().trim().min(1).max(40).optional(),
+          net: z.coerce.number().int().min(1).max(100_000_000_00).optional(),
+          vat: z.coerce.number().int().min(0).max(100_000_000_00).optional(),
+        }),
         response: { 201: PortalSubcontractorSchema },
       },
     },
@@ -302,6 +311,11 @@ export const portalSubcontractorRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }>
             throw badRequest('invalid_ubl', `Votre fichier UBL est illisible : ${err.message}`);
           throw err;
         }
+      if (!ubl && (!req.query.number || req.query.net === undefined))
+        throw badRequest(
+          'invoice_details_missing',
+          'Indiquez le numéro et le montant HTVA de votre facture, ou déposez-la au format UBL.',
+        );
       const dto = await withTenant(deps.prisma, t.tenantId, null, async (tx) => {
         const mission = await tx.subcontract.findFirst({
           where: { id: req.query.subcontractId, supplierId: t.supplierId, status: { not: 'cancelled' } },
@@ -322,6 +336,9 @@ export const portalSubcontractorRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }>
             actor: { type: 'portal', label: 'Portail sous-traitant' },
             supplierId: t.supplierId,
             subcontractId: mission.id,
+            declared: ubl
+              ? null
+              : { number: req.query.number!, net: BigInt(req.query.net!), vat: BigInt(req.query.vat ?? 0) },
           });
         }
         return portalDto(tx, t.supplierId, req.params.token);

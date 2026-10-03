@@ -227,6 +227,8 @@ export async function ingestSupplierInvoice(
     /** Dépôt par le sous-traitant sur son portail : émetteur et contrat connus. */
     supplierId?: string | null;
     subcontractId?: string | null;
+    /** Montants déclarés par le sous-traitant au dépôt d'un PDF (sans UBL). */
+    declared?: { number: string; net: bigint; vat: bigint } | null;
   },
 ) {
   if (input.externalId) {
@@ -253,13 +255,13 @@ export async function ingestSupplierInvoice(
       supplierId: supplier?.id ?? null,
       supplierName: supplier?.name ?? u?.supplier.name ?? input.fallbackName ?? 'Fournisseur à identifier',
       supplierVat: u?.supplier.vatNumber ?? null,
-      number: u?.number ?? null,
+      number: u?.number ?? input.declared?.number ?? null,
       issueDate: u?.issueDate ? new Date(`${u.issueDate}T00:00:00Z`) : null,
       dueDate: u?.dueDate ? new Date(`${u.dueDate}T00:00:00Z`) : null,
       currency: u?.currency ?? 'EUR',
-      totalNet: (u?.totals.net ?? 0n) * sign,
-      totalVat: (u?.totals.vat ?? 0n) * sign,
-      totalGross: (u?.totals.gross ?? 0n) * sign,
+      totalNet: (u?.totals.net ?? input.declared?.net ?? 0n) * sign,
+      totalVat: (u?.totals.vat ?? input.declared?.vat ?? 0n) * sign,
+      totalGross: (u?.totals.gross ?? (input.declared ? input.declared.net + input.declared.vat : 0n)) * sign,
       orderReference: u?.orderReference ?? null,
       deliveryAddress: u?.deliveryAddress ?? null,
       notes: [u?.buyerReference, ...(u?.notes ?? [])].filter(Boolean).join('\n') || null,

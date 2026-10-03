@@ -3,12 +3,12 @@
 Ce fichier est le point de reprise entre sessions cloud. Une nouvelle session doit pouvoir reprendre le travail en ne lisant que lui et `CLAUDE.md`.
 
 ## Jalon en cours
-**M9 — Sous-traitance et conformité** — en cours (domaine, base, adaptateur 30bis, API, worker écrits ; écrans, seed et E2E P9 à faire). M8 ✅ validé (CI run 43 : checks + E2E sur les images de production).
+**M9 — Sous-traitance et conformité** — livré (domaine, base, adaptateur 30bis, API, worker, écrans, portail sous-traitant, seed, E2E P9 vert en local), en attente de la CI. M8 ✅ validé (CI run 43).
 
 (L'étiquette `m0-done` existe localement mais le push de tags est refusé par la politique de la session : seule la branche est poussée.)
 
 ## Prochaine action
-M9 : tests d'intégration API (30bis aux deux chemins, portail sous-traitant), tests worker, écrans `/sous-traitance`, onglet chantier, portail `/s/[token]`, seed, E2E P9, ADR 0018.
+Vérifier la CI du push M9 ; si verte, marquer M9 ✅ et démarrer M10 (réception provisoire et définitive, réserves → tâches, facture finale, libération de retenue, rapport de rentabilité, stock, matériel ; parcours P10 et P13).
 
 ## Relancer l'environnement
 ```bash
@@ -119,8 +119,20 @@ docker compose -f docker-compose.coolify.yml -f docker/docker-compose.sandbox.ym
 - Seed : Dupont facturé par 3 états approuvés (2026-116 à 118, payables à réception, 118 échue de 3 jours, rappel n°1) ; toutes les factures émises comme l'application ; numérotation continue 2026-099 → 118.
 - Tests : 11 intégration API (dont 100 émissions concurrentes), 5 worker, 18 domaine, 7 documents ; E2E P7 (acompte, paiement partiel, état approuvé sur le portail, facture avec acompte déduit, paiement en ligne) + P8 sur téléphone.
 
+### M9 — Sous-traitance et conformité (en attente CI)
+- Domaine (`subcontracting.ts`) : retenue 30bis (35 % social, 15 % fiscal du HTVA, plafonnée à la dette, paramétrable), validité et conformité des documents (expire bientôt à 30 j), déclaration de travaux probablement requise (≥ 30 000 € ou sous-traitant), échéancier du contrat, engagé restant ; cycle de vie du contrat ; 20 tests.
+- Base : contrats de sous-traitance, consultations 30bis (**preuve immuable**, déclencheur), documents des sous-traitants ; retenue sur les factures fournisseurs ; jetons de portail sous-traitant ; RLS (ADR 0018).
+- Intégration : `ThirtyBisChecker` + mock déterministe (dette sociale / fiscale / les deux selon le numéro) ; `THIRTY_BIS_PROVIDER`.
+- Documents : contrat de sous-traitance, preuve de consultation 30bis, document de versement de la retenue (PDF).
+- API : sous-traitants (conformité, 30bis, contrats), documents (dépôt, retrait, téléchargement), consultation manuelle, invitation au portail, contrats (30bis à la création, PDF versionné, modification, clôture), déclaration de travaux (pré-remplie, référence) ; **contrôle 30bis avant « à payer » et « payée »** (bloquée en cas de dette, retenue appliquée + document de versement) ; portail public `/portal/subcontractors/:token` (missions, documents, factures UBL ou PDF avec montants).
+- Worker : engagé du contrat sur le poste, fil du chantier, facture du sous-traitant imputée au poste du contrat, 30bis à la réception, alertes (dette, paiement bloqué), e-mail d'accès au portail, alertes quotidiennes d'échéance des documents (bureau + sous-traitant).
+- Web : module « Sous-traitance » (sous-traitants : conformité et 30bis ; contrats en cours), fiche sous-traitant (documents obligatoires, dépôt, historique 30bis avec preuves, contrats, invitation), contrat (tiroir : échéancier, facturé, retenues, factures, PDF, clôture), onglet « Sous-traitance » du cockpit avec la déclaration de travaux, bloc 30bis dans la facture fournisseur (« Appliquer la retenue et mettre à payer »), portail `/s/[token]` vouvoyé.
+- Seed : Électro Pirson (sans dette, attestation ONSS à renouveler, acompte payé) et Façades Lemaire (dette sociale, assurance expirée, acompte bloqué, retenue 1 932 €) sur la « Rénovation de 4 appartements », déclaration de travaux à faire.
+- Tests : 15 intégration API (les deux chemins 30bis), 3 worker, 20 domaine, 2 documents ; E2E P9 (contrat sur un poste, portail, documents dont un expiré, facture imputée seule, mise à payer ; chemin dette : bloquée, retenue, document de versement) + portail sur téléphone.
+- Check In and Out : livré au M5 (mock + export + relance) — rien de neuf ici.
+
 ## Reste à faire
-M9 → M13 selon `docs/11-plan-de-livraison.md`.
+M10 → M13 selon `docs/11-plan-de-livraison.md`.
 
 ## Écarts avec la spécification
 - Nouveau paquet `packages/documents` (PDF) en plus de la liste de `CLAUDE.md` (ADR 0012).
@@ -147,7 +159,7 @@ M9 → M13 selon `docs/11-plan-de-livraison.md`.
 - `pkill -f` avec un motif présent dans la commande courante tue le shell de l'outil : utiliser `ps | grep | kill`.
 
 ## À valider métier (comptable / juriste)
-- Taux de retenue 30bis et seuils de la déclaration de travaux (`05` §7)
+- Taux de retenue 30bis (35 % / 15 %, plafonnés à la dette), seuils de la déclaration de travaux (30 000 € ou sous-traitant) et coordonnées de versement ONSS / SPF Finances (`05` §7, ADR 0018)
 - Forme de l'attestation 6 % et éligibilité ligne par ligne (`05` §3)
 - Mention légale d'autoliquidation (`05` §3)
 - Délai d'émission des factures et durée de conservation (`05` §2) — bucket légal paramétré à 10 ans

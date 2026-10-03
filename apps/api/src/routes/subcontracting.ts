@@ -41,13 +41,14 @@ import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { v7 as uuidv7 } from 'uuid';
 import { z } from 'zod';
 import type { AppDeps } from '../context';
-import { badRequest, conflict, notFound, unprocessable } from '../lib/errors';
+import { AppError, badRequest, conflict, notFound, unprocessable } from '../lib/errors';
 import { inTenant, iso, isoDate } from '../lib/tenant';
 import { addressLines } from '../services/quotes';
 import {
   checkDto,
   complianceOf,
   documentDto,
+  ensureThirtyBisProof,
   SUBCONTRACT_INCLUDE,
   subcontractDto,
   subcontractSummaries,
@@ -353,9 +354,9 @@ export const subcontractingRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = as
     },
     async (req, reply) => {
       const key = await inTenant(deps, req, 'subcontracting.read', async ({ tx }) => {
-        const c = await tx.thirtyBisCheck.findUnique({ where: { id: req.params.id } });
-        if (!c?.proofKey) throw notFound('Cette preuve');
-        return c.proofKey;
+        const k = await ensureThirtyBisProof(deps, tx, req.params.id);
+        if (!k) throw notFound('Cette preuve');
+        return k;
       });
       const file = await deps.integrations.storage.get('legal', key);
       return reply
@@ -465,6 +466,8 @@ export const subcontractingRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = as
         if (!doc) throw notFound('Ce document');
         return doc;
       });
+      if (!(await deps.integrations.storage.exists('legal', d.fileKey)))
+        throw new AppError(404, 'file_unavailable', 'Le fichier de ce document n’est pas disponible.');
       const file = await deps.integrations.storage.get('legal', d.fileKey);
       return reply
         .header('content-type', d.contentType)

@@ -11,12 +11,14 @@ import {
   Notice,
   SelectField,
   Skeleton,
+  TextField,
   useToast,
 } from '@batimint/ui';
 import { ExternalLink, FileUp, Upload } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useCallback, useEffect, useId, useState } from 'react';
 import { v7 as uuidv7 } from 'uuid';
+import { MoneyInput } from '@/components/MoneyInput';
 import { DocumentUploadDialog } from '@/components/subcontracting/DocumentUploadDialog';
 import { DOC_STATUS_TONE, formatDay } from '@/components/subcontracting/shared';
 import { api, ApiError } from '@/lib/api';
@@ -200,7 +202,7 @@ function Portal({
                   {r.status === 'missing'
                     ? t('missing')
                     : r.expiresOn
-                      ? t('until', { date: formatDay(r.expiresOn) })
+                      ? t(r.status === 'expired' ? 'expiredOn' : 'until', { date: formatDay(r.expiresOn) })
                       : t('noExpiry')}
                 </span>
               </span>
@@ -329,19 +331,30 @@ function InvoiceUploadDialog({
   const [id] = useState(() => uuidv7());
   const [mission, setMission] = useState(missionId);
   const [file, setFile] = useState<File | null>(null);
+  const [number, setNumber] = useState('');
+  const [net, setNet] = useState(0);
+  const [vat, setVat] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Un fichier UBL porte déjà son numéro et ses montants ; un PDF demande de les indiquer.
+  const isXml = Boolean(file && (/xml/.test(file.type) || /\.xml$/i.test(file.name)));
   const submit = async () => {
     if (!file) return setError(t('errors.file'));
     if (file.size > 15 * 1024 * 1024) return setError(t('errors.tooLarge'));
+    if (!isXml && !number.trim()) return setError(t('errors.number'));
+    if (!isXml && net <= 0) return setError(t('errors.amount'));
     setBusy(true);
     setError(null);
     try {
-      const r = await uploadRaw<PortalSubcontractorDto>(
-        `${base}/invoices?id=${id}&subcontractId=${mission}`,
-        file,
-        { fileName: file.name },
-      );
+      const qs = new URLSearchParams({ id, subcontractId: mission });
+      if (!isXml) {
+        qs.set('number', number.trim());
+        qs.set('net', String(net));
+        qs.set('vat', String(vat));
+      }
+      const r = await uploadRaw<PortalSubcontractorDto>(`${base}/invoices?${qs.toString()}`, file, {
+        fileName: file.name,
+      });
       toast.show({ title: t('sent'), tone: 'good' });
       onUploaded(r);
     } catch (err) {
@@ -394,6 +407,15 @@ function InvoiceUploadDialog({
           />
           <p className="text-[13px] text-muted">{t('fileHint')}</p>
         </div>
+        {file && !isXml ? (
+          <>
+            <TextField label={t('number')} value={number} onChange={(e) => setNumber(e.target.value)} />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <MoneyInput label={t('net')} cents={net} onChange={setNet} />
+              <MoneyInput label={t('vat')} cents={vat} onChange={setVat} hint={t('vatHint')} />
+            </div>
+          </>
+        ) : null}
         {error ? (
           <p role="alert" className="text-[14px] text-crit">
             {error}

@@ -357,7 +357,7 @@ describe('M9 — portail sous-traitant', () => {
     const id = uuidv7();
     const inv = await t.app.inject({
       method: 'POST',
-      url: `/v1/portal/subcontractors/${token}/invoices?subcontractId=${cleanContract}&id=${id}`,
+      url: `/v1/portal/subcontractors/${token}/invoices?subcontractId=${cleanContract}&id=${id}&number=F-12&net=372000&vat=0`,
       payload: Buffer.from('%PDF-1.4 facture'),
       headers: { 'content-type': 'application/pdf', 'x-file-name': 'facture-12.pdf' },
     });
@@ -367,14 +367,28 @@ describe('M9 — portail sous-traitant', () => {
       missionNumber: expect.stringMatching(/^ST/),
     });
     const row = await withSystem(t.prisma, (tx) => tx.supplierInvoice.findUniqueOrThrow({ where: { id } }));
-    expect(row).toMatchObject({ supplierId: cleanId, subcontractId: cleanContract, source: 'upload' });
+    expect(row).toMatchObject({
+      supplierId: cleanId,
+      subcontractId: cleanContract,
+      source: 'upload',
+      number: 'F-12',
+      totalNet: 372_000n,
+      totalGross: 372_000n,
+    });
+    const missing = await t.app.inject({
+      method: 'POST',
+      url: `/v1/portal/subcontractors/${token}/invoices?subcontractId=${cleanContract}`,
+      payload: Buffer.from('%PDF-1.4'),
+      headers: { 'content-type': 'application/pdf' },
+    });
+    expect(missing.statusCode).toBe(400);
     expect((await outbox('subcontractor.document_uploaded.v1')).length).toBe(1);
   });
 
   it('refuse la mission d’un autre sous-traitant et un lien invalide', async () => {
     const other = await t.app.inject({
       method: 'POST',
-      url: `/v1/portal/subcontractors/${token}/invoices?subcontractId=${debtorContract}`,
+      url: `/v1/portal/subcontractors/${token}/invoices?subcontractId=${debtorContract}&number=X&net=100`,
       payload: Buffer.from('%PDF-1.4'),
       headers: { 'content-type': 'application/pdf' },
     });

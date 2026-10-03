@@ -9,7 +9,14 @@ import {
   type SubcontractSummaryDto,
   type ThirtyBisCheckDto,
 } from '@batimint/contracts';
-import { recordThirtyBisCheck, subcontractTotals, type ThirtyBisPorts, type Tx } from '@batimint/db';
+import {
+  recordThirtyBisCheck,
+  subcontractTotals,
+  THIRTY_BIS_CONTEXT_LABEL,
+  type ThirtyBisContext,
+  type ThirtyBisPorts,
+  type Tx,
+} from '@batimint/db';
 import { renderThirtyBisProofPdf, renderThirtyBisTransferPdf, sha256 } from '@batimint/documents';
 import {
   brusselsDate,
@@ -66,7 +73,7 @@ export function checkDto(
     provider: c.provider,
     reference: c.reference,
     checkedAt: c.checkedAt.toISOString(),
-    proofUrl: c.proofKey ? `/api/v1/thirty-bis-checks/${c.id}/proof` : null,
+    proofUrl: `/api/v1/thirty-bis-checks/${c.id}/proof`,
     subcontractNumber: refs.subcontractNumber ?? null,
     supplierInvoiceNumber: refs.supplierInvoiceNumber ?? null,
   };
@@ -344,4 +351,40 @@ export async function storeTransferDocument(deps: AppDeps, tx: Tx, invoiceId: st
   const key = `t/${i.tenantId}/supplier-invoices/${i.id}/retenue-30bis-${check.id}.pdf`;
   await deps.integrations.storage.put({ bucket: 'legal', key, body: pdf, contentType: 'application/pdf' });
   return { key, sha256: sha256(pdf) };
+}
+
+/**
+ * Preuve d'une consultation : le PDF archivé, ou (consultation importée sans document) rendu à
+ * partir du résultat enregistré, puis archivé avec son empreinte.
+ */
+export async function ensureThirtyBisProof(deps: AppDeps, tx: Tx, checkId: string): Promise<string | null> {
+  const c = await tx.thirtyBisCheck.findUnique({ where: { id: checkId } });
+  if (!c) return null;
+  if (c.proofKey) return c.proofKey;
+  const [tenant, supplier, user] = await Promise.all([
+    tx.tenant.findUniqueOrThrow({ where: { id: c.tenantId } }),
+    c.supplierId ? tx.supplier.findUnique({ where: { id: c.supplierId } }) : null,
+    c.createdBy ? tx.user.findUnique({ where: { id: c.createdBy }, select: { name: true } }) : null,
+  ]);
+  const pdf = await renderThirtyBisProofPdf({
+    tenant: {
+      name: tenant.legalName ?? tenant.name,
+      lines: tenant.enterpriseNumber ? [`BCE ${tenant.enterpriseNumber}`] : [],
+      brandColor: tenant.brandColor,
+    },
+    subcontractor: { name: supplier?.name ?? '—', enterpriseNumber: c.enterpriseNumber },
+    checkedAt: c.checkedAt,
+    reference: c.reference,
+    service: c.provider === 'mock' ? 'Simulation ONSS / SPF Finances (mock)' : c.provider,
+    context: THIRTY_BIS_CONTEXT_LABEL[c.context as ThirtyBisContext] ?? c.context,
+    hasSocialDebt: c.hasSocialDebt,
+    hasTaxDebt: c.hasTaxDebt,
+    socialDebtAmount: c.socialDebtAmount,
+    taxDebtAmount: c.taxDebtAmount,
+    checkedBy: user?.name ?? null,
+  });
+  const key = `t/${c.tenantId}/thirty-bis/${c.id}.pdf`;
+  await deps.integrations.storage.put({ bucket: 'legal', key, body: pdf, contentType: 'application/pdf' });
+  await tx.thirtyBisCheck.update({ where: { id: c.id }, data: { proofKey: key, proofSha256: sha256(pdf) } });
+  return key;
 }
