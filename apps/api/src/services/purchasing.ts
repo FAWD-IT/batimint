@@ -17,13 +17,15 @@ import { invoiceThirtyBis } from './subcontracting';
 type PoRow = Awaited<ReturnType<Tx['purchaseOrder']['findUniqueOrThrow']>> & {
   lines: Awaited<ReturnType<Tx['purchaseOrderLine']['findUniqueOrThrow']>>[];
   supplier: { id: string; name: string; orderEmail: string | null; email: string | null };
-  project: { id: string; number: string; name: string };
+  project: { id: string; number: string; name: string } | null;
+  stockLocation: { id: string; name: string } | null;
 };
 
 export const PO_INCLUDE = {
   lines: { orderBy: { position: 'asc' as const } },
   supplier: { select: { id: true, name: true, orderEmail: true, email: true } },
   project: { select: { id: true, number: true, name: true } },
+  stockLocation: { select: { id: true, name: true } },
 };
 
 /** Montant déjà facturé par bon de commande (ventilations des factures rapprochées). */
@@ -55,6 +57,7 @@ export async function poDto(tx: Tx, po: PoRow, invoiced?: bigint): Promise<Purch
     number: po.number,
     status: po.status,
     project: po.project,
+    stockLocation: po.stockLocation,
     supplier: {
       id: po.supplier.id,
       name: po.supplier.name,
@@ -79,6 +82,7 @@ export async function poDto(tx: Tx, po: PoRow, invoiced?: bigint): Promise<Purch
       budgetLineLabel: l.budgetLineId ? (labels.get(l.budgetLineId) ?? null) : null,
       receivedQuantity: l.receivedQuantity.toString(),
       sourceKey: l.sourceKey,
+      itemId: l.itemId,
     })),
     createdAt: po.createdAt.toISOString(),
   };

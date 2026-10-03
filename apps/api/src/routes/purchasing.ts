@@ -67,6 +67,7 @@ async function writeLines(
       unitPrice: BigInt(l.unitPrice),
       budgetLineId: l.budgetLineId ?? null,
       sourceKey: l.sourceKey ?? null,
+      itemId: l.itemId ?? null,
     })),
   });
   return sumCents(lines.map((l) => lineTotal(l.quantity, BigInt(l.unitPrice))));
@@ -83,11 +84,13 @@ async function storeOrderPdf(
     where: { id: poId },
     include: {
       lines: { orderBy: { position: 'asc' } },
-      project: { include: { tenant: true } },
+      project: true,
+      stockLocation: true,
+      tenant: true,
       supplier: true,
     },
   });
-  const t = po.project.tenant;
+  const t = po.tenant;
   const pdf = await renderPurchaseOrderPdf({
     tenant: {
       name: t.legalName ?? t.name,
@@ -103,7 +106,9 @@ async function storeOrderPdf(
     },
     number: at.number,
     date: at.date,
-    projectRef: `${po.project.number} — ${po.project.name}`,
+    projectRef: po.project
+      ? `${po.project.number} — ${po.project.name}`
+      : `Stock — ${po.stockLocation?.name ?? 'dépôt'}`,
     deliveryAddress: po.deliveryAddress,
     expectedOn: po.expectedOn,
     notes: po.notes,
@@ -222,26 +227,37 @@ export const purchasingRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async 
         const existing = await tx.purchaseOrder.findUnique({ where: { id: b.id } });
         if (existing && existing.status !== 'draft')
           throw conflict('purchase_order_sent', 'Ce bon de commande est envoyé : il ne se modifie plus.');
-        const project = await tx.project.findUnique({ where: { id: b.projectId }, include: { site: true } });
-        if (!project) throw notFound('Ce chantier');
+        const project = b.projectId
+          ? await tx.project.findUnique({ where: { id: b.projectId }, include: { site: true } })
+          : null;
+        if (b.projectId && !project) throw notFound('Ce chantier');
+        const location = b.stockLocationId
+          ? await tx.stockLocation.findFirst({ where: { id: b.stockLocationId, archivedAt: null } })
+          : null;
+        if (b.stockLocationId && !location) throw notFound('Cet emplacement de stock');
         if (!(await tx.supplier.findFirst({ where: { id: b.supplierId, archivedAt: null } })))
           throw notFound('Ce fournisseur');
         const posts = new Set(
-          (await tx.budgetLine.findMany({ where: { projectId: project.id }, select: { id: true } })).map(
-            (x) => x.id,
-          ),
+          project
+            ? (await tx.budgetLine.findMany({ where: { projectId: project.id }, select: { id: true } })).map(
+                (x) => x.id,
+              )
+            : [],
         );
         if (b.lines.some((l) => l.budgetLineId && !posts.has(l.budgetLineId)))
           throw badRequest('invalid_budget_line', 'Un poste ne fait pas partie de ce chantier.');
         const address =
           b.deliveryAddress ??
-          (project.site ? `${project.site.street}, ${project.site.postalCode} ${project.site.city}` : null);
+          (project?.site
+            ? `${project.site.street}, ${project.site.postalCode} ${project.site.city}`
+            : (location?.address ?? null));
         if (!existing)
           await tx.purchaseOrder.create({
             data: {
               id: b.id,
               tenantId: auth.tenantId,
-              projectId: project.id,
+              projectId: project?.id ?? null,
+              stockLocationId: location?.id ?? null,
               supplierId: b.supplierId,
               expectedOn: b.expectedOn ? new Date(`${b.expectedOn}T00:00:00Z`) : null,
               deliveryAddress: address,
@@ -292,14 +308,15 @@ export const purchasingRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async 
           );
         await tx.purchaseOrder.update({ where: { id: po.id }, data: { status: 'cancelled' } });
         await audit('purchase_order.cancelled', 'purchase_order', po.id, { number: po.number });
-        await emitEvent(tx, {
-          tenantId: auth.tenantId,
-          type: 'project.updated.v1',
-          aggregateType: 'project',
-          aggregateId: po.projectId,
-          payload: { projectId: po.projectId, fields: ['purchase_orders'] },
-          actor,
-        });
+        if (po.projectId)
+          await emitEvent(tx, {
+            tenantId: auth.tenantId,
+            type: 'project.updated.v1',
+            aggregateType: 'project',
+            aggregateId: po.projectId,
+            payload: { projectId: po.projectId, fields: ['purchase_orders'] },
+            actor,
+          });
         return { ok: true as const };
       }),
   );
@@ -336,7 +353,7 @@ export const purchasingRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async 
           );
         const now = new Date();
         const year = now.getUTCFullYear();
-        const t = po.project.tenant;
+        const t = await tx.tenant.findUniqueOrThrow({ where: { id: auth.tenantId } });
         const number = formatDocumentNumber(parseTenantSettings(t.settings).numbering.purchase_order, {
           year,
           sequence: await nextSequenceValue(tx, auth.tenantId, 'purchase_order', year),
@@ -355,8 +372,8 @@ export const purchasingRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async 
         await emitEvent(tx, {
           tenantId: auth.tenantId,
           type: 'purchase_order.sent.v1',
-          aggregateType: 'project',
-          aggregateId: po.projectId,
+          aggregateType: po.projectId ? 'project' : 'purchase_order',
+          aggregateId: po.projectId ?? po.id,
           payload: { purchaseOrderId: po.id, projectId: po.projectId, email },
           actor,
         });
@@ -443,8 +460,8 @@ export const purchasingRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async 
         await emitEvent(tx, {
           tenantId: auth.tenantId,
           type: 'purchase_order.received.v1',
-          aggregateType: 'project',
-          aggregateId: po.projectId,
+          aggregateType: po.projectId ? 'project' : 'purchase_order',
+          aggregateId: po.projectId ?? po.id,
           payload: { purchaseOrderId: po.id, projectId: po.projectId, complete },
           actor,
         });

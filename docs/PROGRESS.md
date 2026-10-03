@@ -3,12 +3,12 @@
 Ce fichier est le point de reprise entre sessions cloud. Une nouvelle session doit pouvoir reprendre le travail en ne lisant que lui et `CLAUDE.md`.
 
 ## Jalon en cours
-**M9 — Sous-traitance et conformité** — livré (domaine, base, adaptateur 30bis, API, worker, écrans, portail sous-traitant, seed, E2E P9 vert en local), en attente de la CI. M8 ✅ validé (CI run 43).
+**M10 — Réception, stock, matériel** — en cours. M9 ✅ validé (CI run 46 : checks + E2E sur les images de production).
 
 (L'étiquette `m0-done` existe localement mais le push de tags est refusé par la politique de la session : seule la branche est poussée.)
 
 ## Prochaine action
-Vérifier la CI du push M9 ; si verte, marquer M9 ✅ et démarrer M10 (réception provisoire et définitive, réserves → tâches, facture finale, libération de retenue, rapport de rentabilité, stock, matériel ; parcours P10 et P13).
+M10 (réception provisoire et définitive, réserves → tâches, facture finale, libération de retenue, rapport de rentabilité, stock, matériel ; parcours P10 et P13).
 
 ## Relancer l'environnement
 ```bash
@@ -119,7 +119,7 @@ docker compose -f docker-compose.coolify.yml -f docker/docker-compose.sandbox.ym
 - Seed : Dupont facturé par 3 états approuvés (2026-116 à 118, payables à réception, 118 échue de 3 jours, rappel n°1) ; toutes les factures émises comme l'application ; numérotation continue 2026-099 → 118.
 - Tests : 11 intégration API (dont 100 émissions concurrentes), 5 worker, 18 domaine, 7 documents ; E2E P7 (acompte, paiement partiel, état approuvé sur le portail, facture avec acompte déduit, paiement en ligne) + P8 sur téléphone.
 
-### M9 — Sous-traitance et conformité (en attente CI)
+### M9 — Sous-traitance et conformité ✅ (CI run 46)
 - Domaine (`subcontracting.ts`) : retenue 30bis (35 % social, 15 % fiscal du HTVA, plafonnée à la dette, paramétrable), validité et conformité des documents (expire bientôt à 30 j), déclaration de travaux probablement requise (≥ 30 000 € ou sous-traitant), échéancier du contrat, engagé restant ; cycle de vie du contrat ; 20 tests.
 - Base : contrats de sous-traitance, consultations 30bis (**preuve immuable**, déclencheur), documents des sous-traitants ; retenue sur les factures fournisseurs ; jetons de portail sous-traitant ; RLS (ADR 0018).
 - Intégration : `ThirtyBisChecker` + mock déterministe (dette sociale / fiscale / les deux selon le numéro) ; `THIRTY_BIS_PROVIDER`.
@@ -130,6 +130,7 @@ docker compose -f docker-compose.coolify.yml -f docker/docker-compose.sandbox.ym
 - Seed : Électro Pirson (sans dette, attestation ONSS à renouveler, acompte payé) et Façades Lemaire (dette sociale, assurance expirée, acompte bloqué, retenue 1 932 €) sur la « Rénovation de 4 appartements », déclaration de travaux à faire.
 - Tests : 15 intégration API (les deux chemins 30bis), 3 worker, 20 domaine, 2 documents ; E2E P9 (contrat sur un poste, portail, documents dont un expiré, facture imputée seule, mise à payer ; chemin dette : bloquée, retenue, document de versement) + portail sur téléphone.
 - Check In and Out : livré au M5 (mock + export + relance) — rien de neuf ici.
+- Correctif : une rafale d'émissions de factures attend son tour sur le verrou de numérotation (60 s) au lieu d'échouer après 10 s.
 
 ## Reste à faire
 M10 → M13 selon `docs/11-plan-de-livraison.md`.

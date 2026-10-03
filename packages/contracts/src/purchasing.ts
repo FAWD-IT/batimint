@@ -16,17 +16,25 @@ export const PurchaseOrderLineInputSchema = z.object({
   unitPrice: CentsSchema.min(0),
   budgetLineId: Uuid.nullable().optional(),
   sourceKey: z.string().max(80).nullable().optional(),
+  /** Article de la bibliothèque (réapprovisionnement du stock : entre en stock à la réception). */
+  itemId: Uuid.nullable().optional(),
 });
 
-export const PurchaseOrderInputSchema = z.object({
-  id: Uuid,
-  projectId: Uuid,
-  supplierId: Uuid,
-  expectedOn: IsoDay.nullable().optional(),
-  deliveryAddress: optText(300),
-  notes: optText(2000),
-  lines: z.array(PurchaseOrderLineInputSchema).min(1).max(200),
-});
+export const PurchaseOrderInputSchema = z
+  .object({
+    id: Uuid,
+    /** Un chantier, ou un emplacement de stock à réapprovisionner. */
+    projectId: Uuid.nullable().optional(),
+    stockLocationId: Uuid.nullable().optional(),
+    supplierId: Uuid,
+    expectedOn: IsoDay.nullable().optional(),
+    deliveryAddress: optText(300),
+    notes: optText(2000),
+    lines: z.array(PurchaseOrderLineInputSchema).min(1).max(200),
+  })
+  .refine((b) => Boolean(b.projectId) !== Boolean(b.stockLocationId), {
+    error: 'Un bon de commande est pour un chantier ou pour le stock.',
+  });
 export type PurchaseOrderInput = z.input<typeof PurchaseOrderInputSchema>;
 
 export const PurchaseOrderLineSchema = z.object({
@@ -42,6 +50,7 @@ export const PurchaseOrderLineSchema = z.object({
   receivedQuantity: DecimalString,
   /** Ligne du devis d'origine (proposition de commande), conservée à l'édition du brouillon. */
   sourceKey: z.string().nullable(),
+  itemId: Uuid.nullable(),
 });
 
 export const PurchaseOrderStatusSchema = z.enum([
@@ -56,7 +65,9 @@ export const PurchaseOrderSchema = z.object({
   id: Uuid,
   number: z.string().nullable(),
   status: PurchaseOrderStatusSchema,
-  project: z.object({ id: Uuid, number: z.string(), name: z.string() }),
+  /** Chantier ; nul pour un réapprovisionnement du stock (livré à `stockLocation`). */
+  project: z.object({ id: Uuid, number: z.string(), name: z.string() }).nullable(),
+  stockLocation: z.object({ id: Uuid, name: z.string() }).nullable(),
   supplier: z.object({ id: Uuid, name: z.string(), orderEmail: z.string().nullable() }),
   expectedOn: IsoDay.nullable(),
   deliveryAddress: z.string().nullable(),

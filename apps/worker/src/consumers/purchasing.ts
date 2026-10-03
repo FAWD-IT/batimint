@@ -15,6 +15,7 @@ import {
   formatEuros,
   lineTotal,
   matchSupplierInvoice,
+  normalizeRef,
   remainingCommitment,
   roundHalfAwayFromZero,
 } from '@batimint/domain';
@@ -99,7 +100,9 @@ export async function recomputeOrderCommitment(ctx: ConsumerContext, orderId: st
     where: { id: orderId },
     include: { lines: true, supplier: true },
   });
-  if (!po) return;
+  // Réapprovisionnement du stock : aucun engagement sur un chantier.
+  if (!po?.projectId) return;
+  const projectId = po.projectId;
   const prefix = `${po.id}:`;
   const current = await tx.projectCost.findMany({
     where: { category: 'purchase_order', sourceType: 'purchase_order', sourceId: { startsWith: prefix } },
@@ -115,7 +118,7 @@ export async function recomputeOrderCommitment(ctx: ConsumerContext, orderId: st
     const invoiced = new Map<string | null, bigint>();
     for (const a of await tx.costAllocation.findMany({
       where: {
-        projectId: po.projectId,
+        projectId,
         invoice: {
           purchaseOrderId: po.id,
           status: { in: ['allocated', 'validated', 'to_pay', 'blocked', 'paid'] },
@@ -135,9 +138,9 @@ export async function recomputeOrderCommitment(ctx: ConsumerContext, orderId: st
       tenantId: ctx.event.tenantId,
       type: 'project.cost_recorded.v1',
       aggregateType: 'project',
-      aggregateId: po.projectId,
+      aggregateId: projectId,
       payload: {
-        projectId: po.projectId,
+        projectId,
         costId: c.id,
         budgetLineId: c.budgetLineId,
         category: 'purchase_order',
@@ -148,7 +151,7 @@ export async function recomputeOrderCommitment(ctx: ConsumerContext, orderId: st
   }
   for (const [sourceId, w] of wanted)
     await upsertCost(ctx, {
-      projectId: po.projectId,
+      projectId,
       budgetLineId: w.budgetLineId,
       category: 'purchase_order',
       sourceType: 'purchase_order',
@@ -170,27 +173,31 @@ export const purchaseOrderSent: Consumer = {
         include: { supplier: true },
       });
       if (!po) return;
-      await tx.timelineEntry.create({
-        data: {
-          tenantId: event.tenantId,
-          eventId: event.id,
-          projectId: po.projectId,
-          type: 'purchase_order.received',
-          title: `${p.complete ? 'Livraison complète' : 'Livraison partielle'} : ${po.number} (${po.supplier.name})`,
-          actorLabel: (event.actor as { label?: string } | null)?.label ?? null,
-          occurredAt: event.occurredAt,
-        },
-      });
-      await publish(ctx, [po.projectId], ['timeline', 'purchase_orders']);
+      if (po.projectId)
+        await tx.timelineEntry.create({
+          data: {
+            tenantId: event.tenantId,
+            eventId: event.id,
+            projectId: po.projectId,
+            type: 'purchase_order.received',
+            title: `${p.complete ? 'Livraison complète' : 'Livraison partielle'} : ${po.number} (${po.supplier.name})`,
+            actorLabel: (event.actor as { label?: string } | null)?.label ?? null,
+            occurredAt: event.occurredAt,
+          },
+        });
+      await publish(ctx, po.projectId ? [po.projectId] : [], ['timeline', 'purchase_orders']);
       return;
     }
     const p = parseEventPayload('purchase_order.sent.v1', event.payload);
     const po = await tx.purchaseOrder.findUnique({
       where: { id: p.purchaseOrderId },
-      include: { supplier: true, project: { include: { tenant: true } } },
+      include: { supplier: true, project: true, stockLocation: true, tenant: true },
     });
     if (!po || po.status === 'draft') return;
-    const t = po.project.tenant;
+    const t = po.tenant;
+    const destination = po.project
+      ? `pour le chantier « ${po.project.name} »`
+      : `pour notre stock (${po.stockLocation?.name ?? 'dépôt'})`;
     const pdf = po.pdfKey
       ? await deps.integrations.storage.get('uploads', po.pdfKey).catch(() => null)
       : null;
@@ -201,7 +208,7 @@ export const purchaseOrderSent: Consumer = {
         title: `Bon de commande ${po.number}`,
         paragraphs: [
           'Bonjour,',
-          `Veuillez trouver ci-joint notre bon de commande ${po.number} pour le chantier « ${po.project.name} » (${formatEuros(po.totalNet)} HTVA).`,
+          `Veuillez trouver ci-joint notre bon de commande ${po.number} ${destination} (${formatEuros(po.totalNet)} HTVA).`,
           po.deliveryAddress ? `Livraison : ${po.deliveryAddress}.` : 'Adresse de livraison à convenir.',
           `Merci de reporter le numéro ${po.number} sur votre facture (référence d’achat Peppol) : elle sera rapprochée automatiquement.`,
         ],
@@ -216,22 +223,23 @@ export const purchaseOrderSent: Consumer = {
           }
         : {}),
     });
-    await tx.timelineEntry.create({
-      data: {
-        tenantId: event.tenantId,
-        eventId: event.id,
-        projectId: po.projectId,
-        customerId: po.project.customerId,
-        type: 'purchase_order.sent',
-        title: `Bon de commande ${po.number} envoyé à ${po.supplier.name}`,
-        body: p.email,
-        amount: -po.totalNet,
-        actorLabel: (event.actor as { label?: string } | null)?.label ?? null,
-        occurredAt: event.occurredAt,
-      },
-    });
+    if (po.project)
+      await tx.timelineEntry.create({
+        data: {
+          tenantId: event.tenantId,
+          eventId: event.id,
+          projectId: po.project.id,
+          customerId: po.project.customerId,
+          type: 'purchase_order.sent',
+          title: `Bon de commande ${po.number} envoyé à ${po.supplier.name}`,
+          body: p.email,
+          amount: -po.totalNet,
+          actorLabel: (event.actor as { label?: string } | null)?.label ?? null,
+          occurredAt: event.occurredAt,
+        },
+      });
     await recomputeOrderCommitment(ctx, po.id);
-    await publish(ctx, [po.projectId], ['timeline', 'purchase_orders', 'project']);
+    await publish(ctx, po.projectId ? [po.projectId] : [], ['timeline', 'purchase_orders', 'project']);
   },
 };
 
@@ -316,6 +324,31 @@ export const supplierInvoiceMatching: Consumer = {
       where: { status: { in: ['preparation', 'in_progress', 'suspended', 'provisional_acceptance'] } },
       include: { site: true, budgetLines: { orderBy: { position: 'asc' } } },
     });
+    // Facture d'un réapprovisionnement du stock : rapprochée du BC, sans imputation à un chantier
+    // (la valeur entre en stock à la réception de la marchandise).
+    const ref = invoice.orderReference ? normalizeRef(invoice.orderReference) : null;
+    const stockOrder = ref ? orders.find((o) => !o.projectId && normalizeRef(o.number!) === ref) : undefined;
+    if (stockOrder) {
+      await tx.supplierInvoice.update({
+        where: { id: invoice.id },
+        data: {
+          status: 'allocated',
+          matchMethod: 'purchase_order',
+          matchConfidence: '1.000',
+          purchaseOrderId: stockOrder.id,
+          allocatedAt: new Date(),
+        },
+      });
+      await emitEvent(tx, {
+        tenantId: event.tenantId,
+        type: 'supplier_invoice.allocated.v1',
+        aggregateType: 'supplier_invoice',
+        aggregateId: invoice.id,
+        payload: { invoiceId: invoice.id, projectIds: [], automatic: true },
+        actor: SYSTEM,
+      });
+      return;
+    }
     const match = matchSupplierInvoice({
       invoice: {
         supplierId: invoice.supplierId,
@@ -323,7 +356,9 @@ export const supplierInvoiceMatching: Consumer = {
         texts: [invoice.notes ?? '', ...lines.map((l) => l.description)],
         deliveryAddress: invoice.deliveryAddress,
       },
-      orders: orders.map((o) => ({ ...o, number: o.number! })),
+      orders: orders.flatMap((o) =>
+        o.projectId ? [{ ...o, number: o.number!, projectId: o.projectId }] : [],
+      ),
       projects: projects.map((x) => ({
         id: x.id,
         number: x.number,

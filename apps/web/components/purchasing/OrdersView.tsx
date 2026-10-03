@@ -147,18 +147,29 @@ export function OrdersTable({
                   {o.sentAt
                     ? t('orders.sentAgo', { date: relative(o.sentAt) })
                     : t('orders.createdAgo', { date: relative(o.createdAt) })}
-                  {showProject ? <span className="md:hidden"> · {o.project.number}</span> : null}
+                  {showProject ? (
+                    <span className="md:hidden"> · {o.project?.number ?? o.stockLocation?.name ?? ''}</span>
+                  ) : null}
                 </span>
               </button>
             </Td>
             {showProject ? (
               <Td className="hidden text-[14px] md:table-cell">
-                <Link
-                  href={`/chantiers/${o.project.id}?onglet=achats`}
-                  className="hover:underline focus-visible:outline-2 focus-visible:outline-accent"
-                >
-                  {o.project.number} · {o.project.name}
-                </Link>
+                {o.project ? (
+                  <Link
+                    href={`/chantiers/${o.project.id}?onglet=achats`}
+                    className="hover:underline focus-visible:outline-2 focus-visible:outline-accent"
+                  >
+                    {o.project.number} · {o.project.name}
+                  </Link>
+                ) : (
+                  <Link
+                    href="/stock"
+                    className="hover:underline focus-visible:outline-2 focus-visible:outline-accent"
+                  >
+                    {t('order.stockDestination', { name: o.stockLocation?.name ?? '' })}
+                  </Link>
+                )}
               </Td>
             ) : null}
             <Td align="right" className="hidden tabular-nums sm:table-cell">

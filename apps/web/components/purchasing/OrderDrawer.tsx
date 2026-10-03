@@ -65,12 +65,18 @@ export function OrderDrawer({
               {t(`status.${o.status}`)}
             </Chip>
             <span>{o.supplier.name}</span>
-            <Link
-              href={`/chantiers/${o.project.id}?onglet=achats`}
-              className="underline-offset-4 hover:underline"
-            >
-              {o.project.number} · {o.project.name}
-            </Link>
+            {o.project ? (
+              <Link
+                href={`/chantiers/${o.project.id}?onglet=achats`}
+                className="underline-offset-4 hover:underline"
+              >
+                {o.project.number} · {o.project.name}
+              </Link>
+            ) : o.stockLocation ? (
+              <Link href="/stock" className="underline-offset-4 hover:underline">
+                {t('stockDestination', { name: o.stockLocation.name })}
+              </Link>
+            ) : null}
           </span>
         ) : undefined
       }
@@ -87,7 +93,8 @@ export function OrderDrawer({
         <OrderEditor
           key={o ? `${o.id}-${o.totalNet}-${o.lines.length}` : 'new'}
           order={o ?? null}
-          projectId={o?.project.id ?? projectId!}
+          projectId={o ? (o.project?.id ?? null) : (projectId ?? null)}
+          stockLocationId={o?.stockLocation?.id ?? null}
           onSaved={setId}
           onDeleted={onClose}
         />
@@ -109,16 +116,19 @@ interface EditLine {
   unitPrice: number;
   budgetLineId: string | null;
   sourceKey: string | null;
+  itemId?: string | null;
 }
 
 function OrderEditor({
   order,
   projectId,
+  stockLocationId,
   onSaved,
   onDeleted,
 }: {
   order: PurchaseOrderDto | null;
-  projectId: string;
+  projectId: string | null;
+  stockLocationId: string | null;
   onSaved: (id: string) => void;
   onDeleted: () => void;
 }) {
@@ -126,7 +136,7 @@ function OrderEditor({
   const tc = useTranslations('common');
   const can = useCan();
   const queryClient = useQueryClient();
-  const project = useApi<ProjectDto>(['project', projectId], `/projects/${projectId}`);
+  const project = useApi<ProjectDto>(['project', projectId], projectId ? `/projects/${projectId}` : null);
   const suppliers = useApi<{ items: SupplierDto[] }>(['suppliers', 'list', ''], '/suppliers');
   const [id] = useState(() => order?.id ?? uuidv7());
   const [supplierId, setSupplierId] = useState(order?.supplier.id ?? '');
@@ -144,6 +154,7 @@ function OrderEditor({
           unitPrice: l.unitPrice,
           budgetLineId: l.budgetLineId,
           sourceKey: l.sourceKey,
+          itemId: l.itemId,
         }))
       : [newLine()],
   );
@@ -176,6 +187,7 @@ function OrderEditor({
     return {
       id,
       projectId,
+      stockLocationId,
       supplierId,
       expectedOn: expectedOn || null,
       deliveryAddress: deliveryAddress.trim() || null,
@@ -188,6 +200,7 @@ function OrderEditor({
         unitPrice: l.unitPrice,
         budgetLineId: l.budgetLineId,
         sourceKey: l.sourceKey,
+        itemId: l.itemId ?? null,
       })),
     };
   };

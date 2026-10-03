@@ -118,8 +118,16 @@ export const EventPayloads = {
   'project.arrival_scheduled.v1': z.object({ projectId: Uuid, startDate: z.string() }),
   /** Planning du lendemain d'une personne (envoyé à 18 h). */
   'planning.day_ahead.v1': z.object({ employeeId: Uuid, userId: Uuid, day: z.string() }),
-  'purchase_order.sent.v1': z.object({ purchaseOrderId: Uuid, projectId: Uuid, email: z.string() }),
-  'purchase_order.received.v1': z.object({ purchaseOrderId: Uuid, projectId: Uuid, complete: z.boolean() }),
+  'purchase_order.sent.v1': z.object({
+    purchaseOrderId: Uuid,
+    projectId: Uuid.nullable(),
+    email: z.string(),
+  }),
+  'purchase_order.received.v1': z.object({
+    purchaseOrderId: Uuid,
+    projectId: Uuid.nullable(),
+    complete: z.boolean(),
+  }),
   /** Facture fournisseur reçue (Peppol, dépôt, e-mail) : extraction puis rapprochement. */
   'supplier_invoice.received.v1': z.object({
     invoiceId: Uuid,
