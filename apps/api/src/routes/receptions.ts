@@ -33,6 +33,7 @@ import {
   RECEPTION_INCLUDE,
   receptionDto,
   renderReceptionFor,
+  signedReceptionPdf,
 } from '../services/receptions';
 
 const day = (d: string) => new Date(`${d}T00:00:00Z`);
@@ -310,16 +311,14 @@ export const receptionRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (
       },
     },
     async (req, reply) => {
-      const r = await inTenant(deps, req, 'projects.read', async ({ tx }) => {
-        const x = await tx.reception.findUnique({ where: { id: req.params.id } });
-        if (!x?.pdfKey) throw notFound('Ce PV');
-        return x;
-      });
-      const file = await deps.integrations.storage.get('legal', r.pdfKey!);
+      const r = await inTenant(deps, req, 'projects.read', async ({ tx }) =>
+        signedReceptionPdf(tx, deps.integrations.storage, req.params.id),
+      );
+      if (!r) throw notFound('Ce PV');
       return reply
         .header('content-type', 'application/pdf')
         .header('content-disposition', `inline; filename="${r.number}.pdf"`)
-        .send(file);
+        .send(r.pdf);
     },
   );
 

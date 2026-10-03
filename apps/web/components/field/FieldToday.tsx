@@ -20,6 +20,7 @@ import {
   HardHat,
   MapPin,
   Navigation,
+  Package,
   PenLine,
   Phone,
   TriangleAlert,
@@ -39,6 +40,7 @@ import { IssueSheet } from './IssueSheet';
 import { clockTime, duration, SyncPill, TEAM_COLORS, useFieldToday, usePhotoCapture } from './shared';
 import { WorkOrderSheet } from './WorkOrderSheet';
 import { ReceptionSheet } from '@/components/receptions/ReceptionSheet';
+import { StockOutSheet } from './StockOutSheet';
 
 type Today = FieldTodayDto & { fromCache?: string };
 type Status = 'todo' | 'in_progress' | 'done';
@@ -182,6 +184,7 @@ function Day({
   const [issueOpen, setIssueOpen] = useState(false);
   const [workOrderOpen, setWorkOrderOpen] = useState(false);
   const [receptionOpen, setReceptionOpen] = useState(false);
+  const [stockOpen, setStockOpen] = useState(false);
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
   const project = data.project;
@@ -405,7 +408,12 @@ function Day({
       <div
         className={cn(
           'grid gap-2.5',
-          data.can.workOrders && !data.can.reception ? 'grid-cols-3' : 'grid-cols-2',
+          (() => {
+            const n = [true, true, data.can.workOrders, data.can.reception, data.can.stock].filter(
+              Boolean,
+            ).length;
+            return n === 3 || n >= 5 ? 'grid-cols-3' : 'grid-cols-2';
+          })(),
         )}
       >
         <ActionTile
@@ -430,6 +438,13 @@ function Day({
             icon={<ClipboardCheck aria-hidden className="size-6" />}
             label={t('actions.reception')}
             onClick={() => setReceptionOpen(true)}
+          />
+        ) : null}
+        {data.can.stock ? (
+          <ActionTile
+            icon={<Package aria-hidden className="size-6" />}
+            label={t('actions.stock')}
+            onClick={() => setStockOpen(true)}
           />
         ) : null}
       </div>
@@ -580,6 +595,14 @@ function Day({
             setReceptionOpen(false);
             void queryClient.invalidateQueries({ queryKey: ['field', 'today'] });
           }}
+        />
+      ) : null}
+      {data.can.stock && stockOpen ? (
+        <StockOutSheet
+          projectId={project.id}
+          projectName={project.name}
+          employeeId={data.employee?.id ?? null}
+          onClose={() => setStockOpen(false)}
         />
       ) : null}
       {data.can.workOrders && workOrderOpen ? (

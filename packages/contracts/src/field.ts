@@ -4,6 +4,7 @@
  * journalier. Aucun prix dans ces échanges (l'Ouvrier ne voit pas les montants).
  */
 import { z } from 'zod';
+import { StockMovementInputSchema } from './stock';
 import { DecimalString, Uuid } from './common';
 
 const IsoDay = z.iso.date();
@@ -72,6 +73,8 @@ export const FieldTodaySchema = z.object({
     workOrders: z.boolean(),
     /** Réception provisoire à faire signer sur le chantier (P10.1). */
     reception: z.boolean(),
+    /** Sortie de stock (camionnette ou dépôt) vers le chantier du jour (P13). */
+    stock: z.boolean(),
   }),
 });
 export type FieldTodayDto = z.infer<typeof FieldTodaySchema>;
@@ -132,6 +135,8 @@ export const FieldActionSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('clock'), id: Uuid, data: ClockInputSchema }),
   z.object({ type: z.literal('task'), id: Uuid, data: TaskFieldUpdateSchema }),
   z.object({ type: z.literal('issue'), id: Uuid, data: IssueInputSchema }),
+  /** Sortie de stock vers le chantier (P13), prise dans la camionnette ou au dépôt. */
+  z.object({ type: z.literal('stock'), id: Uuid, data: StockMovementInputSchema }),
 ]);
 export type FieldAction = z.input<typeof FieldActionSchema>;
 

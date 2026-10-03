@@ -102,7 +102,9 @@
     "planning": "Planning",
     "purchasing": "Achats",
     "billing": "Facturation",
-    "subcontracting": "Sous-traitance"
+    "subcontracting": "Sous-traitance",
+    "stock": "Stock",
+    "equipment": "Matériel"
   },
   "notifications": {
     "title": "Notifications",
@@ -2080,7 +2082,8 @@
       "photo": "Photo",
       "report": "Signaler",
       "sign": "Faire signer",
-      "reception": "Réception"
+      "reception": "Réception",
+      "stock": "Matériaux"
     },
     "photo": {
       "queued": "{n, plural, one {Photo envoyée} other {# photos envoyées}}",
@@ -3326,6 +3329,252 @@
       "apply": "{n, plural, =0 {Appliquer} one {Appliquer # ajustement} other {Appliquer # ajustements}}",
       "applied": "{n, plural, one {# article mis à jour} other {# articles mis à jour}}",
       "noSuggestion": "Aucun écart significatif : la bibliothèque est juste pour ce chantier."
+    }
+  },
+  "stock": {
+    "title": "Stock",
+    "summary": "{value} en stock · {low, plural, =0 {aucun article sous le seuil} one {# article sous le seuil} other {# articles sous le seuil}}",
+    "newMovement": "Mouvement",
+    "newLocation": "Emplacement",
+    "locations": {
+      "label": "Emplacements",
+      "all": "Tous les emplacements",
+      "depot": "Dépôt",
+      "van": "Camionnette",
+      "items": "{n, plural, =0 {Vide} one {# article} other {# articles}}",
+      "low": "{n, plural, one {# sous le seuil} other {# sous le seuil}}",
+      "driver": "Conduite par {name}"
+    },
+    "tabs": {
+      "label": "Vue du stock",
+      "items": "Articles",
+      "movements": "Mouvements",
+      "reorder": "Réapprovisionnement"
+    },
+    "columns": {
+      "item": "Article",
+      "quantity": "Quantité",
+      "averageCost": "Coût moyen",
+      "value": "Valeur",
+      "threshold": "Seuil",
+      "date": "Date",
+      "kind": "Mouvement",
+      "location": "Emplacement",
+      "project": "Chantier",
+      "cost": "Coût"
+    },
+    "below": "Sous le seuil",
+    "noThreshold": "Aucun",
+    "setThreshold": "Seuil de {item}",
+    "breakdown": "{location} : {quantity}",
+    "noLocationsTitle": "Créez votre dépôt",
+    "noLocations": "Déclarez le dépôt et les camionnettes : chaque entrée, sortie vers un chantier ou transfert y est suivie au coût moyen pondéré.",
+    "emptyTitle": "Aucun article en stock",
+    "empty": "Enregistrez une entrée de stock, ou réceptionnez un bon de commande de réapprovisionnement.",
+    "movementsEmptyTitle": "Aucun mouvement",
+    "movementsEmpty": "Les entrées, sorties vers les chantiers, transferts et inventaires apparaîtront ici.",
+    "reorderEmptyTitle": "Rien à commander",
+    "reorderEmpty": "Aucun article n’est sous son seuil d’alerte. Fixez un seuil sur les articles que vous tenez en stock pour être prévenu.",
+    "reorder": {
+      "for": "Livraison : {location}",
+      "noSupplier": "Fournisseur à choisir",
+      "noSupplierHint": "Associez un fournisseur à ces articles dans la bibliothèque pour préparer la commande.",
+      "stock": "En stock : {quantity} · seuil {min}",
+      "prepare": "Préparer le bon de commande",
+      "prepared": "Bon de commande préparé en brouillon"
+    },
+    "kinds": {
+      "in": "Entrée",
+      "out": "Sortie chantier",
+      "transfer": "Transfert",
+      "adjustment": "Inventaire"
+    },
+    "movement": {
+      "title": "Nouveau mouvement de stock",
+      "description": "Les sorties sont imputées au poste du chantier au coût moyen pondéré.",
+      "kind": "Type de mouvement",
+      "item": "Article",
+      "chooseItem": "Choisissez un article",
+      "location": "Emplacement",
+      "from": "Depuis",
+      "to": "Vers",
+      "quantity": "Quantité ({unit})",
+      "counted": "Quantité comptée ({unit})",
+      "available": "Disponible : {quantity} {unit}",
+      "unitCost": "Prix d’achat unitaire HTVA",
+      "project": "Chantier",
+      "chooseProject": "Choisissez le chantier",
+      "post": "Poste",
+      "noPost": "Non ventilé",
+      "note": "Note",
+      "costPreview": "Coût imputé : environ {amount}",
+      "save": "Enregistrer",
+      "saved": "Mouvement enregistré",
+      "errors": {
+        "item": "Choisissez un article.",
+        "quantity": "Indiquez une quantité positive.",
+        "project": "Choisissez le chantier.",
+        "to": "Choisissez l’emplacement de destination.",
+        "location": "Choisissez l’emplacement."
+      }
+    },
+    "location": {
+      "title": "Nouvel emplacement",
+      "name": "Nom",
+      "namePlaceholder": "Dépôt de Gosselies",
+      "kind": "Type",
+      "address": "Adresse",
+      "driver": "Conduite par",
+      "noDriver": "Personne",
+      "save": "Créer l’emplacement",
+      "saved": "Emplacement créé",
+      "errors": {
+        "name": "Donnez un nom d’au moins 2 caractères."
+      }
+    },
+    "threshold": {
+      "description": "Sous ce seuil, le bureau est prévenu et l’article est proposé au réapprovisionnement.",
+      "min": "Seuil d’alerte ({unit})",
+      "reorder": "Quantité à commander ({unit})",
+      "reorderHint": "Par défaut : de quoi revenir au double du seuil.",
+      "location": "Emplacement",
+      "save": "Enregistrer le seuil",
+      "saved": "Seuil enregistré"
+    }
+  },
+  "equipment": {
+    "title": "Matériel",
+    "detailTitle": "Fiche matériel",
+    "summary": "{n, plural, =0 {Aucun matériel} one {# matériel} other {# matériels}} · {busy} sur chantier",
+    "new": "Nouveau matériel",
+    "emptyTitle": "Aucun matériel",
+    "empty": "Ajoutez vos machines et outillages : leur coût d’usage journalier est imputé au chantier où ils sont affectés, et leurs entretiens sont rappelés à date.",
+    "columns": {
+      "name": "Matériel",
+      "category": "Catégorie",
+      "assignedTo": "Affecté à",
+      "maintenance": "Prochain entretien",
+      "dailyCost": "Coût / jour",
+      "period": "Période",
+      "days": "Jours",
+      "cost": "Coût"
+    },
+    "available": "Disponible",
+    "since": "depuis le {date}",
+    "until": "jusqu’au {date}",
+    "perDay": "{amount} / jour",
+    "status": {
+      "ok": "Le {date}",
+      "due_soon": "Bientôt : {date}",
+      "overdue": "En retard : {date}"
+    },
+    "noMaintenance": "Aucun planifié",
+    "edit": "Modifier",
+    "current": {
+      "title": "Affectation",
+      "none": "Ce matériel est disponible.",
+      "assign": "Affecter à un chantier",
+      "return": "Retour",
+      "usage": "{days, plural, =0 {Aucun jour ouvré} one {# jour ouvré} other {# jours ouvrés}} · {amount} imputés"
+    },
+    "history": {
+      "title": "Historique des affectations",
+      "empty": "Jamais affecté à un chantier.",
+      "open": "en cours"
+    },
+    "maintenance": {
+      "title": "Entretiens et contrôles",
+      "empty": "Aucun entretien planifié. Planifiez les contrôles obligatoires pour être prévenu à temps.",
+      "plan": "Planifier",
+      "done": "Fait",
+      "doneOn": "Fait le {date}",
+      "every": "tous les {n} mois",
+      "kinds": {
+        "maintenance": "Entretien",
+        "inspection": "Contrôle"
+      }
+    },
+    "form": {
+      "title": "Nouveau matériel",
+      "editTitle": "Modifier le matériel",
+      "name": "Désignation",
+      "namePlaceholder": "Mini-pelle Kubota U17",
+      "code": "Code interne",
+      "category": "Catégorie",
+      "categoryPlaceholder": "Terrassement",
+      "serial": "N° de série",
+      "dailyCost": "Coût d’usage journalier",
+      "dailyCostHint": "Imputé au chantier par jour ouvré d’affectation.",
+      "purchasedOn": "Date d’achat",
+      "notes": "Notes",
+      "save": "Enregistrer",
+      "saved": "Matériel enregistré",
+      "errors": {
+        "name": "Donnez une désignation d’au moins 2 caractères."
+      }
+    },
+    "assign": {
+      "title": "Affecter {name}",
+      "project": "Chantier",
+      "chooseProject": "Choisissez le chantier",
+      "post": "Poste",
+      "noPost": "Non ventilé",
+      "start": "À partir du",
+      "end": "Retour prévu",
+      "save": "Affecter",
+      "saved": "Matériel affecté",
+      "errors": {
+        "project": "Choisissez le chantier.",
+        "dates": "Le retour précède l’affectation."
+      }
+    },
+    "returnDialog": {
+      "title": "Retour de {name}",
+      "description": "Le coût d’usage est arrêté à cette date.",
+      "end": "Rendu le",
+      "save": "Enregistrer le retour",
+      "saved": "Retour enregistré"
+    },
+    "plan": {
+      "title": "Planifier un entretien",
+      "kind": "Type",
+      "label": "Intitulé",
+      "labelPlaceholder": "Contrôle périodique (SECT)",
+      "dueOn": "Échéance",
+      "interval": "Périodicité (mois)",
+      "intervalHint": "Le suivant est planifié automatiquement quand celui-ci est fait.",
+      "save": "Planifier",
+      "saved": "Entretien planifié",
+      "errors": {
+        "label": "Donnez un intitulé.",
+        "dueOn": "Choisissez une échéance."
+      }
+    },
+    "doneDialog": {
+      "title": "{label} fait",
+      "doneOn": "Fait le",
+      "cost": "Coût",
+      "notes": "Notes",
+      "save": "Enregistrer",
+      "saved": "Entretien enregistré"
+    }
+  },
+  "fieldStock": {
+    "title": "Sortie de matériaux",
+    "description": "Ce que tu prends pour {project} est imputé au chantier.",
+    "location": "Pris dans",
+    "item": "Article",
+    "chooseItem": "Choisis un article",
+    "available": "Il reste {quantity} {unit}",
+    "quantity": "Quantité ({unit})",
+    "post": "Pour le poste",
+    "noPost": "Je ne sais pas",
+    "empty": "Rien en stock ici. Demande au bureau de réapprovisionner.",
+    "save": "Enregistrer la sortie",
+    "saved": "{quantity} {unit} de {item} imputés au chantier",
+    "errors": {
+      "item": "Choisis un article.",
+      "quantity": "Indique une quantité positive."
     }
   }
 }

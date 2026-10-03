@@ -11,6 +11,7 @@ import { seedPlanning } from './seed-planning';
 import { seedProjects } from './seed-projects';
 import { seedPurchasing } from './seed-purchasing';
 import { seedQuotes } from './seed-quotes';
+import { seedStock, seedReceptions } from './seed-stock';
 import { seedSubcontracting } from './seed-subcontracting';
 import { loadEnv } from './env';
 import { hashPassword } from './password';
@@ -249,6 +250,8 @@ async function main(): Promise<void> {
         await seedPlanning(tx, tenant.id, users, brusselsDate(new Date()));
         await seedPurchasing(tx, tenant.id, users, brusselsDate(new Date()));
         await seedSubcontracting(tx, tenant.id, users, brusselsDate(new Date()));
+        await seedStock(tx, tenant.id, users, brusselsDate(new Date()));
+        await seedReceptions(tx, tenant.id, users, brusselsDate(new Date()));
       },
       { timeoutMs: 120_000 },
     );

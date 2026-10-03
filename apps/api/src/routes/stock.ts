@@ -22,6 +22,7 @@ import {
 import { emitEvent, recordStockMovement, type Tx } from '@batimint/db';
 import {
   brusselsDate,
+  can,
   dec,
   equipmentUsageCost,
   equipmentUsageDays,
@@ -37,8 +38,8 @@ import {
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import type { AppDeps } from '../context';
-import { badRequest, conflict, notFound, unprocessable } from '../lib/errors';
-import { inTenant, isoDate } from '../lib/tenant';
+import { badRequest, conflict, forbidden, notFound, unprocessable } from '../lib/errors';
+import { inTenant, isoDate, type TenantScope } from '../lib/tenant';
 
 const day = (d: string) => new Date(`${d}T00:00:00Z`);
 
@@ -225,6 +226,61 @@ function stockError(err: unknown): never {
   throw err;
 }
 
+/**
+ * Mouvement de stock (bureau ou terrain hors ligne) : contrôles, mouvement au CMP, audit.
+ * Un renvoi du même identifiant renvoie le mouvement déjà enregistré.
+ */
+export async function createStockMovement(
+  { tx, auth, actor, audit }: TenantScope,
+  b: z.infer<typeof StockMovementInputSchema>,
+) {
+  if (!can(auth.role, 'stock.write')) throw forbidden();
+  const existing = await tx.stockMovement.findUnique({ where: { id: b.id } });
+  if (existing) return existing;
+  if (!(await tx.stockLocation.findFirst({ where: { id: b.locationId, archivedAt: null } })))
+    throw notFound('Cet emplacement');
+  if (
+    b.toLocationId &&
+    !(await tx.stockLocation.findFirst({ where: { id: b.toLocationId, archivedAt: null } }))
+  )
+    throw notFound('Cet emplacement de destination');
+  const item = await tx.item.findUnique({ where: { id: b.itemId } });
+  if (!item) throw notFound('Cet article');
+  if (b.kind === 'out') {
+    const p = await tx.project.findUnique({ where: { id: b.projectId! } });
+    if (!p) throw notFound('Ce chantier');
+    if (['closed'].includes(p.status))
+      throw conflict('project_closed', 'Ce chantier est clôturé : on n’y impute plus de coût.');
+    if (
+      b.budgetLineId &&
+      !(await tx.budgetLine.findFirst({ where: { id: b.budgetLineId, projectId: p.id } }))
+    )
+      throw badRequest('invalid_budget_line', 'Ce poste ne fait pas partie du chantier.');
+  }
+  const m = await recordStockMovement(tx, {
+    id: b.id,
+    tenantId: auth.tenantId,
+    kind: b.kind,
+    itemId: b.itemId,
+    locationId: b.locationId,
+    quantity: b.quantity,
+    unitCost: b.unitCost === undefined || b.unitCost === null ? null : BigInt(b.unitCost),
+    toLocationId: b.toLocationId ?? null,
+    projectId: b.projectId ?? null,
+    budgetLineId: b.budgetLineId ?? null,
+    note: b.note ?? null,
+    userId: auth.userId,
+    actor,
+  }).catch(stockError);
+  await audit(`stock.${b.kind}`, 'item', b.itemId, {
+    movementId: m.id,
+    quantity: m.quantity.toString(),
+    totalCost: m.totalCost.toString(),
+    projectId: m.projectId,
+  });
+  return m;
+}
+
 export const stockRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (app, { deps }) => {
   // -------------------------------------------------------------------------
   // Emplacements et niveaux
@@ -371,49 +427,9 @@ export const stockRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (app,
       },
     },
     async (req, reply) => {
-      const dto = await inTenant(deps, req, 'stock.write', async ({ tx, auth, actor, audit }) => {
-        const b = req.body;
-        if (!(await tx.stockLocation.findFirst({ where: { id: b.locationId, archivedAt: null } })))
-          throw notFound('Cet emplacement');
-        if (
-          b.toLocationId &&
-          !(await tx.stockLocation.findFirst({ where: { id: b.toLocationId, archivedAt: null } }))
-        )
-          throw notFound('Cet emplacement de destination');
-        const item = await tx.item.findUnique({ where: { id: b.itemId } });
-        if (!item) throw notFound('Cet article');
-        if (b.kind === 'out') {
-          const p = await tx.project.findUnique({ where: { id: b.projectId! } });
-          if (!p) throw notFound('Ce chantier');
-          if (['closed'].includes(p.status))
-            throw conflict('project_closed', 'Ce chantier est clôturé : on n’y impute plus de coût.');
-          if (
-            b.budgetLineId &&
-            !(await tx.budgetLine.findFirst({ where: { id: b.budgetLineId, projectId: p.id } }))
-          )
-            throw badRequest('invalid_budget_line', 'Ce poste ne fait pas partie du chantier.');
-        }
-        const m = await recordStockMovement(tx, {
-          id: b.id,
-          tenantId: auth.tenantId,
-          kind: b.kind,
-          itemId: b.itemId,
-          locationId: b.locationId,
-          quantity: b.quantity,
-          unitCost: b.unitCost === undefined || b.unitCost === null ? null : BigInt(b.unitCost),
-          toLocationId: b.toLocationId ?? null,
-          projectId: b.projectId ?? null,
-          budgetLineId: b.budgetLineId ?? null,
-          note: b.note ?? null,
-          userId: auth.userId,
-          actor,
-        }).catch(stockError);
-        await audit(`stock.${b.kind}`, 'item', b.itemId, {
-          movementId: m.id,
-          quantity: m.quantity.toString(),
-          totalCost: m.totalCost.toString(),
-          projectId: m.projectId,
-        });
+      const dto = await inTenant(deps, req, 'stock.write', async (scope) => {
+        const m = await createStockMovement(scope, req.body);
+        const { tx } = scope;
         return (await movementDtos(tx, [m]))[0]!;
       });
       return reply.status(201).send(dto);

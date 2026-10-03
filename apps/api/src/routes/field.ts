@@ -37,6 +37,7 @@ import { v7 as uuidv7 } from 'uuid';
 import { z } from 'zod';
 import type { AppDeps } from '../context';
 import { badRequest, conflict, forbidden, notFound } from '../lib/errors';
+import { createStockMovement } from './stock';
 import { inTenant, iso, isoDate, type TenantScope } from '../lib/tenant';
 import {
   actionError,
@@ -413,6 +414,10 @@ export const fieldRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (app,
                     select: { id: true },
                   })
                 : null),
+            stock:
+              can(auth.role, 'stock.write') &&
+              Boolean(project && project.status !== 'closed') &&
+              (await tx.stockLocation.count({ where: { archivedAt: null } })) > 0,
           },
         };
       }),
@@ -461,7 +466,7 @@ export const fieldRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (app,
     {
       schema: {
         tags: ['terrain'],
-        summary: 'Synchronisation hors ligne par lots (pointages, tâches, signalements)',
+        summary: 'Synchronisation hors ligne par lots (pointages, tâches, signalements, sorties de stock)',
         body: FieldSyncRequestSchema,
         response: { 200: FieldSyncResponseSchema },
       },
@@ -479,6 +484,10 @@ export const fieldRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (app,
             }
             if (action.type === 'task') {
               await updateTaskFromField(scope, action.data);
+              return {};
+            }
+            if (action.type === 'stock') {
+              await createStockMovement(scope, action.data);
               return {};
             }
             await createIssue(scope, action.data);

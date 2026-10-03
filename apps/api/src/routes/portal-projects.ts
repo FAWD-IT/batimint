@@ -38,6 +38,7 @@ import {
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { v7 as uuidv7 } from 'uuid';
 import { z } from 'zod';
+import { signedReceptionPdf } from '../services/receptions';
 import type { AppDeps } from '../context';
 import { AppError, conflict } from '../lib/errors';
 import { iso, isoDate } from '../lib/tenant';
@@ -464,16 +465,19 @@ export const portalProjectRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = asy
     { schema: { tags: ['portail'], summary: 'PV de réception signé', params: coParams, hide: true } },
     async (req, reply) => {
       const t = await resolveProjectToken(deps, req.params.token);
-      const rc = await withTenant(deps.prisma, t.tenantId, null, (tx) =>
-        tx.reception.findFirst({ where: { id: req.params.id, projectId: t.projectId, status: 'signed' } }),
-      );
-      if (!rc?.pdfKey) throw portalNotFound();
-      const pdf = Buffer.from(await deps.integrations.storage.get('legal', rc.pdfKey));
+      const rc = await withTenant(deps.prisma, t.tenantId, null, async (tx) => {
+        const x = await tx.reception.findFirst({
+          where: { id: req.params.id, projectId: t.projectId, status: 'signed' },
+          select: { id: true },
+        });
+        return x ? signedReceptionPdf(tx, deps.integrations.storage, x.id) : null;
+      });
+      if (!rc) throw portalNotFound();
       return reply
         .header('content-type', 'application/pdf')
         .header('content-disposition', `inline; filename="${rc.number}.pdf"`)
         .header('cache-control', 'private, no-store')
-        .send(pdf);
+        .send(rc.pdf);
     },
   );
 

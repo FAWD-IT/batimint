@@ -4,7 +4,8 @@
  */
 import type { ProfitabilityDto, ProjectReceptionDto, ReceptionDto } from '@batimint/contracts';
 import { loadProjectNumbers, type Tx } from '@batimint/db';
-import { renderReceptionPdf } from '@batimint/documents';
+import { renderReceptionPdf, sha256 } from '@batimint/documents';
+import type { ObjectStorage } from '@batimint/integrations';
 import {
   type Cents,
   dec,
@@ -303,4 +304,35 @@ export async function profitability(tx: Tx, projectId: string, tenantId: string)
       variance: s.variance.toString(),
     })),
   };
+}
+
+/**
+ * PDF d'un PV signé : celui qui a été figé à la signature ; s'il manque (PV du seed de démo), il
+ * est rendu une seule fois depuis les données signées, puis son empreinte ne change plus.
+ */
+export async function signedReceptionPdf(
+  tx: Tx,
+  storage: ObjectStorage,
+  receptionId: string,
+): Promise<{ pdf: Buffer; number: string } | null> {
+  const r = await tx.reception.findUnique({ where: { id: receptionId } });
+  if (!r || r.status !== 'signed' || !r.number) return null;
+  if (r.pdfKey) return { pdf: Buffer.from(await storage.get('legal', r.pdfKey)), number: r.number };
+  const pdf = await renderReceptionFor(
+    tx,
+    r.id,
+    r.signerName && r.signedAt ? { signerName: r.signerName, signedAt: r.signedAt, ip: null } : null,
+    r.number,
+  );
+  const hash = sha256(pdf);
+  const key = `t/${r.tenantId}/receptions/${r.id}/${r.number}-signe-${hash.slice(0, 12)}.pdf`;
+  await storage.put({
+    bucket: 'legal',
+    key,
+    body: pdf,
+    contentType: 'application/pdf',
+    metadata: { sha256: hash },
+  });
+  await tx.reception.update({ where: { id: r.id }, data: { pdfKey: key, pdfSha256: hash } });
+  return { pdf, number: r.number };
 }
