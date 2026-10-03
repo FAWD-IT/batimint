@@ -524,7 +524,7 @@ describe('numérotation légale (règle n°4)', () => {
         ],
       });
     const issued = await Promise.all(ids.map((id) => inject('POST', `/v1/invoices/${id}/issue`)));
-    expect(issued.every((r) => r.statusCode === 200)).toBe(true);
+    expect(issued.filter((r) => r.statusCode !== 200).map((r) => r.body)).toEqual([]);
     const seqs = issued
       .map((r) => Number((r.json() as InvoiceDto).number!.split('-')[1]))
       .sort((a, b) => a - b);

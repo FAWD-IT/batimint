@@ -14,6 +14,8 @@ export interface DbContext {
 
 export interface TxOptions {
   timeoutMs?: number;
+  /** Attente maximale d'une connexion du pool (rafales sur une ressource verrouillée). */
+  maxWaitMs?: number;
   isolationLevel?: 'ReadCommitted' | 'RepeatableRead' | 'Serializable';
 }
 
@@ -37,7 +39,7 @@ export function withContext<T>(
     },
     {
       timeout: options.timeoutMs ?? 20_000,
-      maxWait: 10_000,
+      maxWait: options.maxWaitMs ?? 10_000,
       ...(options.isolationLevel ? { isolationLevel: options.isolationLevel } : {}),
     },
   );

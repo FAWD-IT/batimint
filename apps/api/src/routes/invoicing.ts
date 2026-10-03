@@ -298,23 +298,31 @@ export const invoicingRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (
       },
     },
     (req) =>
-      inTenant(deps, req, 'invoices.issue', async ({ tx, auth, actor, audit }) => {
-        const before = await tx.invoice.findUnique({ where: { id: req.params.id } });
-        if (before && before.status !== 'draft') return invoiceDto(tx, await loadInvoice(tx, req.params.id));
-        await issueInvoice(tx, deps.integrations, {
-          tenantId: auth.tenantId,
-          invoiceId: req.params.id,
-          userId: auth.userId,
-          actor,
-        });
-        const i = await loadInvoice(tx, req.params.id);
-        await audit('invoice.issued', 'invoice', i.id, {
-          number: i.number,
-          totalGross: i.totalGross.toString(),
-          type: i.type,
-        });
-        return invoiceDto(tx, i);
-      }),
+      // Les émissions se suivent sur le verrou de la séquence : une rafale attend son tour.
+      inTenant(
+        deps,
+        req,
+        'invoices.issue',
+        async ({ tx, auth, actor, audit }) => {
+          const before = await tx.invoice.findUnique({ where: { id: req.params.id } });
+          if (before && before.status !== 'draft')
+            return invoiceDto(tx, await loadInvoice(tx, req.params.id));
+          await issueInvoice(tx, deps.integrations, {
+            tenantId: auth.tenantId,
+            invoiceId: req.params.id,
+            userId: auth.userId,
+            actor,
+          });
+          const i = await loadInvoice(tx, req.params.id);
+          await audit('invoice.issued', 'invoice', i.id, {
+            number: i.number,
+            totalGross: i.totalGross.toString(),
+            type: i.type,
+          });
+          return invoiceDto(tx, i);
+        },
+        { maxWaitMs: 60_000, timeoutMs: 60_000 },
+      ),
   );
 
   for (const kind of ['pdf', 'ubl'] as const)
