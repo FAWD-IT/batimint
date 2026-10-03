@@ -2556,7 +2556,8 @@
         "invalid": "Saisissez des quantités valides (ex. 2 ou 2,5).",
         "nothing": "Indiquez au moins une quantité reçue."
       },
-      "stockDestination": "Stock · {name}"
+      "stockDestination": "Stock · {name}",
+      "deliveryStockHint": "Vide : livraison à l’emplacement de stock."
     },
     "proposal": {
       "open": "Commander les matériaux",

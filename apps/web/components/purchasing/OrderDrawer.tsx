@@ -263,7 +263,7 @@ function OrderEditor({
           containerClassName="sm:col-span-2"
           value={deliveryAddress}
           placeholder={project.data?.site?.address ?? ''}
-          hint={t('deliveryHint')}
+          hint={stockLocationId ? t('deliveryStockHint') : t('deliveryHint')}
           disabled={!editable}
           onChange={(e) => setDeliveryAddress(e.target.value)}
         />
@@ -309,17 +309,19 @@ function OrderEditor({
                 cents={l.unitPrice}
                 onChange={(unitPrice) => update(l.key, { unitPrice })}
               />
-              <SelectField
-                label={t('line.post')}
-                containerClassName="sm:col-span-2"
-                value={l.budgetLineId ?? ''}
-                disabled={!editable}
-                options={[
-                  { value: '', label: t('line.noPost') },
-                  ...posts.map((b) => ({ value: b.id, label: b.label })),
-                ]}
-                onChange={(e) => update(l.key, { budgetLineId: e.target.value || null })}
-              />
+              {stockLocationId ? null : (
+                <SelectField
+                  label={t('line.post')}
+                  containerClassName="sm:col-span-2"
+                  value={l.budgetLineId ?? ''}
+                  disabled={!editable}
+                  options={[
+                    { value: '', label: t('line.noPost') },
+                    ...posts.map((b) => ({ value: b.id, label: b.label })),
+                  ]}
+                  onChange={(e) => update(l.key, { budgetLineId: e.target.value || null })}
+                />
+              )}
               {editable ? (
                 <div className="flex items-end justify-between gap-2 sm:col-span-6">
                   <span className="text-[13px] text-muted tabular-nums">
