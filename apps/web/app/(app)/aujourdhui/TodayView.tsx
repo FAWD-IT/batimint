@@ -88,6 +88,23 @@ export function TodayView() {
           <Skeleton className="h-64" />
           <Skeleton className="h-64" />
         </div>
+      ) : !d.sites.length &&
+        !d.changes.length &&
+        !d.alerts.length &&
+        !Object.values(d.figures ?? {}).some(Boolean) ? (
+        // Nouvel espace : rien à montrer encore, on explique ce qui viendra ici.
+        <EmptyState
+          icon={<Sun aria-hidden className="size-5" />}
+          title={t('emptyTitle')}
+          description={t('emptyDescription')}
+          action={
+            can('diagnostics.run') ? (
+              <Link href="/parametres/diagnostic" className={buttonClasses('secondary')}>
+                {t('emptyAction')}
+              </Link>
+            ) : null
+          }
+        />
       ) : (
         <>
           {d.figures ? (
