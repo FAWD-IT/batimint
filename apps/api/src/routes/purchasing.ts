@@ -732,6 +732,15 @@ export const purchasingRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async 
             ? { thirtyBisCheckId: gate.checkId, social: String(gate.social), tax: String(gate.tax) }
             : {}),
         });
+        if (target === 'paid')
+          await emitEvent(tx, {
+            tenantId: auth.tenantId,
+            type: 'supplier_invoice.paid.v1',
+            aggregateType: 'supplier_invoice',
+            aggregateId: i.id,
+            payload: { invoiceId: i.id },
+            actor,
+          });
         if (gate && !gate.ok)
           await emitEvent(tx, {
             tenantId: auth.tenantId,

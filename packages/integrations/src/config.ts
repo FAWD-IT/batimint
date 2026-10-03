@@ -1,6 +1,8 @@
 /**
  * Sélection des implémentations par variables d'environnement (mock par défaut, règle n°5).
  */
+import { MockAccountingSync } from './accounting/mock';
+import type { AccountingSync } from './accounting/types';
 import { MockAiAssistant } from './ai/mock';
 import type { AiAssistant } from './ai/types';
 import { MockMailer } from './mail/mock';
@@ -32,6 +34,14 @@ export interface Integrations {
   attendance: AttendanceRegistry;
   thirtyBis: ThirtyBisChecker;
   payments: PaymentLinkProvider;
+  accounting: AccountingSync;
+}
+
+export function createAccountingSync(env: Env = process.env): AccountingSync {
+  const provider = env['ACCOUNTING_PROVIDER'] ?? 'mock';
+  if (provider !== 'mock')
+    throw new Error(`ACCOUNTING_PROVIDER=${provider} n'est pas encore disponible : utilisez « mock ».`);
+  return new MockAccountingSync();
 }
 
 export function createAttendanceRegistry(env: Env = process.env): AttendanceRegistry {
@@ -113,6 +123,7 @@ export function createIntegrations(env: Env = process.env): Integrations {
     attendance: createAttendanceRegistry(env),
     thirtyBis: createThirtyBisChecker(env),
     payments: createPaymentLinkProvider(env),
+    accounting: createAccountingSync(env),
   };
 }
 
@@ -127,6 +138,7 @@ export function createMockIntegrations(overrides: Partial<Integrations> = {}): I
     attendance: new MockAttendanceRegistry(),
     thirtyBis: new MockThirtyBisChecker(),
     payments: new MockPaymentLinkProvider(),
+    accounting: new MockAccountingSync(),
     ...overrides,
   };
 }

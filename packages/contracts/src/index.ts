@@ -16,3 +16,5 @@ export * from './invoicing';
 export * from './subcontracting';
 export * from './receptions';
 export * from './stock';
+export * from './reporting';
+export * from './accounting';

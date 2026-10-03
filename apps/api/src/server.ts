@@ -35,6 +35,9 @@ import { portalProjectRoutes } from './routes/portal-projects';
 import { portalSubcontractorRoutes } from './routes/portal-subcontractor';
 import { receptionRoutes } from './routes/receptions';
 import { stockRoutes } from './routes/stock';
+import { reportRoutes } from './routes/reports';
+import { exportRoutes } from './routes/exports';
+import { accountingRoutes } from './routes/accounting';
 import { subcontractingRoutes } from './routes/subcontracting';
 import { profileRoutes } from './routes/profile';
 import { quoteRoutes } from './routes/quotes';
@@ -152,6 +155,9 @@ export async function buildServer(deps: AppDeps, options: BuildOptions = {}): Pr
       await v1.register(portalSubcontractorRoutes, { deps });
       await v1.register(receptionRoutes, { deps });
       await v1.register(stockRoutes, { deps });
+      await v1.register(reportRoutes, { deps });
+      await v1.register(exportRoutes, { deps });
+      await v1.register(accountingRoutes, { deps });
       v1.get('/openapi.json', { schema: { hide: true }, config: { rateLimit: false } }, async () =>
         app.swagger(),
       );

@@ -139,6 +139,7 @@ model Tenant {
   equipment            Equipment[]
   equipmentAssignments EquipmentAssignment[]
   maintenanceEvents    MaintenanceEvent[]
+  accountingSyncs      AccountingSync[]
 
   @@map("tenants")
 }
@@ -2405,4 +2406,47 @@ model MaintenanceEvent {
   @@index([tenantId, equipmentId])
   @@index([tenantId, dueOn])
   @@map("maintenance_events")
+}
+
+// ---------------------------------------------------------------------------
+// M11 — Comptabilité (03 §13, 07 « Chift »)
+// ---------------------------------------------------------------------------
+
+enum AccountingDocumentType {
+  invoice
+  supplier_invoice
+  payment
+  supplier_payment
+}
+
+/// Synchronisation d'un document vers le logiciel comptable (via Chift) : un statut par document,
+/// l'écriture envoyée, l'erreur lisible et la reprise.
+model AccountingSync {
+  id            String                 @id @default(uuid(7)) @db.Uuid
+  tenantId      String                 @map("tenant_id") @db.Uuid
+  documentType  AccountingDocumentType @map("document_type")
+  /// Facture, facture fournisseur, paiement reçu ; paiement fournisseur = la facture payée.
+  documentId    String                 @map("document_id") @db.Uuid
+  number        String
+  documentDate  DateTime               @map("document_date") @db.Date
+  partnerName   String                 @map("partner_name")
+  amount        BigInt
+  /// `waiting` (comptabilité non connectée), `pending`, `synced`, `error`.
+  status        String                 @default("pending")
+  externalId    String?                @map("external_id")
+  attempts      Int                    @default(0)
+  lastError     String?                @map("last_error")
+  /// Écriture envoyée (journal, lignes, codes TVA), pour contrôle par le comptable.
+  entry         Json?
+  lastAttemptAt DateTime?              @map("last_attempt_at") @db.Timestamptz(3)
+  syncedAt      DateTime?              @map("synced_at") @db.Timestamptz(3)
+  createdAt     DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime               @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, documentType, documentId])
+  @@index([tenantId, status])
+  @@index([tenantId, documentDate])
+  @@map("accounting_syncs")
 }

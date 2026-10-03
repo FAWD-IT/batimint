@@ -140,6 +140,12 @@ export const EventPayloads = {
     automatic: z.boolean(),
   }),
   'supplier_invoice.to_allocate.v1': z.object({ invoiceId: Uuid }),
+  /** Facture fournisseur payée (retenue 30bis éventuelle déduite) : synchro compta. */
+  'supplier_invoice.paid.v1': z.object({ invoiceId: Uuid }),
+  /** Reprise demandée des synchronisations comptables (erreur ou attente de connexion). */
+  'accounting.sync_requested.v1': z.object({ syncIds: z.array(Uuid).max(500) }),
+  /** Synchronisation comptable en erreur : le bureau et le comptable sont prévenus. */
+  'accounting.sync_failed.v1': z.object({ syncId: Uuid, message: z.string() }),
   /** Sous-traitant avec dettes au moment du paiement : retenue 30bis à appliquer (05 §7). */
   'supplier_invoice.blocked_thirty_bis.v1': z.object({
     invoiceId: Uuid,

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { createIntegrations, MemoryStorage, MockMailer, MockVatValidator } from './index';
+import { type AccountingEntry, DEFAULT_ACCOUNTING_MAPPING, saleEntry } from '@batimint/domain';
+import { createIntegrations, MemoryStorage, MockAccountingSync, MockMailer, MockVatValidator } from './index';
 
 describe('intégrations mock (règle n°5 : tout tourne sans clé)', () => {
   it('sélectionne les mocks sans configuration', () => {
@@ -148,5 +149,65 @@ describe('assistant IA simulé', () => {
       ],
     );
     expect(s.suggestions[0]).toMatchObject({ projectId: 'p1', budgetLineId: 'b1' });
+  });
+});
+
+describe('comptabilité simulée (Chift)', () => {
+  const sync = new MockAccountingSync();
+  const entry = (overrides: Partial<AccountingEntry> = {}): AccountingEntry => ({
+    ...saleEntry(
+      {
+        type: 'invoice',
+        number: '2026-120',
+        issueDate: '2026-10-01',
+        dueDate: '2026-10-31',
+        partner: { name: 'Gilson SA', vatNumber: 'BE0456789034', enterpriseNumber: '0456789034' },
+        structuredCommunication: null,
+        vatBreakdown: [
+          { regimes: ['standard_21'], ratePercent: '21', taxableAmount: 100_000n, taxAmount: 21_000n },
+        ],
+        totalNet: 100_000n,
+        totalVat: 21_000n,
+        totalGross: 121_000n,
+      },
+      DEFAULT_ACCOUNTING_MAPPING,
+    ),
+    ...overrides,
+  });
+
+  it('connexion, plan comptable, journaux et codes TVA ; pièce acceptée de façon idempotente', async () => {
+    expect(createIntegrations({}).accounting.provider).toBe('mock');
+    const c = await sync.connect({
+      tenantId: '01a0f987-cc38-71ac-bb0b-129d59034cdb',
+      name: 'Rénov',
+      enterpriseNumber: null,
+    });
+    expect(c).toMatchObject({ status: 'active', software: 'WinBooks (simulation)' });
+    expect((await sync.listChartOfAccounts(c.connectionId)).map((a) => a.number)).toContain('700000');
+    expect((await sync.listJournals(c.connectionId)).map((j) => j.code)).toEqual([
+      'VEN',
+      'NCV',
+      'ACH',
+      'BQ1',
+      'OD',
+    ]);
+    expect((await sync.mapVatCodes(c.connectionId)).some((v) => v.code === 'VCC')).toBe(true);
+    const a = await sync.pushSale(c.connectionId, entry());
+    expect(a.externalId).toBe('VEN-2026-120');
+    expect(await sync.pushSale(c.connectionId, entry())).toEqual(a);
+  });
+
+  it('erreurs lisibles : compte absent, journal inconnu, TVA du partenaire invalide', async () => {
+    const id = 'mock-abc';
+    const bad = entry();
+    bad.lines = bad.lines.map((l) => (l.account === '700000' ? { ...l, account: '709999' } : l));
+    await expect(sync.pushSale(id, bad)).rejects.toThrow(/le compte 709999 n’existe pas/);
+    await expect(sync.pushPurchase(id, entry())).rejects.toThrow(/journal « VEN » n’existe pas/);
+    await expect(
+      sync.pushSale(
+        id,
+        entry({ partner: { name: 'Gilson SA', vatNumber: 'BE0456789000', enterpriseNumber: null } }),
+      ),
+    ).rejects.toThrow(/numéro de TVA BE0456789000 de « Gilson SA » est invalide/);
   });
 });

@@ -163,6 +163,13 @@ export const integrationRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async
             const e = await deps.integrations.peppol.getLegalEntityStatus(existing.externalId);
             status = e.status === 'rejected' ? 'error' : e.status;
             config = { ...config, participantId: e.participantId, message: e.message };
+          } else if (kind === 'accounting') {
+            if (!existing?.externalId)
+              throw new Error(
+                'La comptabilité n’est pas encore connectée : ouvrez « Comptabilité » et cliquez sur « Connecter ».',
+              );
+            await deps.integrations.accounting.listJournals(existing.externalId);
+            status = 'active';
           } else if (providerFor(kind) === 'mock') {
             // Les autres intégrations sont simulées tant que leur jalon n'est pas livré : la connexion est saine.
             status = 'active';

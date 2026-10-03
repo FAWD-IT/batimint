@@ -134,6 +134,8 @@ export const TenantSettingsSchema = z
       .max(4)
       .default(['rc_insurance', 'social_certificate', 'tax_certificate']),
     numbering: NumberingSchema.default(DEFAULT_NUMBER_PATTERNS),
+    /** Solde bancaire connu (point de départ de la trésorerie prévisionnelle, 03 §12). */
+    cashBalance: z.object({ amount: z.number().int(), on: z.iso.date() }).nullable().default(null),
   })
   .meta({ id: 'TenantSettings' });
 export type TenantSettings = z.infer<typeof TenantSettingsSchema>;

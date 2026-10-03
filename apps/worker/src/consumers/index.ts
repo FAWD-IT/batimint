@@ -15,6 +15,7 @@ import { invoicingConsumers } from './invoicing';
 import { subcontractingConsumers } from './subcontracting';
 import { receptionConsumers } from './receptions';
 import { stockConsumers } from './stock';
+import { accountingConsumers } from './accounting';
 import { memberJoined } from './members';
 import { diagnosticNotification } from './notifications';
 import {
@@ -60,6 +61,7 @@ export const CONSUMERS: readonly Consumer[] = [
   ...subcontractingConsumers,
   ...receptionConsumers,
   ...stockConsumers,
+  ...accountingConsumers,
   realtimeBroadcast,
 ];
 
