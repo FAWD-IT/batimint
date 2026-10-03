@@ -112,10 +112,11 @@ export const InvoiceStatus = defineMachine({
     sent: ['delivered', 'partially_paid', 'paid', 'cancelled'],
     delivered: ['partially_paid', 'paid', 'cancelled'],
     partially_paid: ['paid', 'cancelled'],
-    paid: [],
+    // La libération de la retenue de garantie (réception définitive) rouvre le solde.
+    paid: ['partially_paid'],
     cancelled: [],
   },
-  terminal: ['paid', 'cancelled'],
+  terminal: ['cancelled'],
 });
 export type InvoiceStatus = (typeof InvoiceStatus.states)[number];
 

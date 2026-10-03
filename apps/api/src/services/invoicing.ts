@@ -15,6 +15,7 @@ import {
   dec,
   formatEuros,
   formatDocumentNumber,
+  heldRetention,
   invoiceBalance,
   paymentState,
   retentionOf,
@@ -58,13 +59,15 @@ export function balanceOf(i: {
   status: string;
   totalGross: bigint;
   retentionAmount: bigint;
+  retentionReleasedAt?: Date | null;
   amountPaid: bigint;
   amountCredited: bigint;
 }): bigint {
   if (i.type === 'credit_note' || i.status === 'draft' || i.status === 'cancelled') return 0n;
   return invoiceBalance({
     totalGross: i.totalGross,
-    retentionAmount: i.retentionAmount,
+    // Libérée à la réception définitive, la retenue redevient payable.
+    retentionAmount: heldRetention(i),
     paid: i.amountPaid,
     credited: i.amountCredited,
   });
@@ -596,7 +599,7 @@ export async function recordPayment(
   const paid = i.amountPaid + input.amount;
   const state = paymentState({
     totalGross: i.totalGross,
-    retentionAmount: i.retentionAmount,
+    retentionAmount: heldRetention(i),
     paid,
     credited: i.amountCredited,
   });

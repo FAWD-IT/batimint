@@ -7,3 +7,4 @@ export * from './purchase-order-pdf';
 export * from './invoice-ubl';
 export * from './invoice-pdf';
 export * from './subcontracting-pdf';
+export * from './reception-pdf';

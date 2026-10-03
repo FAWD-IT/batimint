@@ -321,7 +321,8 @@
         "change_order": "Avenants",
         "progress_statement": "États d'avancement",
         "work_order": "Bons de régie",
-        "subcontract": "Contrats de sous-traitance"
+        "subcontract": "Contrats de sous-traitance",
+        "reception": "PV de réception"
       },
       "nextNumber": "Prochain : {example}",
       "invalidPattern": "Le modèle doit contenir '{SEQ}' et seulement des lettres, chiffres, - _ / ."

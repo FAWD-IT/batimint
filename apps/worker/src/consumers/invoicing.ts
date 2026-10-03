@@ -17,6 +17,7 @@ import {
   dueDunningStep,
   formatEuros,
   formatStructuredCommunication,
+  heldRetention,
   invoiceBalance,
 } from '@batimint/domain';
 import { buildEmail } from '@batimint/integrations';
@@ -57,12 +58,13 @@ async function publish(ctx: ConsumerContext, projectId: string | null) {
 function balance(i: {
   totalGross: bigint;
   retentionAmount: bigint;
+  retentionReleasedAt?: Date | null;
   amountPaid: bigint;
   amountCredited: bigint;
 }) {
   return invoiceBalance({
     totalGross: i.totalGross,
-    retentionAmount: i.retentionAmount,
+    retentionAmount: heldRetention(i),
     paid: i.amountPaid,
     credited: i.amountCredited,
   });

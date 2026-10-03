@@ -9,6 +9,7 @@ import {
   brusselsDate,
   documentCompliance,
   dueDunningStep,
+  heldRetention,
   invoiceBalance,
   isQuoteExpired,
   isQuoteReminderDue,
@@ -188,13 +189,20 @@ export async function runDunning(deps: WorkerDeps, now: Date = new Date()) {
     });
     let due = 0;
     for (const i of invoices) {
+      // Retenue libérée, le reste payé : seule la retenue est due, à sa propre échéance.
+      const onlyRetention =
+        i.retentionReleasedAt !== null &&
+        i.retentionDueDate !== null &&
+        i.amountPaid + i.amountCredited >= i.totalGross - i.retentionAmount;
+      const dueDate = onlyRetention ? i.retentionDueDate! : i.dueDate!;
+      if (iso(dueDate) >= today) continue;
       const step = dueDunningStep({
-        dueDate: iso(i.dueDate!),
+        dueDate: iso(dueDate),
         today,
         stepsSent: i.dunning.length,
         balance: invoiceBalance({
           totalGross: i.totalGross,
-          retentionAmount: i.retentionAmount,
+          retentionAmount: heldRetention(i),
           paid: i.amountPaid,
           credited: i.amountCredited,
         }),

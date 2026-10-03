@@ -181,6 +181,17 @@ export const EventPayloads = {
     documentId: Uuid,
     state: z.enum(['expiring', 'expired']),
   }),
+  /** PV de réception signé : statut du chantier, réserves → tâches, retenue libérée (définitive). */
+  'reception.signed.v1': z.object({
+    receptionId: Uuid,
+    projectId: Uuid,
+    kind: z.enum(['provisional', 'final']),
+  }),
+  /** Réserve levée (tâche faite) ; la dernière déclenche la facture finale. */
+  'reserve.lifted.v1': z.object({ reserveId: Uuid, projectId: Uuid, receptionId: Uuid }),
+  /** Facture finale à générer (réserves levées, ou demande du bureau). */
+  'project.final_invoice_requested.v1': z.object({ projectId: Uuid }),
+  'project.closed.v1': z.object({ projectId: Uuid }),
   /** Facture ou note de crédit émise (numéro définitif) : envoi Peppol ou e-mail, timeline. */
   'invoice.issued.v1': z.object({
     invoiceId: Uuid,

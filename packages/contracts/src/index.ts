@@ -14,3 +14,4 @@ export * from './planning';
 export * from './purchasing';
 export * from './invoicing';
 export * from './subcontracting';
+export * from './receptions';

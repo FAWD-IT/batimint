@@ -1737,3 +1737,193 @@ describe('M9 — sous-traitance', () => {
     ).toBeGreaterThanOrEqual(1);
   });
 });
+
+describe('M10 — réception', () => {
+  async function receivedProject() {
+    return withTenant(prisma, tenantId, userId, async (tx) => {
+      const customer = await tx.customer.create({
+        data: {
+          tenantId,
+          kind: 'individual',
+          displayName: 'Jean Réception',
+          email: `rec-${uuidv7().slice(-6)}@example.be`,
+        },
+      });
+      const project = await tx.project.create({
+        data: {
+          tenantId,
+          number: `CH-${uuidv7().slice(-6)}`,
+          name: 'Salle de bain réceptionnée',
+          customerId: customer.id,
+          status: 'provisional_acceptance',
+          contractAmount: 1_000_000n,
+          retentionPercent: '5',
+        },
+      });
+      const post = await tx.budgetLine.create({
+        data: {
+          tenantId,
+          projectId: project.id,
+          position: 0,
+          label: 'Carrelage',
+          saleAmount: 1_000_000n,
+          budgetedCost: 700_000n,
+        },
+      });
+      return { customer, project, post };
+    });
+  }
+
+  it('PV provisoire : réserves → tâches ; tâche faite → réserve levée → facture finale en brouillon', async () => {
+    const { project, post } = await receivedProject();
+    const receptionId = uuidv7();
+    const reserveId = uuidv7();
+    await withTenant(prisma, tenantId, userId, async (tx) => {
+      await tx.reception.create({
+        data: {
+          id: receptionId,
+          tenantId,
+          projectId: project.id,
+          kind: 'provisional',
+          status: 'signed',
+          number: `PV-${uuidv7().slice(-4)}`,
+          receptionDate: new Date(),
+          signerName: 'Jean Réception',
+          signedAt: new Date(),
+          reserves: {
+            create: [
+              {
+                id: reserveId,
+                tenantId,
+                projectId: project.id,
+                position: 0,
+                description: 'Joint de la baignoire',
+                budgetLineId: post.id,
+              },
+            ],
+          },
+        },
+      });
+      await emitEvent(tx, {
+        tenantId,
+        type: 'reception.signed.v1',
+        aggregateType: 'project',
+        aggregateId: project.id,
+        payload: { receptionId, projectId: project.id, kind: 'provisional' },
+      });
+    });
+    const task = await waitFor(() =>
+      withTenant(prisma, tenantId, userId, async (tx) => {
+        const r = await tx.reserve.findUnique({ where: { id: reserveId } });
+        return r?.taskId ? tx.task.findUnique({ where: { id: r.taskId } }) : null;
+      }),
+    );
+    expect(task).toMatchObject({
+      title: 'Réserve : Joint de la baignoire',
+      budgetLineId: post.id,
+      status: 'todo',
+    });
+    const entry = await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.timelineEntry.findFirst({ where: { projectId: project.id, type: 'reception.signed' } }),
+      ),
+    );
+    expect(entry).toMatchObject({
+      title: 'Réception provisoire signée par Jean Réception',
+      visibleToClient: true,
+    });
+
+    await withTenant(prisma, tenantId, userId, async (tx) => {
+      await tx.task.update({ where: { id: task!.id }, data: { status: 'done', progress: '1' } });
+      await emitEvent(tx, {
+        tenantId,
+        type: 'task.completed.v1',
+        aggregateType: 'project',
+        aggregateId: project.id,
+        payload: { projectId: project.id, taskId: task!.id, budgetLineId: post.id },
+      });
+    });
+    const draft = await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.invoice.findFirst({ where: { projectId: project.id, type: 'final' } }),
+      ),
+    );
+    expect(draft).toMatchObject({ status: 'draft', totalNet: 1_000_000n });
+    const lifted = await withTenant(prisma, tenantId, userId, (tx) =>
+      tx.reserve.findUniqueOrThrow({ where: { id: reserveId } }),
+    );
+    expect(lifted.liftedAt).not.toBeNull();
+    const notif = await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.notification.findFirst({
+          where: { userId, type: 'invoice.final_drafted', link: `/facturation/${draft.id}` },
+        }),
+      ),
+    );
+    expect(notif.title).toMatch(/Facture finale prête/);
+  });
+
+  it('PV définitif : la retenue est libérée, le solde rouvert, le client prévenu ; une seule fois', async () => {
+    const { project, customer } = await receivedProject();
+    const invoiceId = uuidv7();
+    const receptionId = uuidv7();
+    await withTenant(prisma, tenantId, userId, async (tx) => {
+      await tx.invoice.create({
+        data: {
+          id: invoiceId,
+          tenantId,
+          projectId: project.id,
+          customerId: customer.id,
+          type: 'final',
+          status: 'paid',
+          number: `2026-${uuidv7().slice(-4)}`,
+          title: 'Facture finale',
+          issueDate: new Date(),
+          totalNet: 1_000_000n,
+          totalVat: 210_000n,
+          totalGross: 1_210_000n,
+          retentionPercent: '5',
+          retentionAmount: 60_500n,
+          amountPaid: 1_149_500n,
+        },
+      });
+      await tx.project.update({ where: { id: project.id }, data: { status: 'final_acceptance' } });
+      await tx.reception.create({
+        data: {
+          id: receptionId,
+          tenantId,
+          projectId: project.id,
+          kind: 'final',
+          status: 'signed',
+          number: `PV-${uuidv7().slice(-4)}`,
+          receptionDate: new Date(),
+          signerName: 'Jean Réception',
+          signedAt: new Date(),
+        },
+      });
+      await emitEvent(tx, {
+        tenantId,
+        type: 'reception.signed.v1',
+        aggregateType: 'project',
+        aggregateId: project.id,
+        payload: { receptionId, projectId: project.id, kind: 'final' },
+      });
+    });
+    const released = await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.invoice.findFirst({ where: { id: invoiceId, retentionReleasedAt: { not: null } } }),
+      ),
+    );
+    expect(released.status).toBe('partially_paid');
+    expect(released.retentionDueDate).not.toBeNull();
+    const mail = await waitFor(() =>
+      bgMailer.sent.find((m) => m.to === customer.email && /libération de la retenue/.test(m.subject)),
+    );
+    expect(mail.text).toContain('605,00');
+    expect(mail.attachments?.[0]?.filename).toBe('liberation-retenue-garantie.pdf');
+    const entries = await withTenant(prisma, tenantId, userId, (tx) =>
+      tx.timelineEntry.count({ where: { projectId: project.id, type: 'retention.released' } }),
+    );
+    expect(entries).toBe(1);
+  });
+});

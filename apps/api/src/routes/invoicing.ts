@@ -162,6 +162,7 @@ export const invoicingRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (
             status: true,
             totalGross: true,
             retentionAmount: true,
+            retentionReleasedAt: true,
             amountPaid: true,
             amountCredited: true,
             dueDate: true,

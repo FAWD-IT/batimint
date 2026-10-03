@@ -12,7 +12,8 @@ export type NumberedDocumentType =
   | 'change_order'
   | 'progress_statement'
   | 'work_order'
-  | 'subcontract';
+  | 'subcontract'
+  | 'reception';
 
 export const DEFAULT_NUMBER_PATTERNS: Record<NumberedDocumentType, string> = {
   quote: 'D{YYYY}-{SEQ:3}',
@@ -23,6 +24,7 @@ export const DEFAULT_NUMBER_PATTERNS: Record<NumberedDocumentType, string> = {
   progress_statement: 'EA{YYYY}-{SEQ:3}',
   work_order: 'BR{YYYY}-{SEQ:3}',
   subcontract: 'ST{YYYY}-{SEQ:3}',
+  reception: 'PV{YYYY}-{SEQ:3}',
 };
 
 export class NumberingError extends Error {

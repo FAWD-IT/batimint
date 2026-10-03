@@ -13,6 +13,7 @@ import {
   summarizeStatement,
   type VatRegime,
 } from '@batimint/domain';
+import { randomUUID } from 'node:crypto';
 import type { Tx } from './client';
 import { loadProjectNumbers } from './projects';
 
@@ -200,9 +201,12 @@ export async function createProgressInvoiceDraft(
       tenantId: st.tenantId,
       projectId: st.projectId,
       customerId: st.project.customerId,
-      type: 'progress',
+      // L'état qui atteint 100 % du contrat produit la facture finale (solde, acompte entièrement déduit).
+      type: final ? 'final' : 'progress',
       status: 'draft',
-      title: `État d’avancement n°${st.ordinal} — ${percentLabel(summary.cumulativeAmount, summary.contractAmount)}`,
+      title: final
+        ? `Facture finale — ${st.project.name}`
+        : `État d’avancement n°${st.ordinal} — ${percentLabel(summary.cumulativeAmount, summary.contractAmount)}`,
       progressStatementId: st.id,
       servicePeriodStart: start,
       servicePeriodEnd: st.periodEnd,
@@ -228,4 +232,66 @@ export async function createProgressInvoiceDraft(
     },
   });
   return { id: invoice.id, created: true };
+}
+
+/**
+ * Facture finale (P10.2) : un état de clôture porte chaque poste à 100 % du contrat (devis +
+ * avenants) ; la facture facture le solde, déduit ce qui reste de l'acompte. Idempotent : une
+ * facture finale existante (non annulée) est renvoyée telle quelle.
+ */
+export async function createFinalInvoiceDraft(
+  tx: Tx,
+  projectId: string,
+  createdBy: string | null,
+): Promise<{ id: string; created: boolean } | null> {
+  const existing = await tx.invoice.findFirst({
+    where: { projectId, type: 'final', status: { not: 'cancelled' } },
+  });
+  if (existing) return { id: existing.id, created: false };
+  const project = await tx.project.findUniqueOrThrow({ where: { id: projectId } });
+  const posts = await projectPostContext(tx, projectId);
+  const remaining = posts.reduce((s, p) => s + (p.contractAmount - p.previousAmount), 0n);
+  if (remaining <= 0n) return null;
+  const last = await tx.progressStatement.findFirst({ where: { projectId }, orderBy: { ordinal: 'desc' } });
+  // Un état en cours (brouillon, soumis) est remplacé par l'état de clôture.
+  if (last && ['draft', 'submitted', 'disputed'].includes(last.status))
+    await tx.progressStatement.delete({ where: { id: last.id } });
+  const ordinal =
+    ((await tx.progressStatement.findFirst({ where: { projectId }, orderBy: { ordinal: 'desc' } }))
+      ?.ordinal ?? 0) + 1;
+  const contract = posts.reduce((s, p) => s + p.contractAmount, 0n);
+  const previous = posts.reduce((s, p) => s + p.previousAmount, 0n);
+  const today = new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00Z');
+  const st = await tx.progressStatement.create({
+    data: {
+      id: randomUUID(),
+      tenantId: project.tenantId,
+      projectId,
+      ordinal,
+      status: 'approved',
+      periodEnd: today,
+      contractAmount: contract,
+      previousAmount: previous,
+      cumulativeAmount: contract,
+      approvedAt: new Date(),
+      approvedByName: 'Réception des travaux',
+      createdBy,
+      lines: {
+        create: posts.map((p, position) => ({
+          tenantId: project.tenantId,
+          budgetLineId: p.budgetLineId,
+          position,
+          label: p.label,
+          contractAmount: p.contractAmount,
+          previousAmount: p.previousAmount,
+          cumulativeAmount: p.contractAmount,
+          cumulativePercent: '100',
+          unit: p.unit,
+          totalQuantity: p.totalQuantity,
+          cumulativeQuantity: p.totalQuantity,
+        })),
+      },
+    },
+  });
+  return createProgressInvoiceDraft(tx, st.id, createdBy);
 }
