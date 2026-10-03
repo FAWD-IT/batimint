@@ -3,12 +3,12 @@
 Ce fichier est le point de reprise entre sessions cloud. Une nouvelle session doit pouvoir reprendre le travail en ne lisant que lui et `CLAUDE.md`.
 
 ## Jalon en cours
-**M11 — Pilotage et compta** — en validation CI. M10 ✅ validé (CI run 56).
+**M12 — Intégrations réelles** — à démarrer. M11 ✅ validé (CI run 61 : checks + E2E sur les images de production ; 31 parcours E2E verts en local).
 
 (L'étiquette `m0-done` existe localement mais le push de tags est refusé par la politique de la session : seule la branche est poussée.)
 
 ## Prochaine action
-Valider M11 en CI, puis M12 (intégrations réelles : getpeppr sandbox, Chift, Mollie test, Anthropic, SMTP ; `pnpm integrations:smoke`).
+M12 : implémentations réelles getpeppr (sandbox), Chift, Mollie (test), Anthropic, SMTP, activées par variables ; tests contre réponses enregistrées et `pnpm integrations:smoke` si le réseau de la session bloque ces API.
 
 ## Relancer l'environnement
 ```bash
@@ -119,7 +119,7 @@ docker compose -f docker-compose.coolify.yml -f docker/docker-compose.sandbox.ym
 - Seed : Dupont facturé par 3 états approuvés (2026-116 à 118, payables à réception, 118 échue de 3 jours, rappel n°1) ; toutes les factures émises comme l'application ; numérotation continue 2026-099 → 118.
 - Tests : 11 intégration API (dont 100 émissions concurrentes), 5 worker, 18 domaine, 7 documents ; E2E P7 (acompte, paiement partiel, état approuvé sur le portail, facture avec acompte déduit, paiement en ligne) + P8 sur téléphone.
 
-### M11 — Pilotage et comptabilité (en validation CI)
+### M11 — Pilotage et comptabilité ✅ (CI run 61)
 - Domaine : périodes, transformation des devis, carnet de commandes, marges groupées, heures contre planning, trésorerie à 90 jours (masse salariale estimée) ; écritures de vente, note de crédit, achat (autoliquidation), paiement (retenue 30bis), codes et grilles TVA belges, PCMN par défaut ; 15 tests (ADR 0020).
 - Intégration : `AccountingSync` (Chift) + mock « WinBooks (simulation) » aux erreurs lisibles ; `ACCOUNTING_PROVIDER`.
 - Base : `accounting_syncs` (statut par document, écriture envoyée, tentatives, erreur) avec RLS ; solde bancaire en paramètre du tenant.
