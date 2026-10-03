@@ -12,7 +12,7 @@ import {
   priceSuggestions,
   profitabilityReport,
   receptionBlockers,
-  ratio,
+  type ratio,
 } from '@batimint/domain';
 import { iso, isoDate } from '../lib/tenant';
 import { addressLines } from './quotes';
