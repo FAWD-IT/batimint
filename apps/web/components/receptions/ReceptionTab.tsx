@@ -30,9 +30,12 @@ import { ReceptionSheet } from './ReceptionSheet';
 
 const day = (d: string | null | undefined) =>
   d
-    ? new Intl.DateTimeFormat('fr-BE', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(
-        new Date(d.length === 10 ? `${d}T00:00:00Z` : d),
-      )
+    ? new Intl.DateTimeFormat('fr-BE', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+        timeZone: 'UTC',
+      }).format(new Date(d.length === 10 ? `${d}T00:00:00Z` : d))
     : '—';
 
 /** Onglet « Réception » du cockpit (P10) : PV, réserves, facture finale, garantie, clôture, rentabilité. */
@@ -52,7 +55,11 @@ export function ReceptionTab({ project }: { project: ProjectDto }) {
   );
   const finalInvoice = useApiMutation<void, { invoiceId: string }>(
     () => ({ path: `/projects/${project.id}/final-invoice`, method: 'POST' }),
-    { invalidate, successMessage: t('finalInvoiceReady'), onSuccess: (r) => router.push(`/facturation/${r.invoiceId}`) },
+    {
+      invalidate,
+      successMessage: t('finalInvoiceReady'),
+      onSuccess: (r) => router.push(`/facturation/${r.invoiceId}`),
+    },
   );
   const close = useApiMutation<void, ProjectDto>(
     () => ({ path: `/projects/${project.id}/close`, method: 'POST' }),
@@ -100,7 +107,10 @@ export function ReceptionTab({ project }: { project: ProjectDto }) {
           </div>
           <div className="flex flex-wrap gap-2">
             {manage && r.can.provisional ? (
-              <Button icon={<FileSignature aria-hidden className="size-4" />} onClick={() => setSheet('provisional')}>
+              <Button
+                icon={<FileSignature aria-hidden className="size-4" />}
+                onClick={() => setSheet('provisional')}
+              >
                 {t('startProvisional')}
               </Button>
             ) : null}
@@ -115,12 +125,19 @@ export function ReceptionTab({ project }: { project: ProjectDto }) {
               </Button>
             ) : null}
             {manage && r.can.final ? (
-              <Button icon={<FileSignature aria-hidden className="size-4" />} onClick={() => setSheet('final')}>
+              <Button
+                icon={<FileSignature aria-hidden className="size-4" />}
+                onClick={() => setSheet('final')}
+              >
                 {t('startFinal')}
               </Button>
             ) : null}
             {can('projects.write') && r.can.close ? (
-              <Button variant="secondary" icon={<Lock aria-hidden className="size-4" />} onClick={() => setClosing(true)}>
+              <Button
+                variant="secondary"
+                icon={<Lock aria-hidden className="size-4" />}
+                onClick={() => setClosing(true)}
+              >
                 {t('close')}
               </Button>
             ) : null}
@@ -139,13 +156,20 @@ export function ReceptionTab({ project }: { project: ProjectDto }) {
           <Fact label={t('retentionHeld')} value={formatEuros(BigInt(r.retention.held))} />
           <Fact
             label={t('retentionReleased')}
-            value={r.retention.released ? `${formatEuros(BigInt(r.retention.released))} · ${day(r.retention.releasedAt)}` : '—'}
+            value={
+              r.retention.released
+                ? `${formatEuros(BigInt(r.retention.released))} · ${day(r.retention.releasedAt)}`
+                : '—'
+            }
           />
           <div className="flex flex-col gap-0.5">
             <dt className="text-[12px] text-muted">{t('finalInvoice')}</dt>
             <dd>
               {r.finalInvoice ? (
-                <Link href={`/facturation/${r.finalInvoice.id}`} className="font-medium text-accent hover:underline">
+                <Link
+                  href={`/facturation/${r.finalInvoice.id}`}
+                  className="font-medium text-accent hover:underline"
+                >
                   {r.finalInvoice.number ?? t('finalInvoiceDraft')}
                 </Link>
               ) : (
@@ -239,16 +263,26 @@ function ReceptionCard({
         x.reserves.length ? (
           <ul className="flex flex-col divide-y divide-line-soft">
             {x.reserves.map((rv) => (
-              <li key={rv.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-[14px]">
+              <li
+                key={rv.id}
+                className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-[14px]"
+              >
                 <span className="flex min-w-0 flex-col">
-                  <span className={rv.liftedAt ? 'text-muted line-through' : 'font-medium'}>{rv.description}</span>
+                  <span className={rv.liftedAt ? 'text-muted line-through' : 'font-medium'}>
+                    {rv.description}
+                  </span>
                   <span className="text-[12px] text-muted">
                     {[rv.location, rv.budgetLine?.label].filter(Boolean).join(' · ') || ' '}
                   </span>
                   {rv.photos.length ? (
                     <span className="mt-1 flex gap-1.5">
                       {rv.photos.map((p) => (
-                        <img key={p.id} src={p.thumbUrl ?? p.url} alt="" className="size-12 rounded-[8px] object-cover" />
+                        <img
+                          key={p.id}
+                          src={p.thumbUrl ?? p.url}
+                          alt=""
+                          className="size-12 rounded-[8px] object-cover"
+                        />
                       ))}
                     </span>
                   ) : null}
@@ -286,7 +320,10 @@ function ReceptionCard({
 function ProfitabilityCard({ projectId, status }: { projectId: string; status: string }) {
   const t = useTranslations('reception.profitability');
   const can = useCan();
-  const data = useApi<ProfitabilityDto>(['reception', projectId, 'profitability'], `/projects/${projectId}/profitability`);
+  const data = useApi<ProfitabilityDto>(
+    ['reception', projectId, 'profitability'],
+    `/projects/${projectId}/profitability`,
+  );
   const [chosen, setChosen] = useState<Set<string>>(new Set());
   const apply = useApiMutation<void, { updated: number }>(
     () => ({
@@ -348,17 +385,25 @@ function ProfitabilityCard({ projectId, status }: { projectId: string; status: s
                 align="right"
                 className={`hidden tabular-nums sm:table-cell ${p.costVariance > 0 ? 'text-crit' : 'text-good'}`}
               >
-                {p.costVarianceRatio === null ? '—' : `${p.costVariance > 0 ? '+' : ''}${formatPercent(p.costVarianceRatio)}`}
+                {p.costVarianceRatio === null
+                  ? '—'
+                  : `${p.costVariance > 0 ? '+' : ''}${formatPercent(p.costVarianceRatio)}`}
               </Td>
               <Td align="right" className="hidden tabular-nums md:table-cell">
-                {t('hoursValue', { actual: p.actualHours.replace('.', ','), planned: p.plannedHours.replace('.', ',') })}
+                {t('hoursValue', {
+                  actual: p.actualHours.replace('.', ','),
+                  planned: p.plannedHours.replace('.', ','),
+                })}
               </Td>
             </tr>
           ))}
         </tbody>
       </Table>
       {r.suggestions.length ? (
-        <section aria-labelledby="suggestions-title" className="flex flex-col gap-3 border-t border-line-soft pt-4">
+        <section
+          aria-labelledby="suggestions-title"
+          className="flex flex-col gap-3 border-t border-line-soft pt-4"
+        >
           <h3 id="suggestions-title" className="text-[15px] font-semibold">
             {t('suggestions')}
           </h3>
@@ -393,7 +438,12 @@ function ProfitabilityCard({ projectId, status }: { projectId: string; status: s
             })}
           </ul>
           {can('library.write') ? (
-            <Button className="w-fit" disabled={!chosen.size} loading={apply.isPending} onClick={() => apply.mutate()}>
+            <Button
+              className="w-fit"
+              disabled={!chosen.size}
+              loading={apply.isPending}
+              onClick={() => apply.mutate()}
+            >
               {t('apply', { n: chosen.size })}
             </Button>
           ) : null}
@@ -418,7 +468,9 @@ function Kpi({ label, value, strong }: { label: string; value: string; strong?: 
   return (
     <div className="flex flex-col">
       <span className="text-[12px] text-muted">{label}</span>
-      <span className={strong ? 'text-[20px] font-bold tabular-nums' : 'text-[16px] tabular-nums'}>{value}</span>
+      <span className={strong ? 'text-[20px] font-bold tabular-nums' : 'text-[16px] tabular-nums'}>
+        {value}
+      </span>
     </div>
   );
 }

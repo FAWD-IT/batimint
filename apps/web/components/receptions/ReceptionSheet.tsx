@@ -1,7 +1,16 @@
 'use client';
 
 import type { ReceptionDto } from '@batimint/contracts';
-import { Button, Checkbox, Dialog, Notice, SelectField, TextAreaField, TextField, useToast } from '@batimint/ui';
+import {
+  Button,
+  Checkbox,
+  Dialog,
+  Notice,
+  SelectField,
+  TextAreaField,
+  TextField,
+  useToast,
+} from '@batimint/ui';
 import { Camera, Plus, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { type FormEvent, useRef, useState } from 'react';
@@ -196,7 +205,12 @@ export function ReceptionSheet({
         </div>
       ) : null}
       {step === 'describe' ? (
-        <form id={`reception-${id}`} onSubmit={(e) => void toSign(e)} className="flex flex-col gap-4" noValidate>
+        <form
+          id={`reception-${id}`}
+          onSubmit={(e) => void toSign(e)}
+          className="flex flex-col gap-4"
+          noValidate
+        >
           <div className="grid gap-4 sm:grid-cols-2">
             <TextField label={t('date')} type="date" value={date} onChange={(e) => setDate(e.target.value)} />
             <TextField
@@ -212,7 +226,11 @@ export function ReceptionSheet({
               <legend className="mb-1 text-[15px] font-semibold">{t('reserves')}</legend>
               {reserves.length === 0 ? <p className="text-[14px] text-muted">{t('noReserve')}</p> : null}
               {reserves.map((r, k) => (
-                <div key={r.id} className="flex flex-col gap-3 rounded-[14px] border border-line p-3" data-testid="reserve">
+                <div
+                  key={r.id}
+                  className="flex flex-col gap-3 rounded-[14px] border border-line p-3"
+                  data-testid="reserve"
+                >
                   <div className="flex items-start justify-between gap-2">
                     <span className="text-[13px] font-semibold">{t('reserveN', { n: k + 1 })}</span>
                     <Button
@@ -244,13 +262,21 @@ export function ReceptionSheet({
                         label={t('post', { n: k + 1 })}
                         value={r.budgetLineId}
                         onChange={(e) => update(r.id, { budgetLineId: e.target.value })}
-                        options={[{ value: '', label: t('noPost') }, ...posts.map((p) => ({ value: p.id, label: p.label }))]}
+                        options={[
+                          { value: '', label: t('noPost') },
+                          ...posts.map((p) => ({ value: p.id, label: p.label })),
+                        ]}
                       />
                     ) : null}
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     {r.photos.map((p) => (
-                      <img key={p.id} src={p.preview} alt={t('photoAlt', { n: k + 1 })} className="size-16 rounded-[10px] object-cover" />
+                      <img
+                        key={p.id}
+                        src={p.preview}
+                        alt={t('photoAlt', { n: k + 1 })}
+                        className="size-16 rounded-[10px] object-cover"
+                      />
                     ))}
                     <Button
                       variant="secondary"
@@ -308,7 +334,12 @@ export function ReceptionSheet({
           />
         </form>
       ) : (
-        <form id={`reception-sign-${id}`} onSubmit={(e) => void sign(e)} className="flex flex-col gap-4" noValidate>
+        <form
+          id={`reception-sign-${id}`}
+          onSubmit={(e) => void sign(e)}
+          className="flex flex-col gap-4"
+          noValidate
+        >
           <Notice tone="accent">
             {kind === 'provisional'
               ? reserves.length
