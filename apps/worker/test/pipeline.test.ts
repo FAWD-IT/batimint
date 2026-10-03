@@ -2118,3 +2118,189 @@ describe('M10 — stock et matériel', () => {
     ).toBeGreaterThanOrEqual(1);
   });
 });
+
+describe('M11 — synchronisation comptable', () => {
+  async function invoice(number: string) {
+    return withTenant(prisma, tenantId, userId, async (tx) => {
+      const customer = await tx.customer.create({
+        data: { tenantId, kind: 'company', displayName: `Client ${number}`, vatNumber: 'BE0456789034' },
+      });
+      return tx.invoice.create({
+        data: {
+          tenantId,
+          customerId: customer.id,
+          type: 'free',
+          status: 'sent',
+          number,
+          title: number,
+          issueDate: new Date(`${brusselsDate(new Date())}T00:00:00Z`),
+          totalNet: 100_000n,
+          totalVat: 21_000n,
+          totalGross: 121_000n,
+          vatBreakdown: [{ category: 'S', ratePercent: '21', taxableAmount: 100_000, taxAmount: 21_000 }],
+          buyer: { name: `Client ${number}`, vatNumber: 'BE0456789034', enterpriseNumber: '0456789034' },
+        },
+      });
+    });
+  }
+  const issued = (i: { id: string; number: string | null }) =>
+    withTenant(prisma, tenantId, userId, (tx) =>
+      emitEvent(tx, {
+        tenantId,
+        type: 'invoice.issued.v1',
+        aggregateType: 'invoice',
+        aggregateId: i.id,
+        payload: { invoiceId: i.id, projectId: null, type: 'free', number: i.number! },
+      }),
+    );
+  const syncOf = (documentId: string, status?: string) =>
+    waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.accountingSync.findFirst({ where: { documentId, ...(status ? { status } : {}) } }),
+      ),
+    );
+
+  it('sans connexion : en attente ; connectée : écriture envoyée, statut « synchronisé »', async () => {
+    const a = await invoice(`C-${uuidv7().slice(-6)}`);
+    await issued(a);
+    expect((await syncOf(a.id, 'waiting')).externalId).toBeNull();
+    await withTenant(prisma, tenantId, userId, (tx) =>
+      tx.integrationConnection.upsert({
+        where: { tenantId_kind: { tenantId, kind: 'accounting' } },
+        create: { tenantId, kind: 'accounting', provider: 'mock', status: 'active', externalId: 'mock-test' },
+        update: { status: 'active', externalId: 'mock-test', config: {} },
+      }),
+    );
+    const b = await invoice(`C-${uuidv7().slice(-6)}`);
+    await issued(b);
+    const row = await syncOf(b.id, 'synced');
+    expect(row.externalId).toBe(`VEN-${b.number}`);
+    const entry = row.entry as {
+      journal: string;
+      lines: { account: string; amount: string; vatCode: string | null }[];
+    };
+    expect(entry.journal).toBe('VEN');
+    expect(entry.lines.map((l) => [l.account, l.amount, l.vatCode])).toEqual([
+      ['400000', '121000', null],
+      ['700000', '-100000', 'V21'],
+      ['451000', '-21000', 'V21'],
+    ]);
+    // La pièce en attente part à la demande de reprise.
+    const waiting = await syncOf(a.id, 'waiting');
+    await withTenant(prisma, tenantId, userId, (tx) =>
+      emitEvent(tx, {
+        tenantId,
+        type: 'accounting.sync_requested.v1',
+        aggregateType: 'tenant',
+        aggregateId: tenantId,
+        payload: { syncIds: [waiting.id] },
+      }),
+    );
+    await syncOf(a.id, 'synced');
+  });
+
+  it('erreur lisible du logiciel : notifiée une fois, corrigée puis relancée', async () => {
+    await withTenant(prisma, tenantId, userId, (tx) =>
+      tx.integrationConnection.update({
+        where: { tenantId_kind: { tenantId, kind: 'accounting' } },
+        data: { config: { mapping: { accounts: { sales: '709999' } } } },
+      }),
+    );
+    const c = await invoice(`C-${uuidv7().slice(-6)}`);
+    await issued(c);
+    const failed = await syncOf(c.id, 'error');
+    expect(failed.lastError).toMatch(/le compte 709999 n’existe pas dans le plan comptable/);
+    const notif = await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.notification.findFirst({
+          where: { userId, type: 'accounting.sync_failed', title: { contains: c.number! } },
+        }),
+      ),
+    );
+    expect(notif.link).toBe('/comptabilite?statut=error');
+    await withTenant(prisma, tenantId, userId, (tx) =>
+      tx.integrationConnection.update({
+        where: { tenantId_kind: { tenantId, kind: 'accounting' } },
+        data: { config: { mapping: { accounts: { sales: '705000' } } } },
+      }),
+    );
+    await withTenant(prisma, tenantId, userId, (tx) =>
+      emitEvent(tx, {
+        tenantId,
+        type: 'accounting.sync_requested.v1',
+        aggregateType: 'tenant',
+        aggregateId: tenantId,
+        payload: { syncIds: [failed.id] },
+      }),
+    );
+    const ok = await syncOf(c.id, 'synced');
+    expect(ok.attempts).toBe(2);
+    expect((ok.entry as { lines: { account: string }[] }).lines[1]!.account).toBe('705000');
+  });
+
+  it('facture fournisseur payée avec retenue 30bis : achat puis paiement soldé', async () => {
+    const id = uuidv7();
+    await withTenant(prisma, tenantId, userId, async (tx) => {
+      const supplier = await tx.supplier.create({
+        data: { tenantId, name: 'Façades Test', vatNumber: 'BE0456789034', isSubcontractor: true },
+      });
+      await tx.supplierInvoice.create({
+        data: {
+          id,
+          tenantId,
+          source: 'upload',
+          supplierId: supplier.id,
+          supplierName: supplier.name,
+          number: `ST-${id.slice(-4)}`,
+          issueDate: new Date(),
+          totalNet: 1_000_000n,
+          totalVat: 0n,
+          totalGross: 1_000_000n,
+          status: 'paid',
+          paidAt: new Date(),
+          withholdingSocial: 350_000n,
+          withholdingTax: 0n,
+          withholdingAppliedAt: new Date(),
+        },
+      });
+      await emitEvent(tx, {
+        tenantId,
+        type: 'supplier_invoice.paid.v1',
+        aggregateType: 'supplier_invoice',
+        aggregateId: id,
+        payload: { invoiceId: id },
+      });
+    });
+    const purchase = await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.accountingSync.findFirst({
+          where: { documentId: id, documentType: 'supplier_invoice', status: 'synced' },
+        }),
+      ),
+    );
+    expect(
+      (purchase.entry as { lines: { account: string; vatCode: string | null }[] }).lines[0],
+    ).toMatchObject({
+      account: '611000',
+      vatCode: 'ACC',
+    });
+    const payment = await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.accountingSync.findFirst({
+          where: { documentId: id, documentType: 'supplier_payment', status: 'synced' },
+        }),
+      ),
+    );
+    expect(payment.amount).toBe(650_000n);
+    expect(
+      (payment.entry as { lines: { account: string; amount: string }[] }).lines.map((l) => [
+        l.account,
+        l.amount,
+      ]),
+    ).toEqual([
+      ['440000', '1000000'],
+      ['550000', '-650000'],
+      ['454000', '-350000'],
+    ]);
+  });
+});
