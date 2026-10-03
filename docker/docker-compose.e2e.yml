@@ -1,0 +1,22 @@
+# Surcouche E2E (CI) : ajoute Mailpit pour lire les e-mails dans les parcours Playwright,
+# charge le seed de démo et désactive la limitation de débit (tests en parallèle depuis une IP).
+services:
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - '127.0.0.1:8025:8025'
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: 'true'
+      MP_SMTP_AUTH_ALLOW_INSECURE: 'true'
+  api:
+    environment:
+      SMTP_HOST: mailpit
+      SMTP_PORT: '1025'
+      RATE_LIMIT_DISABLED: 'true'
+  worker:
+    environment:
+      SMTP_HOST: mailpit
+      SMTP_PORT: '1025'
+  migrate:
+    environment:
+      SEED_DEMO: 'true'

@@ -1,0 +1,13 @@
+pnpm-lock.yaml
+design/
+docs/
+**/generated/**
+.next/
+dist/
+coverage/
+playwright-report/
+*.md
+packages/ui/src/tokens.css
+**/.turbo/**
+**/test-results/**
+**/next-env.d.ts

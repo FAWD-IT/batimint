@@ -1,0 +1,62 @@
+@import 'tailwindcss';
+@import '../../../packages/ui/src/tokens.css';
+@import '../../../packages/ui/src/styles.css';
+
+@source '../../../packages/ui/src';
+
+/* Tokens du design system (design/tokens.css) exposés à Tailwind. */
+@theme inline {
+  --font-sans: var(--font-geist-sans), system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-ink-inverse: var(--ink-inverse);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-line-soft: var(--line-soft);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-good: var(--good);
+  --color-good-soft: var(--good-soft);
+  --color-warn: var(--warn);
+  --color-crit: var(--crit);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-panel: var(--panel-dark);
+  --color-panel-text: var(--panel-dark-text);
+  --color-panel-muted: var(--panel-dark-muted);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family:
+    var(--font-geist-sans),
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline-color: var(--accent);
+}
+
+.skip-link {
+  position: absolute;
+  left: 8px;
+  top: -48px;
+  z-index: 100;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--ink);
+  color: var(--ink-inverse);
+  font-weight: 600;
+}
+.skip-link:focus {
+  top: 8px;
+}

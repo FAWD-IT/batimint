@@ -1,0 +1,66 @@
+# Services d'infrastructure pour le développement local (pnpm dev / pnpm services:up).
+name: batimint-dev
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: batimint
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+      - ./packages/db/docker/init-dev.sql:/docker-entrypoint-initdb.d/10-init-dev.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d batimint']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  minio:
+    # Fork communautaire maintenu de MinIO (les images officielles ne sont plus publiées), voir ADR 0006.
+    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
+    command: server /data --console-address ':9001'
+    environment:
+      MINIO_ROOT_USER: batimint
+      MINIO_ROOT_PASSWORD: batimint-dev-secret
+    ports:
+      - '${MINIO_PORT:-9000}:9000'
+      - '${MINIO_CONSOLE_PORT:-9001}:9001'
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', 'http://localhost:9000/minio/health/live']
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  minio-init:
+    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: ['/bin/sh', '-c']
+    command:
+      - |
+        mc alias set local http://minio:9000 batimint batimint-dev-secret &&
+        mc mb --ignore-existing local/batimint-uploads &&
+        mc mb --ignore-existing --with-lock local/batimint-legal &&
+        mc version enable local/batimint-legal &&
+        mc retention set --default GOVERNANCE 3650d local/batimint-legal 2>/dev/null || true
+    restart: 'no'
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - '${SMTP_PORT:-1025}:1025'
+      - '${MAILPIT_UI_PORT:-8025}:8025'
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: 'true'
+      MP_SMTP_AUTH_ALLOW_INSECURE: 'true'
+
+volumes:
+  pg-data:
+  minio-data:
