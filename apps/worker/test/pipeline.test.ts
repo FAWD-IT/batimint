@@ -8,12 +8,13 @@ import {
   emitEvent,
   FieldCipher,
   type PrismaClient,
+  recordStockMovement,
   withSystem,
   withTenant,
 } from '@batimint/db';
 import { testDatabaseUrls } from '@batimint/db/testing';
 import { createMockIntegrations, MockMailer } from '@batimint/integrations';
-import { addDays, brusselsDate, isWorkingDay } from '@batimint/domain';
+import { addDays, brusselsDate, equipmentUsageDays, isWorkingDay } from '@batimint/domain';
 import pg from 'pg';
 import type { PgBoss } from 'pg-boss';
 import { v7 as uuidv7 } from 'uuid';
@@ -25,7 +26,12 @@ import { loadDotEnv } from '../src/env';
 import { OutboxRelay } from '../src/relay';
 import { runConsumer } from '../src/runner';
 import type { WorkerDeps } from '../src/consumer';
-import { runDunning, runPeppolDelivery, runSubcontractorDocumentAlerts } from '../src/schedules';
+import {
+  runDunning,
+  runEquipmentDaily,
+  runPeppolDelivery,
+  runSubcontractorDocumentAlerts,
+} from '../src/schedules';
 
 loadDotEnv();
 const urls = testDatabaseUrls('worker');
@@ -1925,5 +1931,190 @@ describe('M10 — réception', () => {
       tx.timelineEntry.count({ where: { projectId: project.id, type: 'retention.released' } }),
     );
     expect(entries).toBe(1);
+  });
+});
+
+describe('M10 — stock et matériel', () => {
+  async function site() {
+    return withTenant(prisma, tenantId, userId, async (tx) => {
+      const customer = await tx.customer.create({
+        data: { tenantId, kind: 'individual', displayName: 'Jean Stock' },
+      });
+      const project = await tx.project.create({
+        data: {
+          tenantId,
+          number: `CH-${uuidv7().slice(-6)}`,
+          name: 'Terrasse Dupont',
+          customerId: customer.id,
+          status: 'in_progress',
+          contractAmount: 1_000_000n,
+        },
+      });
+      const post = await tx.budgetLine.create({
+        data: { tenantId, projectId: project.id, position: 0, label: 'Gros œuvre', budgetedCost: 500_000n },
+      });
+      return { project, post };
+    });
+  }
+
+  it('sortie de stock : coût au CMP imputé au poste, fil ; seuil franchi : une alerte au bureau', async () => {
+    const { project, post } = await site();
+    const actor = { type: 'user' as const, id: userId, label: 'W' };
+    const { item, outId } = await withTenant(prisma, tenantId, userId, async (tx) => {
+      const location = await tx.stockLocation.create({ data: { tenantId, name: 'Dépôt' } });
+      const item = await tx.item.create({
+        data: {
+          tenantId,
+          code: `CIM-${uuidv7().slice(-4)}`,
+          kind: 'material',
+          name: 'Ciment 25 kg',
+          unit: 'sac',
+        },
+      });
+      await tx.stockLevel.create({
+        data: { tenantId, locationId: location.id, itemId: item.id, minQuantity: '10' },
+      });
+      for (const [qty, cost] of [
+        ['10', 800n],
+        ['10', 1_000n],
+      ] as const)
+        await recordStockMovement(tx, {
+          id: uuidv7(),
+          tenantId,
+          kind: 'in',
+          itemId: item.id,
+          locationId: location.id,
+          quantity: qty,
+          unitCost: cost,
+          actor,
+        });
+      const out = await recordStockMovement(tx, {
+        id: uuidv7(),
+        tenantId,
+        kind: 'out',
+        itemId: item.id,
+        locationId: location.id,
+        quantity: '12',
+        projectId: project.id,
+        budgetLineId: post.id,
+        actor,
+      });
+      return { item, outId: out.id };
+    });
+    const cost = await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.projectCost.findFirst({ where: { sourceType: 'stock_movement', sourceId: outId } }),
+      ),
+    );
+    // CMP 9,00 € × 12 sacs
+    expect(cost).toMatchObject({
+      category: 'stock',
+      amount: 10_800n,
+      budgetLineId: post.id,
+      projectId: project.id,
+    });
+    const entry = await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.timelineEntry.findFirst({ where: { projectId: project.id, type: 'project.cost_recorded' } }),
+      ),
+    );
+    expect(entry.title).toContain('Ciment 25 kg');
+    const notif = await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.notification.findFirst({
+          where: { userId, type: 'stock.level_low', title: `Stock bas : ${item.name}` },
+        }),
+      ),
+    );
+    expect(notif.body).toContain('Dépôt : 8 sac (seuil 10)');
+  });
+
+  it('matériel affecté : coût d’usage imputé, fil ; recalcul quotidien ; entretien : une alerte par état', async () => {
+    const { project, post } = await site();
+    const today = brusselsDate(new Date());
+    const start = addDays(today, -7);
+    const { equipment, assignment } = await withTenant(prisma, tenantId, userId, async (tx) => {
+      const equipment = await tx.equipment.create({
+        data: { id: uuidv7(), tenantId, name: `Bétonnière ${uuidv7().slice(-4)}`, dailyCost: 2_500n },
+      });
+      const assignment = await tx.equipmentAssignment.create({
+        data: {
+          id: uuidv7(),
+          tenantId,
+          equipmentId: equipment.id,
+          projectId: project.id,
+          budgetLineId: post.id,
+          startDate: new Date(`${start}T00:00:00Z`),
+          dailyCost: 2_500n,
+        },
+      });
+      await emitEvent(tx, {
+        tenantId,
+        type: 'equipment.assignment_changed.v1',
+        aggregateType: 'project',
+        aggregateId: project.id,
+        payload: { assignmentId: assignment.id, projectId: project.id, action: 'assigned' },
+      });
+      return { equipment, assignment };
+    });
+    const days = equipmentUsageDays(start, null, today);
+    const cost = await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.projectCost.findFirst({ where: { sourceType: 'equipment_assignment', sourceId: assignment.id } }),
+      ),
+    );
+    expect(cost).toMatchObject({
+      category: 'equipment',
+      amount: BigInt(days) * 2_500n,
+      budgetLineId: post.id,
+    });
+    const entry = await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.timelineEntry.findFirst({ where: { projectId: project.id, type: 'equipment.assigned' } }),
+      ),
+    );
+    expect(entry.title).toBe(`Matériel affecté : ${equipment.name}`);
+
+    // Recalcul quotidien : rien tant que le coût ne change pas ; trois jours plus tard, il avance.
+    const later = new Date(Date.now() + 3 * 86_400_000);
+    const laterDays = equipmentUsageDays(start, null, brusselsDate(later));
+    await runEquipmentDaily(deps, later);
+    await waitFor(() =>
+      withTenant(prisma, tenantId, userId, async (tx) => {
+        const c = await tx.projectCost.findFirst({ where: { sourceId: assignment.id } });
+        return c?.amount === BigInt(laterDays) * 2_500n ? c : null;
+      }),
+    );
+    const timeline = await withTenant(prisma, tenantId, userId, (tx) =>
+      tx.timelineEntry.count({ where: { projectId: project.id } }),
+    );
+    expect(timeline, 'le recalcul n’ajoute rien au fil').toBe(1);
+
+    const maintenanceId = uuidv7();
+    await withTenant(prisma, tenantId, userId, (tx) =>
+      tx.maintenanceEvent.create({
+        data: {
+          id: maintenanceId,
+          tenantId,
+          equipmentId: equipment.id,
+          kind: 'maintenance',
+          label: 'Vidange',
+          dueOn: new Date(`${addDays(today, 5)}T00:00:00Z`),
+        },
+      }),
+    );
+    expect((await runEquipmentDaily(deps)).alerts).toBeGreaterThanOrEqual(1);
+    expect((await runEquipmentDaily(deps)).alerts, 'une seule alerte par état').toBe(0);
+    const notif = await waitFor(() =>
+      withTenant(prisma, tenantId, userId, (tx) =>
+        tx.notification.findFirst({
+          where: { userId, type: 'equipment.maintenance_due', link: `/materiel/${equipment.id}` },
+        }),
+      ),
+    );
+    expect(notif.title).toBe(`Entretien à prévoir : ${equipment.name}`);
+    expect(
+      (await runEquipmentDaily(deps, new Date(Date.now() + 7 * 86_400_000))).alerts,
+    ).toBeGreaterThanOrEqual(1);
   });
 });

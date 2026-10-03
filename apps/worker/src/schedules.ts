@@ -9,11 +9,14 @@ import {
   brusselsDate,
   documentCompliance,
   dueDunningStep,
+  equipmentUsageCost,
+  equipmentUsageDays,
   heldRetention,
   invoiceBalance,
   isQuoteExpired,
   isQuoteReminderDue,
   isWorkingDay,
+  maintenanceStatus,
   slotHalfDays,
   type Half,
 } from '@batimint/domain';
@@ -27,6 +30,7 @@ export const DAY_AHEAD_QUEUE = 'schedule.planning-day-ahead';
 export const DUNNING_QUEUE = 'schedule.invoice-dunning';
 export const PEPPOL_DELIVERY_QUEUE = 'schedule.peppol-delivery';
 export const SUBCONTRACTOR_DOCUMENTS_QUEUE = 'schedule.subcontractor-documents';
+export const EQUIPMENT_QUEUE = 'schedule.equipment-daily';
 
 /** Une date de début n'est annoncée au client qu'une fois stable (glisser-déposer successifs). */
 export const ARRIVAL_SETTLE_MS = 10 * 60_000;
@@ -304,6 +308,63 @@ export async function runSubcontractorDocumentAlerts(deps: WorkerDeps, now: Date
   });
 }
 
+/**
+ * Matériel, chaque matin (03 §11) : le coût d'usage des affectations en cours avance d'un jour
+ * ouvré (recalcul émis seulement s'il change) ; entretiens et contrôles bientôt dus ou en retard
+ * signalés une fois par état.
+ */
+export async function runEquipmentDaily(deps: WorkerDeps, now: Date = new Date()) {
+  const today = brusselsDate(now);
+  return withSystem(deps.prisma, async (tx) => {
+    const assignments = await tx.equipmentAssignment.findMany({
+      where: { startDate: { lte: new Date(`${today}T00:00:00Z`) } },
+      select: { id: true, tenantId: true, projectId: true, startDate: true, endDate: true, dailyCost: true },
+    });
+    const costs = new Map(
+      (
+        await tx.projectCost.findMany({
+          where: { sourceType: 'equipment_assignment', sourceId: { in: assignments.map((a) => a.id) } },
+          select: { sourceId: true, amount: true },
+        })
+      ).map((c) => [c.sourceId, c.amount]),
+    );
+    let recomputed = 0;
+    for (const a of assignments) {
+      const days = equipmentUsageDays(iso(a.startDate), a.endDate ? iso(a.endDate) : null, today);
+      if (costs.get(a.id) === equipmentUsageCost(a.dailyCost, days)) continue;
+      await emitEvent(tx, {
+        tenantId: a.tenantId,
+        type: 'equipment.assignment_changed.v1',
+        aggregateType: 'project',
+        aggregateId: a.projectId,
+        payload: { assignmentId: a.id, projectId: a.projectId, action: 'recomputed', asOf: today },
+        actor: { type: 'system', label: 'Batimint' },
+      });
+      recomputed++;
+    }
+    const pending = await tx.maintenanceEvent.findMany({
+      where: { doneOn: null, equipment: { archivedAt: null } },
+      select: { id: true, tenantId: true, equipmentId: true, dueOn: true, alertState: true },
+    });
+    let alerts = 0;
+    for (const m of pending) {
+      const state = maintenanceStatus(iso(m.dueOn), today);
+      if (state === 'ok' || m.alertState === state) continue;
+      await tx.maintenanceEvent.update({ where: { id: m.id }, data: { alertState: state } });
+      await emitEvent(tx, {
+        tenantId: m.tenantId,
+        type: 'equipment.maintenance_due.v1',
+        aggregateType: 'equipment',
+        aggregateId: m.equipmentId,
+        payload: { maintenanceId: m.id, equipmentId: m.equipmentId, state },
+        actor: { type: 'system', label: 'Batimint' },
+      });
+      alerts++;
+    }
+    return { recomputed, alerts };
+  });
+}
+
 export async function registerSchedules(
   boss: PgBoss,
   deps: WorkerDeps,
@@ -344,5 +405,11 @@ export async function registerSchedules(
   await boss.work(SUBCONTRACTOR_DOCUMENTS_QUEUE, async () => {
     const r = await runSubcontractorDocumentAlerts(deps);
     if (r.alerts) logger.info(r, 'sous-traitants : documents à renouveler');
+  });
+  await boss.createQueue(EQUIPMENT_QUEUE, { retryLimit: 2 }).catch(() => undefined);
+  await boss.schedule(EQUIPMENT_QUEUE, '15 6 * * *', {}, { tz: 'Europe/Brussels' });
+  await boss.work(EQUIPMENT_QUEUE, async () => {
+    const r = await runEquipmentDaily(deps);
+    if (r.recomputed || r.alerts) logger.info(r, 'matériel : coûts d’usage et entretiens');
   });
 }

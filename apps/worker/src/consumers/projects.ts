@@ -499,8 +499,9 @@ export const projectTimeline: Consumer = {
       }
       case 'project.cost_recorded.v1': {
         const p = parseEventPayload('project.cost_recorded.v1', event.payload);
-        // Main-d'œuvre, factures et BC ont leur propre entrée (pointage, facture rapprochée, BC envoyé).
-        if (['labour', 'supplier_invoice', 'purchase_order'].includes(p.category)) {
+        // Main-d'œuvre, factures, BC et matériel ont leur propre entrée (pointage, facture rapprochée,
+        // BC envoyé, matériel affecté ou rendu) : le coût d'usage est recalculé chaque jour.
+        if (['labour', 'supplier_invoice', 'purchase_order', 'equipment'].includes(p.category)) {
           await publishProject(ctx, projectId, ['project', 'budget']);
           return;
         }

@@ -192,6 +192,25 @@ export const EventPayloads = {
   /** Facture finale à générer (réserves levées, ou demande du bureau). */
   'project.final_invoice_requested.v1': z.object({ projectId: Uuid }),
   'project.closed.v1': z.object({ projectId: Uuid }),
+  /** Sortie de stock vers un chantier : coût imputé au poste (04 « Engagé »). */
+  'stock.moved_to_project.v1': z.object({ movementId: Uuid, projectId: Uuid }),
+  /** Stock passé sous son seuil (une alerte par passage). */
+  'stock.level_low.v1': z.object({ levelId: Uuid, itemId: Uuid, locationId: Uuid }),
+  /** Affectation de matériel créée, modifiée ou terminée : coût d'usage recalculé. */
+  'equipment.assignment_changed.v1': z.object({
+    assignmentId: Uuid,
+    projectId: Uuid,
+    /** Affectation, retour, ou recalcul quotidien (les jours d'usage avancent). */
+    action: z.enum(['assigned', 'returned', 'recomputed']).default('recomputed'),
+    /** Jour de calcul du recalcul quotidien (sinon le jour de l'événement). */
+    asOf: z.iso.date().optional(),
+  }),
+  /** Entretien ou contrôle bientôt dû ou en retard (une alerte par état). */
+  'equipment.maintenance_due.v1': z.object({
+    maintenanceId: Uuid,
+    equipmentId: Uuid,
+    state: z.enum(['due_soon', 'overdue']),
+  }),
   /** Facture ou note de crédit émise (numéro définitif) : envoi Peppol ou e-mail, timeline. */
   'invoice.issued.v1': z.object({
     invoiceId: Uuid,

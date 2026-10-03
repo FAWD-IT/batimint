@@ -17,7 +17,14 @@ import {
   SupplierInvoiceSchema,
   SupplierInvoiceSummarySchema,
 } from '@batimint/contracts';
-import { emitEvent, nextSequenceValue, type Tx, withSystem, withTenant } from '@batimint/db';
+import {
+  emitEvent,
+  nextSequenceValue,
+  recordStockMovement,
+  type Tx,
+  withSystem,
+  withTenant,
+} from '@batimint/db';
 import { buildSimpleUbl, parseUbl, renderPurchaseOrderPdf, UblError } from '@batimint/documents';
 import {
   assertTransition,
@@ -448,6 +455,25 @@ export const purchasingRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async 
             lines: req.body.lines,
           },
         });
+        // Commande de réapprovisionnement : la réception entre en stock au prix d'achat (03 §11).
+        if (po.stockLocationId)
+          for (const r of req.body.lines) {
+            const line = po.lines.find((l) => l.id === r.lineId)!;
+            if (!line.itemId || dec(r.quantity).lte(0)) continue;
+            await recordStockMovement(tx, {
+              id: uuidv7(),
+              tenantId: auth.tenantId,
+              kind: 'in',
+              itemId: line.itemId,
+              locationId: po.stockLocationId,
+              quantity: r.quantity,
+              unitCost: line.unitPrice,
+              purchaseOrderId: po.id,
+              note: po.number ? `Réception ${po.number}` : null,
+              userId: auth.userId,
+              actor,
+            });
+          }
         const lines = await tx.purchaseOrderLine.findMany({ where: { purchaseOrderId: po.id } });
         const complete = lines.every((l) =>
           dec(l.receivedQuantity.toString()).greaterThanOrEqualTo(dec(l.quantity.toString())),

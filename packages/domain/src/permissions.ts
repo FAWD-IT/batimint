@@ -96,7 +96,10 @@ const SITE_MANAGER: readonly Action[] = [
   'receptions.manage',
   'purchases.read',
   'stock.read',
+  // Le chef sort le matériel de sa camionnette vers le chantier et affecte l'outillage (P13).
+  'stock.write',
   'equipment.read',
+  'equipment.write',
 ];
 
 const WORKER: readonly Action[] = [

@@ -50,7 +50,7 @@ export async function upsertCost(
   c: {
     projectId: string;
     budgetLineId: string | null;
-    category: 'purchase_order' | 'supplier_invoice' | 'subcontract';
+    category: 'purchase_order' | 'supplier_invoice' | 'subcontract' | 'stock' | 'equipment';
     sourceType: string;
     sourceId: string;
     label: string;
