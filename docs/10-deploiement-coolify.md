@@ -139,7 +139,7 @@ Configurer chez chaque fournisseur : `https://api.<domaine>/v1/webhooks/<fournis
 | Connexion impossible, cookie absent | L'interface doit être servie en HTTPS (cookies `Secure` en production) |
 | « En direct » ne s'allume pas | Un proxy intermédiaire bufferise le SSE : vérifier qu'aucune compression n'est ajoutée devant `web` |
 | E-mails non reçus | `SMTP_HOST` vide (mode simulé) ou domaine expéditeur non authentifié |
-| Port 3000/4000 déjà utilisé sur l'hôte | Les ports ne sont publiés que sur `127.0.0.1` pour l'usage local ; changer `WEB_HOST_PORT` / `API_HOST_PORT` |
+| `Bind for 0.0.0.0:<port> failed: port is already allocated` | Un port hôte est déjà pris par une autre application du serveur. Traefik n'en a pas besoin (il passe par le réseau Docker sur 3000/4000) : la stack publie par défaut 5380 (web) et 5480 (api) ; si ceux-ci sont pris aussi, définir `WEB_HOST_PORT` / `API_HOST_PORT` dans les variables Coolify (plage libre, par ex. 5000–6000) |
 
 ## Vérifications de fin
 - `docker compose -f docker-compose.coolify.yml up` fonctionne en local avec un `.env` copié de l'exemple, avec `SEED_DEMO=true`.
