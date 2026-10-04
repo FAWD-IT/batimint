@@ -14,6 +14,15 @@ import { renderEmail } from './emails';
 
 export const SESSION_TTL_DAYS = 30;
 export const SESSION_COOKIE = 'bm_session';
+
+/**
+ * Cookie `Secure` dès que la requête arrive en HTTPS (proxy de confiance : x-forwarded-proto).
+ * Un accès HTTP direct (IP:port du serveur) reste possible : le navigateur y refuserait un cookie
+ * `Secure` et l'utilisateur resterait bloqué sur la page de connexion.
+ */
+export function sessionCookieSecure(protocol: string, isProduction: boolean): boolean {
+  return isProduction && protocol === 'https';
+}
 const MAGIC_LINK_TTL_MIN = 20;
 const RESET_TTL_MIN = 60;
 const TRIAL_DAYS = 14;
