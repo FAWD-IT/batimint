@@ -56,11 +56,12 @@ services:
       SERVICE_URL_WEB_3000: ''
       NODE_ENV: production
       API_INTERNAL_URL: http://api:4000
-    # Traefik (Coolify) joint le conteneur par le réseau Docker sur le port 3000 : la publication
-    # sur l'hôte ne sert qu'en local. Port hôte par défaut hors des ports courants (5000–6000),
-    # pour ne pas entrer en conflit avec les autres applications du serveur.
+    # Ports publiés sur l'hôte, hors des ports courants (5000–6000) pour ne pas entrer en conflit
+    # avec les autres applications du serveur. Sur Coolify, ils écoutent sur toutes les interfaces
+    # (un proxy externe, p. ex. Cloudflare, peut y pointer directement) ; en local et en CI,
+    # .env.example les limite à 127.0.0.1 (HOST_BIND_IP).
     ports:
-      - '127.0.0.1:${WEB_HOST_PORT:-5380}:3000'
+      - '${HOST_BIND_IP:-0.0.0.0}:${WEB_HOST_PORT:-5380}:3000'
     depends_on:
       api:
         condition: service_healthy
@@ -88,7 +89,7 @@ services:
       API_PORT: '4000'
       TRUST_PROXY: 'true'
     ports:
-      - '127.0.0.1:${API_HOST_PORT:-5480}:4000'
+      - '${HOST_BIND_IP:-0.0.0.0}:${API_HOST_PORT:-5480}:4000'
     depends_on:
       postgres:
         condition: service_healthy
