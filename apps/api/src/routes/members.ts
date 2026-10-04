@@ -20,7 +20,7 @@ import type { AppDeps } from '../context';
 import { hashPassword, randomToken, sha256, verifyPassword } from '../lib/crypto';
 import { AppError, badRequest, conflict, forbidden, notFound } from '../lib/errors';
 import { inTenant, iso } from '../lib/tenant';
-import { createSessionForUser, SESSION_COOKIE } from '../services/auth';
+import { createSessionForUser, SESSION_COOKIE, sessionCookieSecure } from '../services/auth';
 
 const INVITATION_TTL_DAYS = 14;
 
@@ -374,7 +374,7 @@ export const memberRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (app
       });
       void reply.setCookie(SESSION_COOKIE, session.token, {
         httpOnly: true,
-        secure: deps.config.isProduction,
+        secure: sessionCookieSecure(req.protocol, deps.config.isProduction),
         sameSite: 'lax',
         path: '/',
         domain: deps.config.COOKIE_DOMAIN,

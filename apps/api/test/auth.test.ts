@@ -1,5 +1,6 @@
 import { withSystem } from '@batimint/db';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { sessionCookieSecure } from '../src/services/auth';
 import { createTestApp, sessionCookie, signupCompany, type TestApp } from './helpers';
 
 let t: TestApp;
@@ -225,5 +226,13 @@ describe('P1.1 — inscription et connexion', () => {
       payload: { email: s.email, password: s.password, totp: totp.generate() },
     });
     expect(step2.json().status).toBe('ok');
+  });
+});
+
+describe('cookie de session', () => {
+  it('Secure en production derrière HTTPS seulement (accès HTTP direct possible)', () => {
+    expect(sessionCookieSecure('https', true)).toBe(true);
+    expect(sessionCookieSecure('http', true)).toBe(false);
+    expect(sessionCookieSecure('https', false)).toBe(false);
   });
 });

@@ -27,6 +27,7 @@ import {
   resetPassword,
   revokeSession,
   SESSION_COOKIE,
+  sessionCookieSecure,
   signup,
   switchTenant,
   totpDisable,
@@ -44,10 +45,10 @@ export const authRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (app, 
     requestId: req.id,
   });
 
-  const setSessionCookie = (reply: FastifyReply, session: CreatedSession) => {
+  const setSessionCookie = (req: FastifyRequest, reply: FastifyReply, session: CreatedSession) => {
     void reply.setCookie(SESSION_COOKIE, session.token, {
       httpOnly: true,
-      secure: deps.config.isProduction,
+      secure: sessionCookieSecure(req.protocol, deps.config.isProduction),
       sameSite: 'lax',
       path: '/',
       domain: deps.config.COOKIE_DOMAIN,
@@ -72,7 +73,7 @@ export const authRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (app, 
     },
     async (req, reply) => {
       const session = await signup(deps, req.body, meta(req));
-      setSessionCookie(reply, session);
+      setSessionCookie(req, reply, session);
       return reply.status(201).send({ status: 'ok', sessionToken: session.token });
     },
   );
@@ -91,7 +92,7 @@ export const authRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (app, 
     async (req, reply) => {
       const result = await login(deps, req.body, meta(req));
       if (result.status === 'mfa_required') return { status: 'mfa_required' as const };
-      setSessionCookie(reply, result.session);
+      setSessionCookie(req, reply, result.session);
       return { status: 'ok' as const, sessionToken: result.session.token };
     },
   );
@@ -136,7 +137,7 @@ export const authRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (app, 
     },
     async (req, reply) => {
       const session = await verifyMagicLink(deps, req.body.token, meta(req));
-      setSessionCookie(reply, session);
+      setSessionCookie(req, reply, session);
       return { status: 'ok' as const, sessionToken: session.token };
     },
   );
@@ -171,7 +172,7 @@ export const authRoutes: FastifyPluginAsyncZod<{ deps: AppDeps }> = async (app, 
     },
     async (req, reply) => {
       const session = await resetPassword(deps, req.body.token, req.body.password, meta(req));
-      setSessionCookie(reply, session);
+      setSessionCookie(req, reply, session);
       return { status: 'ok' as const, sessionToken: session.token };
     },
   );
